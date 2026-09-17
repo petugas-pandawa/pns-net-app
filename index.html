@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PNS.NET — Operasional</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --accent: #3b82f6;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --ok: #22c55e;
+    --err: #ef4444;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Roboto, Segoe UI, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    padding: 16px 20px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header h1 { font-size: 16px; margin: 0; }
+  #connStatus { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+  .online { background: rgba(34,197,94,.15); color: var(--ok); }
+  .offline { background: rgba(239,68,68,.15); color: var(--err); }
+  main { padding: 16px; max-width: 480px; margin: 0 auto; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 14px; margin: 0 0 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
+  label { display: block; font-size: 13px; margin: 10px 0 4px; color: var(--text-dim); }
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0b1220;
+    color: var(--text);
+    font-size: 15px;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 14px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .5; }
+  button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  #loginMsg, #syncMsg { font-size: 13px; margin-top: 10px; }
+  .msg-err { color: var(--err); }
+  .msg-ok { color: var(--ok); }
+  #syncLog {
+    font-size: 12px;
+    color: var(--text-dim);
+    background: #0b1220;
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 160px;
+    overflow-y: auto;
+    margin-top: 10px;
+    white-space: pre-wrap;
+    display: none;
+  }
+  .hidden { display: none !important; }
+  .userbar { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-dim); }
+  .userbar b { color: var(--text); }
+  .pill { font-size: 11px; background: rgba(59,130,246,.15); color: var(--accent); padding: 2px 8px; border-radius: 999px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PNS.NET — Operasional</h1>
+  <span id="connStatus" class="online">Online</span>
+</header>
+
+<main>
+
+  <!-- LOGIN CARD -->
+  <div class="card" id="loginCard">
+    <h2>Login</h2>
+    <label for="username">Username</label>
+    <input type="text" id="username" autocomplete="username">
+    <label for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password">
+    <button id="btnLogin">Masuk</button>
+    <div id="loginMsg"></div>
+  </div>
+
+  <!-- APP AREA (muncul setelah login) -->
+  <div id="appArea" class="hidden">
+
+    <div class="card">
+      <div class="userbar">
+        <span>Login sebagai <b id="userLabel"></b> <span class="pill" id="roleLabel"></span></span>
+        <a href="#" id="btnLogout" style="color:var(--err); font-size:12px;">Keluar</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sinkronisasi Data</h2>
+      <div id="versionSummary" style="font-size:13px; color:var(--text-dim);">Memuat status lokal...</div>
+      <button id="btnSync">Sync Sekarang</button>
+      <div id="syncMsg"></div>
+      <div id="syncLog"></div>
+    </div>
+
+    <div class="card">
+      <h2>Contoh: Dropdown Wilayah (dari Local DB / IndexedDB)</h2>
+      <label for="selKabupaten">Kabupaten</label>
+      <select id="selKabupaten"><option value="">-- pilih kabupaten --</option></select>
+      <label for="selKecamatan">Kecamatan</label>
+      <select id="selKecamatan" disabled><option value="">-- pilih kecamatan --</option></select>
+      <label for="selDesa">Desa/Kelurahan</label>
+      <select id="selDesa" disabled><option value="">-- pilih desa/kelurahan --</option></select>
+      <p style="font-size:12px; color:var(--text-dim); margin-top:10px;">
+        Dropdown ini SELALU dibaca dari IndexedDB (Local DB), bukan dari internet —
+        coba aktifkan Airplane Mode lalu reload halaman ini, dropdown tetap berfungsi
+        selama sudah pernah sync sebelumnya.
+      </p>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// ============================================================
+// KONFIGURASI — GANTI SESUAI DEPLOYMENT APPS SCRIPT ANDA
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbxL5jbQiC02TSmD7Ys183w4l2S3pHQSnEEY324Qok_Uj9zejoMios2KPIkCJkxRjiKSuA/exec';
+
+// ============================================================
+// KONFIGURASI MASTER <-> OBJECT STORE INDEXEDDB
+// ============================================================
+const MASTER_CONFIG = {
+  MASTER_PROVINSI:        { store: 'master_provinsi',        keyPath: 'id_internal' },
+  MASTER_KABUPATEN:       { store: 'master_kabupaten',       keyPath: 'id_internal', parentField: 'parent_id_internal' },
+  MASTER_KECAMATAN:       { store: 'master_kecamatan',       keyPath: 'id_internal', parentField: 'parent_id_internal' },
+  MASTER_DESA:            { store: 'master_desa',            keyPath: 'id_internal', parentField: 'parent_id_internal' },
+  MASTER_PAKET:           { store: 'master_paket',           keyPath: 'id_paket' },
+  MASTER_ROLE:            { store: 'master_role',            keyPath: 'id_role' },
+  MASTER_PERMISSION:      { store: 'master_permission',      keyPath: 'id_permission' },
+  MASTER_STATUS:          { store: 'master_status',          keyPath: 'id_status' },
+  MASTER_SUMBER_PELANGGAN:{ store: 'master_sumber_pelanggan',keyPath: 'id_sumber' },
+  MASTER_JENIS_PEMASANGAN:{ store: 'master_jenis_pemasangan',keyPath: 'id_jenis' }
+};
+
+const DB_NAME = 'pnsnet_local';
+const DB_VERSION = 1;
+let dbInstance = null;
+
+// ============================================================
+// INDEXEDDB — buka & buat schema
+// ============================================================
+function openDb() {
+  return new Promise((resolve, reject) => {
+    if (dbInstance) return resolve(dbInstance);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      Object.values(MASTER_CONFIG).forEach(cfg => {
+        if (!db.objectStoreNames.contains(cfg.store)) {
+          const os = db.createObjectStore(cfg.store, { keyPath: cfg.keyPath });
+          if (cfg.parentField) os.createIndex('by_parent', cfg.parentField, { unique: false });
+        }
+      });
+      if (!db.objectStoreNames.contains('sync_meta')) {
+        db.createObjectStore('sync_meta', { keyPath: 'master_name' });
+      }
+      if (!db.objectStoreNames.contains('sync_queue')) {
+        db.createObjectStore('sync_queue', { keyPath: 'local_id' });
+      }
+      if (!db.objectStoreNames.contains('session')) {
+        db.createObjectStore('session', { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = (e) => { dbInstance = e.target.result; resolve(dbInstance); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function idbGet(storeName, key) {
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function idbGetAll(storeName) {
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function idbGetByParent(storeName, parentId) {
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const idx = tx.objectStore(storeName).index('by_parent');
+    const req = idx.getAll(parentId);
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function idbPut(storeName, value) {
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).put(value);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function idbBulkPut(storeName, values) {
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const os = tx.objectStore(storeName);
+    values.forEach(v => os.put(v));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+// ============================================================
+// API CALL — text/plain supaya lolos CORS preflight Apps Script
+// ============================================================
+async function apiCall(payload) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+// ============================================================
+// SESSION (token + user) — disimpan di IndexedDB, bukan localStorage,
+// supaya konsisten satu tempat dengan data lain (lihat blueprint §6)
+// ============================================================
+async function saveSession(token, user) {
+  await idbPut('session', { key: 'auth', token, user, saved_at: Date.now() });
+}
+async function getSession() {
+  return idbGet('session', 'auth');
+}
+async function clearSession() {
+  await idbPut('session', { key: 'auth', token: null, user: null, saved_at: 0 });
+}
+
+// ============================================================
+// SYNC ENGINE
+// ============================================================
+async function getAllLocalVersions() {
+  const rows = await idbGetAll('sync_meta');
+  const map = {};
+  rows.forEach(r => { map[r.master_name] = r.local_version; });
+  return map;
+}
+
+async function setLocalVersion(masterName, version) {
+  await idbPut('sync_meta', { master_name: masterName, local_version: version });
+}
+
+function logLine(text) {
+  const el = document.getElementById('syncLog');
+  el.style.display = 'block';
+  el.textContent += text + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+async function runSync() {
+  const session = await getSession();
+  if (!session || !session.token) {
+    document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Belum login.</span>';
+    return;
+  }
+  const btn = document.getElementById('btnSync');
+  btn.disabled = true;
+  document.getElementById('syncMsg').textContent = '';
+  document.getElementById('syncLog').textContent = '';
+
+  try {
+    const localVersions = await getAllLocalVersions();
+    logLine('Cek versi server...');
+    const checkResp = await apiCall({ action: 'sync_check', token: session.token, local_versions: localVersions });
+    if (!checkResp.success) throw new Error(checkResp.error || 'sync_check gagal');
+
+    const masters = Object.keys(checkResp.needs_update);
+    if (masters.length === 0) {
+      logLine('Semua data sudah versi terbaru.');
+    }
+
+    for (const masterName of masters) {
+      const cfg = MASTER_CONFIG[masterName];
+      if (!cfg) { logLine(masterName + ': dilewati (belum dikenal di HP)'); continue; }
+      const since = localVersions[masterName] || 0;
+      logLine(masterName + ': menarik data (since v' + since + ')...');
+      const pullResp = await apiCall({ action: 'sync_pull', token: session.token, master: masterName, since_version: since });
+      if (!pullResp.success) { logLine(masterName + ': GAGAL — ' + pullResp.error); continue; }
+      await idbBulkPut(cfg.store, pullResp.rows);
+      await setLocalVersion(masterName, pullResp.server_version);
+      logLine(masterName + ': ' + pullResp.rows.length + ' baris disimpan ke Local DB (v' + pullResp.server_version + ')');
+    }
+
+    document.getElementById('syncMsg').innerHTML = '<span class="msg-ok">Sync selesai.</span>';
+    await refreshVersionSummary();
+    await loadKabupatenDropdown();
+  } catch (err) {
+    document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Sync gagal: ' + err.message + ' (kalau offline, ini wajar — data lama tetap dipakai)</span>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function refreshVersionSummary() {
+  const rows = await idbGetAll('sync_meta');
+  if (rows.length === 0) {
+    document.getElementById('versionSummary').textContent = 'Belum pernah sync sama sekali.';
+    return;
+  }
+  const text = rows.map(r => r.master_name.replace('MASTER_', '') + ':v' + r.local_version).join('  ·  ');
+  document.getElementById('versionSummary').textContent = text;
+}
+
+// ============================================================
+// DROPDOWN WILAYAH — 100% baca dari IndexedDB (offline-safe)
+// ============================================================
+async function loadKabupatenDropdown() {
+  const sel = document.getElementById('selKabupaten');
+  sel.innerHTML = '<option value="">-- pilih kabupaten --</option>';
+  const rows = await idbGetAll('master_kabupaten');
+  rows.filter(r => r.status === 'AKTIF').forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id_internal;
+    opt.textContent = r.nama_resmi;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadKecamatanDropdown(idKabupaten) {
+  const sel = document.getElementById('selKecamatan');
+  sel.innerHTML = '<option value="">-- pilih kecamatan --</option>';
+  sel.disabled = !idKabupaten;
+  if (!idKabupaten) return;
+  const rows = await idbGetByParent('master_kecamatan', idKabupaten);
+  rows.filter(r => r.status === 'AKTIF').forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id_internal;
+    opt.textContent = r.nama_resmi;
+    sel.appendChild(opt);
+  });
+  sel.disabled = false;
+}
+
+async function loadDesaDropdown(idKecamatan) {
+  const sel = document.getElementById('selDesa');
+  sel.innerHTML = '<option value="">-- pilih desa/kelurahan --</option>';
+  sel.disabled = !idKecamatan;
+  if (!idKecamatan) return;
+  const rows = await idbGetByParent('master_desa', idKecamatan);
+  rows.filter(r => r.status === 'AKTIF').forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id_internal;
+    opt.textContent = r.nama_resmi + ' (' + r.jenis + ')';
+    sel.appendChild(opt);
+  });
+  sel.disabled = false;
+}
+
+// ============================================================
+// UI WIRING
+// ============================================================
+document.getElementById('btnLogin').addEventListener('click', async () => {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const msgEl = document.getElementById('loginMsg');
+  if (!username || !password) {
+    msgEl.innerHTML = '<span class="msg-err">Isi username & password.</span>';
+    return;
+  }
+  msgEl.textContent = 'Memproses...';
+  try {
+    const resp = await apiCall({ action: 'login', username, password });
+    if (!resp.success) {
+      msgEl.innerHTML = '<span class="msg-err">' + resp.error + '</span>';
+      return;
+    }
+    await saveSession(resp.token, resp.user);
+    msgEl.textContent = '';
+    await showAppArea(resp.user);
+  } catch (err) {
+    msgEl.innerHTML = '<span class="msg-err">Gagal terhubung ke server. Kalau Anda offline, login pertama memang wajib online dulu.</span>';
+  }
+});
+
+document.getElementById('btnLogout').addEventListener('click', async (e) => {
+  e.preventDefault();
+  await clearSession();
+  document.getElementById('appArea').classList.add('hidden');
+  document.getElementById('loginCard').classList.remove('hidden');
+});
+
+document.getElementById('btnSync').addEventListener('click', runSync);
+
+document.getElementById('selKabupaten').addEventListener('change', (e) => {
+  loadKecamatanDropdown(e.target.value);
+  document.getElementById('selDesa').innerHTML = '<option value="">-- pilih desa/kelurahan --</option>';
+  document.getElementById('selDesa').disabled = true;
+});
+document.getElementById('selKecamatan').addEventListener('change', (e) => {
+  loadDesaDropdown(e.target.value);
+});
+
+async function showAppArea(user) {
+  document.getElementById('loginCard').classList.add('hidden');
+  document.getElementById('appArea').classList.remove('hidden');
+  document.getElementById('userLabel').textContent = user.username;
+  document.getElementById('roleLabel').textContent = user.nama_role;
+  await refreshVersionSummary();
+  await loadKabupatenDropdown();
+}
+
+function updateConnStatus() {
+  const el = document.getElementById('connStatus');
+  if (navigator.onLine) {
+    el.textContent = 'Online';
+    el.className = 'online';
+  } else {
+    el.textContent = 'Offline';
+    el.className = 'offline';
+  }
+}
+window.addEventListener('online', updateConnStatus);
+window.addEventListener('offline', updateConnStatus);
+
+// ============================================================
+// INIT — kalau session sudah ada (login sebelumnya), langsung masuk app
+// tanpa perlu online (offline-first login persistence)
+// ============================================================
+(async function init() {
+  updateConnStatus();
+  const session = await getSession();
+  if (session && session.token && session.user) {
+    await showAppArea(session.user);
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+
+</body>
+</html>
