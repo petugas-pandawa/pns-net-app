@@ -89,6 +89,28 @@
   .userbar { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-dim); }
   .userbar b { color: var(--text); }
   .pill { font-size: 11px; background: rgba(59,130,246,.15); color: var(--accent); padding: 2px 8px; border-radius: 999px; }
+  .warn-box {
+    background: rgba(234,179,8,.12);
+    border: 1px solid rgba(234,179,8,.4);
+    color: #eab308;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 8px;
+    display: none;
+  }
+  .warn-box ul { margin: 6px 0 0; padding-left: 18px; }
+  .row-btns { display: flex; gap: 8px; margin-top: 10px; }
+  .row-btns button { margin-top: 0; }
+  .btn-sm { padding: 8px; font-size: 13px; }
+  .queue-badge {
+    font-size: 11px;
+    background: rgba(234,179,8,.15);
+    color: #eab308;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 6px;
+  }
 </style>
 </head>
 <body>
@@ -144,6 +166,35 @@
       </p>
     </div>
 
+    <div class="card" id="subWilayahCard" style="display:none;">
+      <h2>Dusun / Lingkungan <span id="queueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
+      <label for="selSubWilayah">Pilih yang sudah ada</label>
+      <select id="selSubWilayah"><option value="">-- pilih dusun/lingkungan --</option></select>
+
+      <label for="inputSubWilayahNama">Atau tambah baru</label>
+      <input type="text" id="inputSubWilayahNama" placeholder="mis. Dusun Mekar Jaya">
+      <select id="selJenisSub" style="margin-top:8px;">
+        <option value="DUSUN">Dusun</option>
+        <option value="LINGKUNGAN">Lingkungan</option>
+        <option value="KAMPUNG">Kampung</option>
+        <option value="BANJAR">Banjar</option>
+        <option value="LAINNYA">Lainnya</option>
+      </select>
+
+      <div id="subWilayahWarn" class="warn-box"></div>
+
+      <div class="row-btns">
+        <button id="btnCheckSubWilayah" class="secondary btn-sm">Cek Kemiripan</button>
+        <button id="btnAddSubWilayah" class="btn-sm">Tambahkan</button>
+      </div>
+      <div id="subWilayahMsg" style="font-size:13px; margin-top:8px;"></div>
+      <p style="font-size:11px; color:var(--text-dim); margin-top:10px;">
+        Data baru langsung tersimpan di Local DB (bisa dipakai walau offline) dan masuk
+        antrean Sync Queue — otomatis terkirim ke server saat "Sync Sekarang" berikutnya
+        dilakukan dalam kondisi online.
+      </p>
+    </div>
+
   </div>
 
 </main>
@@ -167,11 +218,12 @@ const MASTER_CONFIG = {
   MASTER_PERMISSION:      { store: 'master_permission',      keyPath: 'id_permission' },
   MASTER_STATUS:          { store: 'master_status',          keyPath: 'id_status' },
   MASTER_SUMBER_PELANGGAN:{ store: 'master_sumber_pelanggan',keyPath: 'id_sumber' },
-  MASTER_JENIS_PEMASANGAN:{ store: 'master_jenis_pemasangan',keyPath: 'id_jenis' }
+  MASTER_JENIS_PEMASANGAN:{ store: 'master_jenis_pemasangan',keyPath: 'id_jenis' },
+  MASTER_SUB_WILAYAH:     { store: 'master_sub_wilayah',     keyPath: 'id_sub_wilayah', parentField: 'parent_id_desa' }
 };
 
 const DB_NAME = 'pnsnet_local';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // dinaikkan dari 1 -> 2 karena menambah object store master_sub_wilayah
 let dbInstance = null;
 
 // ============================================================
@@ -252,6 +304,111 @@ function idbBulkPut(storeName, values) {
 }
 
 // ============================================================
+// NORMALISASI & DETEKSI KEMIRIPAN NAMA (Sub-Wilayah)
+// — cek cepat sisi client dari cache lokal, lihat blueprint §8 & Keputusan A
+// ============================================================
+function normalizeName(s) {
+  return (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i].concat(Array(n).fill(0)));
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function similarityRatio(a, b) {
+  const na = normalizeName(a), nb = normalizeName(b);
+  if (!na || !nb) return 0;
+  if (na === nb) return 1;
+  if (na.includes(nb) || nb.includes(na)) return 0.9;
+  const dist = levenshtein(na, nb);
+  const maxLen = Math.max(na.length, nb.length);
+  return 1 - dist / maxLen;
+}
+
+const SIMILARITY_THRESHOLD = 0.75;
+
+async function findSimilarSubWilayah(nama, idDesa) {
+  const existing = await idbGetByParent('master_sub_wilayah', idDesa);
+  return existing
+    .filter(r => r.status === 'AKTIF')
+    .map(r => ({ nama: r.nama, ratio: similarityRatio(nama, r.nama) }))
+    .filter(r => r.ratio >= SIMILARITY_THRESHOLD)
+    .sort((a, b) => b.ratio - a.ratio);
+}
+
+// ============================================================
+// SYNC QUEUE — transaksi offline (mis. tambah sub-wilayah)
+// ============================================================
+function makeLocalId() {
+  return 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+async function enqueueSyncItem(entityType, payload) {
+  const localId = makeLocalId();
+  await idbPut('sync_queue', {
+    local_id: localId,
+    entity_type: entityType,
+    payload: payload,
+    status: 'PENDING',
+    created_at: Date.now()
+  });
+  return localId;
+}
+
+async function getPendingQueue() {
+  const all = await idbGetAll('sync_queue');
+  return all.filter(q => q.status === 'PENDING' || q.status === 'FAILED');
+}
+
+async function updateQueueStatus(localId, status) {
+  const item = await idbGet('sync_queue', localId);
+  if (!item) return;
+  item.status = status;
+  await idbPut('sync_queue', item);
+}
+
+async function refreshQueueBadge() {
+  const pending = await getPendingQueue();
+  const badge = document.getElementById('queueBadge');
+  if (pending.length > 0) {
+    badge.textContent = pending.length + ' menunggu sync';
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+/** Kirim semua item PENDING/FAILED di sync_queue ke server. Dipanggil di awal runSync(). */
+async function pushPendingQueue(token, log) {
+  const pending = await getPendingQueue();
+  if (pending.length === 0) return;
+  log('Mengirim ' + pending.length + ' transaksi tertunda...');
+  const transactions = pending.map(q => ({ local_id: q.local_id, entity_type: q.entity_type, payload: q.payload }));
+  const resp = await apiCall({ action: 'sync_push', token, transactions });
+  if (!resp.success) { log('sync_push GAGAL: ' + resp.error); return; }
+  for (const r of resp.results) {
+    if (r.status === 'SYNCED') {
+      await updateQueueStatus(r.local_id, 'SYNCED');
+      log('  ' + r.local_id + ': tersinkron' + (r.flag_review ? ' (perlu ditinjau: mirip data lain)' : ''));
+    } else {
+      await updateQueueStatus(r.local_id, 'FAILED');
+      log('  ' + r.local_id + ': GAGAL — ' + (r.error || 'tidak diketahui'));
+    }
+  }
+  await refreshQueueBadge();
+}
+
+// ============================================================
 // API CALL — text/plain supaya lolos CORS preflight Apps Script
 // ============================================================
 async function apiCall(payload) {
@@ -310,6 +467,8 @@ async function runSync() {
   document.getElementById('syncLog').textContent = '';
 
   try {
+    await pushPendingQueue(session.token, logLine);
+
     const localVersions = await getAllLocalVersions();
     logLine('Cek versi server...');
     const checkResp = await apiCall({ action: 'sync_check', token: session.token, local_versions: localVersions });
@@ -398,6 +557,98 @@ async function loadDesaDropdown(idKecamatan) {
 }
 
 // ============================================================
+// SUB-WILAYAH (DUSUN/LINGKUNGAN) — tambah dari HP, offline-first
+// ============================================================
+let currentDesaId = '';
+
+async function loadSubWilayahDropdown(idDesa) {
+  const sel = document.getElementById('selSubWilayah');
+  sel.innerHTML = '<option value="">-- pilih dusun/lingkungan --</option>';
+  const rows = await idbGetByParent('master_sub_wilayah', idDesa);
+  rows.filter(r => r.status === 'AKTIF').forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id_sub_wilayah;
+    opt.textContent = r.nama + ' (' + r.jenis_sub + ')' + (r._pending ? ' — menunggu sync' : '');
+    sel.appendChild(opt);
+  });
+}
+
+function renderSimilarWarning(matches) {
+  const box = document.getElementById('subWilayahWarn');
+  if (!matches || matches.length === 0) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  box.style.display = 'block';
+  box.innerHTML = '<b>Data yang mirip sudah tersedia:</b><ul>' +
+    matches.map(m => '<li>' + m.nama + ' (kemiripan ' + Math.round(m.ratio * 100) + '%)</li>').join('') +
+    '</ul>Kalau memang sama, pilih dari dropdown di atas saja. Kalau memang berbeda, silakan lanjut tambahkan.';
+}
+
+document.getElementById('btnCheckSubWilayah').addEventListener('click', async () => {
+  const nama = document.getElementById('inputSubWilayahNama').value;
+  if (!nama.trim() || !currentDesaId) return;
+  const matches = await findSimilarSubWilayah(nama, currentDesaId);
+  renderSimilarWarning(matches);
+  document.getElementById('subWilayahMsg').textContent = matches.length === 0 ? 'Tidak ditemukan yang mirip — aman untuk ditambahkan.' : '';
+});
+
+document.getElementById('btnAddSubWilayah').addEventListener('click', async () => {
+  const namaInput = document.getElementById('inputSubWilayahNama');
+  const nama = namaInput.value.trim();
+  const jenisSub = document.getElementById('selJenisSub').value;
+  const msgEl = document.getElementById('subWilayahMsg');
+
+  if (!currentDesaId) { msgEl.innerHTML = '<span class="msg-err">Pilih Desa/Kelurahan dulu.</span>'; return; }
+  if (!nama) { msgEl.innerHTML = '<span class="msg-err">Nama tidak boleh kosong.</span>'; return; }
+
+  // cek duplikat sekali lagi sebelum simpan (client-side, dari cache)
+  const matches = await findSimilarSubWilayah(nama, currentDesaId);
+  renderSimilarWarning(matches);
+  if (matches.length > 0 && !namaInput.dataset.forceAdd) {
+    msgEl.innerHTML = '<span class="msg-err">Ada data mirip di atas. Ketuk "Tambahkan" sekali lagi kalau yakin ini memang data baru yang berbeda.</span>';
+    namaInput.dataset.forceAdd = '1';
+    return;
+  }
+  namaInput.dataset.forceAdd = '';
+
+  const session = await getSession();
+  const localId = makeLocalId();
+  const now = Date.now();
+
+  // simpan langsung ke Local DB supaya bisa dipakai instan walau offline
+  const localRecord = {
+    id_sub_wilayah: localId,
+    parent_id_desa: currentDesaId,
+    jenis_sub: jenisSub,
+    nama: nama,
+    nama_normalized: normalizeName(nama),
+    status: 'AKTIF',
+    version: 0,
+    created_by: session && session.user ? session.user.username : '',
+    updated_by: session && session.user ? session.user.username : '',
+    created_at: new Date(now).toISOString(),
+    updated_at: new Date(now).toISOString(),
+    _pending: true
+  };
+  await idbPut('master_sub_wilayah', localRecord);
+
+  await enqueueSyncItem('MASTER_SUB_WILAYAH_CREATE', {
+    local_id: localId,
+    parent_id_desa: currentDesaId,
+    jenis_sub: jenisSub,
+    nama: nama
+  });
+
+  namaInput.value = '';
+  renderSimilarWarning([]);
+  msgEl.innerHTML = '<span class="msg-ok">Tersimpan di Local DB. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
+  await loadSubWilayahDropdown(currentDesaId);
+  await refreshQueueBadge();
+});
+
+// ============================================================
 // UI WIRING
 // ============================================================
 document.getElementById('btnLogin').addEventListener('click', async () => {
@@ -439,6 +690,19 @@ document.getElementById('selKabupaten').addEventListener('change', (e) => {
 });
 document.getElementById('selKecamatan').addEventListener('change', (e) => {
   loadDesaDropdown(e.target.value);
+  currentDesaId = '';
+  document.getElementById('subWilayahCard').style.display = 'none';
+});
+
+document.getElementById('selDesa').addEventListener('change', async (e) => {
+  currentDesaId = e.target.value;
+  const card = document.getElementById('subWilayahCard');
+  if (!currentDesaId) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  document.getElementById('inputSubWilayahNama').value = '';
+  document.getElementById('subWilayahMsg').textContent = '';
+  renderSimilarWarning([]);
+  await loadSubWilayahDropdown(currentDesaId);
 });
 
 async function showAppArea(user) {
@@ -448,6 +712,7 @@ async function showAppArea(user) {
   document.getElementById('roleLabel').textContent = user.nama_role;
   await refreshVersionSummary();
   await loadKabupatenDropdown();
+  await refreshQueueBadge();
 }
 
 function updateConnStatus() {
