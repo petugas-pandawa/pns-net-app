@@ -111,6 +111,14 @@
     border-radius: 999px;
     margin-left: 6px;
   }
+  .cp-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cp-item:last-child { border-bottom: none; }
+  .cp-item .cp-name { color: var(--text); font-weight: 600; }
+  .cp-item .cp-sync-pending { color: #eab308; }
+  .cp-item .cp-sync-ok { color: var(--ok); }
 </style>
 </head>
 <body>
@@ -195,6 +203,28 @@
       </p>
     </div>
 
+    <div class="card" id="calonPelangganCard" style="display:none;">
+      <h2>Form Calon Pelanggan <span id="cpQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
+      <p style="font-size:12px; color:var(--text-dim);">Wilayah &amp; Dusun mengikuti pilihan dropdown di kartu sebelumnya.</p>
+
+      <label for="cpNama">Nama Calon Pelanggan</label>
+      <input type="text" id="cpNama" placeholder="Nama lengkap">
+      <label for="cpNoHp">No. HP</label>
+      <input type="text" id="cpNoHp" placeholder="08xxxxxxxxxx" inputmode="numeric">
+      <label for="cpAlamat">Alamat</label>
+      <input type="text" id="cpAlamat" placeholder="Alamat lengkap (opsional)">
+      <label for="cpPaket">Paket</label>
+      <select id="cpPaket"><option value="">-- pilih paket --</option></select>
+      <label for="cpSumber">Sumber Pelanggan</label>
+      <select id="cpSumber"><option value="">-- pilih sumber --</option></select>
+
+      <button id="btnSubmitCP">Simpan Calon Pelanggan</button>
+      <div id="cpMsg" style="font-size:13px; margin-top:8px;"></div>
+
+      <h2 style="margin-top:18px;">Daftar Lokal (Local DB)</h2>
+      <div id="cpList" style="font-size:13px; color:var(--text-dim);">Belum ada data.</div>
+    </div>
+
   </div>
 
 </main>
@@ -219,11 +249,20 @@ const MASTER_CONFIG = {
   MASTER_STATUS:          { store: 'master_status',          keyPath: 'id_status' },
   MASTER_SUMBER_PELANGGAN:{ store: 'master_sumber_pelanggan',keyPath: 'id_sumber' },
   MASTER_JENIS_PEMASANGAN:{ store: 'master_jenis_pemasangan',keyPath: 'id_jenis' },
-  MASTER_SUB_WILAYAH:     { store: 'master_sub_wilayah',     keyPath: 'id_sub_wilayah', parentField: 'parent_id_desa' }
+  MASTER_SUB_WILAYAH:     { store: 'master_sub_wilayah',     keyPath: 'id_sub_wilayah', parentField: 'parent_id_desa' },
+  CALON_PELANGGAN:        { store: 'calon_pelanggan',        keyPath: 'id_calon_pelanggan' }
 };
 
 const DB_NAME = 'pnsnet_local';
-const DB_VERSION = 2; // dinaikkan dari 1 -> 2 karena menambah object store master_sub_wilayah
+const DB_VERSION = 3; // dinaikkan 2 -> 3 karena menambah object store calon_pelanggan
+
+// Dipakai untuk rekonsiliasi: setelah entity_type ini berhasil sync, hapus
+// record sementara (keyed by local_id) dari store terkait, supaya baris
+// resmi dari server (dengan ID asli) yang tampil setelah sync_pull berikutnya.
+const ENTITY_TEMP_STORE_MAP = {
+  'MASTER_SUB_WILAYAH_CREATE': 'master_sub_wilayah',
+  'CALON_PELANGGAN_CREATE': 'calon_pelanggan'
+};
 let dbInstance = null;
 
 // ============================================================
@@ -298,6 +337,15 @@ function idbBulkPut(storeName, values) {
     const tx = db.transaction(storeName, 'readwrite');
     const os = tx.objectStore(storeName);
     values.forEach(v => os.put(v));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function idbDelete(storeName, key) {
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).delete(key);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   }));
@@ -399,6 +447,8 @@ async function pushPendingQueue(token, log) {
   for (const r of resp.results) {
     if (r.status === 'SYNCED') {
       await updateQueueStatus(r.local_id, 'SYNCED');
+      const storeToClean = ENTITY_TEMP_STORE_MAP[transactions.find(t => t.local_id === r.local_id).entity_type];
+      if (storeToClean) await idbDelete(storeToClean, r.local_id); // baris resmi server akan masuk lewat sync_pull berikutnya
       log('  ' + r.local_id + ': tersinkron' + (r.flag_review ? ' (perlu ditinjau: mirip data lain)' : ''));
     } else {
       await updateQueueStatus(r.local_id, 'FAILED');
@@ -494,6 +544,11 @@ async function runSync() {
     document.getElementById('syncMsg').innerHTML = '<span class="msg-ok">Sync selesai.</span>';
     await refreshVersionSummary();
     await loadKabupatenDropdown();
+    await loadPaketDropdown();
+    await loadSumberDropdown();
+    if (currentDesaId) await refreshCPList();
+    await refreshQueueBadge();
+    await refreshCpQueueBadge();
   } catch (err) {
     document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Sync gagal: ' + err.message + ' (kalau offline, ini wajar — data lama tetap dipakai)</span>';
   } finally {
@@ -649,6 +704,107 @@ document.getElementById('btnAddSubWilayah').addEventListener('click', async () =
 });
 
 // ============================================================
+// FORM CALON PELANGGAN (Fase 9) — transaksi pertama, offline-first
+// ============================================================
+async function loadPaketDropdown() {
+  const sel = document.getElementById('cpPaket');
+  sel.innerHTML = '<option value="">-- pilih paket --</option>';
+  const rows = await idbGetAll('master_paket');
+  rows.filter(r => r.status === 'AKTIF').forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id_paket;
+    opt.textContent = r.nama_paket + ' — Rp' + Number(r.harga_bulanan).toLocaleString('id-ID') + '/bln';
+    sel.appendChild(opt);
+  });
+}
+
+async function loadSumberDropdown() {
+  const sel = document.getElementById('cpSumber');
+  sel.innerHTML = '<option value="">-- pilih sumber --</option>';
+  const rows = await idbGetAll('master_sumber_pelanggan');
+  rows.filter(r => r.status === 'AKTIF').forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id_sumber;
+    opt.textContent = r.nama;
+    sel.appendChild(opt);
+  });
+}
+
+async function refreshCpQueueBadge() {
+  const pending = await getPendingQueue();
+  const cpPending = pending.filter(q => q.entity_type === 'CALON_PELANGGAN_CREATE' || q.entity_type === 'CALON_PELANGGAN_UPDATE_STATUS');
+  const badge = document.getElementById('cpQueueBadge');
+  if (cpPending.length > 0) {
+    badge.textContent = cpPending.length + ' menunggu sync';
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+async function refreshCPList() {
+  const listEl = document.getElementById('cpList');
+  const rows = await idbGetAll('calon_pelanggan');
+  const filtered = currentDesaId ? rows.filter(r => r.id_desa === currentDesaId) : rows;
+  if (filtered.length === 0) {
+    listEl.textContent = 'Belum ada data untuk desa ini.';
+    return;
+  }
+  const pendingQueue = await getPendingQueue();
+  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
+  listEl.innerHTML = filtered.map(r => {
+    const isPending = pendingLocalIds.has(r.id_calon_pelanggan) || r._pending;
+    return '<div class="cp-item"><span class="cp-name">' + r.nama + '</span> — ' + r.no_hp +
+      '<br><span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' +
+      (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span></div>';
+  }).join('');
+}
+
+document.getElementById('btnSubmitCP').addEventListener('click', async () => {
+  const nama = document.getElementById('cpNama').value.trim();
+  const noHp = document.getElementById('cpNoHp').value.trim();
+  const alamat = document.getElementById('cpAlamat').value.trim();
+  const idPaket = document.getElementById('cpPaket').value;
+  const idSumber = document.getElementById('cpSumber').value;
+  const msgEl = document.getElementById('cpMsg');
+
+  if (!currentDesaId) { msgEl.innerHTML = '<span class="msg-err">Pilih Kabupaten/Kecamatan/Desa dulu di kartu atas.</span>'; return; }
+  if (!nama || !noHp || !idPaket || !idSumber) {
+    msgEl.innerHTML = '<span class="msg-err">Nama, No HP, Paket, dan Sumber wajib diisi.</span>';
+    return;
+  }
+
+  const session = await getSession();
+  const idSubWilayah = document.getElementById('selSubWilayah').value || null;
+  const localId = makeLocalId();
+  const now = new Date().toISOString();
+
+  const localRecord = {
+    id_calon_pelanggan: localId,
+    nama, no_hp: noHp, alamat,
+    id_paket: idPaket, id_desa: currentDesaId, id_sub_wilayah: idSubWilayah, id_sumber: idSumber,
+    id_status_proses: '', catatan: '', status: 'AKTIF', version: 0,
+    created_by: session && session.user ? session.user.username : '',
+    updated_by: session && session.user ? session.user.username : '',
+    created_at: now, updated_at: now,
+    _pending: true
+  };
+  await idbPut('calon_pelanggan', localRecord);
+
+  await enqueueSyncItem('CALON_PELANGGAN_CREATE', {
+    local_id: localId, nama, no_hp: noHp, alamat,
+    id_paket: idPaket, id_desa: currentDesaId, id_sub_wilayah: idSubWilayah, id_sumber: idSumber
+  });
+
+  document.getElementById('cpNama').value = '';
+  document.getElementById('cpNoHp').value = '';
+  document.getElementById('cpAlamat').value = '';
+  msgEl.innerHTML = '<span class="msg-ok">Tersimpan di Local DB. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
+  await refreshCPList();
+  await refreshCpQueueBadge();
+});
+
+// ============================================================
 // UI WIRING
 // ============================================================
 document.getElementById('btnLogin').addEventListener('click', async () => {
@@ -697,17 +853,22 @@ document.getElementById('selKecamatan').addEventListener('change', (e) => {
   loadDesaDropdown(e.target.value);
   currentDesaId = '';
   document.getElementById('subWilayahCard').style.display = 'none';
+  document.getElementById('calonPelangganCard').style.display = 'none';
 });
 
 document.getElementById('selDesa').addEventListener('change', async (e) => {
   currentDesaId = e.target.value;
   const card = document.getElementById('subWilayahCard');
-  if (!currentDesaId) { card.style.display = 'none'; return; }
+  const cpCard = document.getElementById('calonPelangganCard');
+  if (!currentDesaId) { card.style.display = 'none'; cpCard.style.display = 'none'; return; }
   card.style.display = 'block';
+  cpCard.style.display = 'block';
   document.getElementById('inputSubWilayahNama').value = '';
   document.getElementById('subWilayahMsg').textContent = '';
   renderSimilarWarning([]);
   await loadSubWilayahDropdown(currentDesaId);
+  await refreshCPList();
+  await refreshCpQueueBadge();
 });
 
 async function showAppArea(user) {
@@ -717,6 +878,8 @@ async function showAppArea(user) {
   document.getElementById('roleLabel').textContent = user.nama_role;
   await refreshVersionSummary();
   await loadKabupatenDropdown();
+  await loadPaketDropdown();
+  await loadSumberDropdown();
   await refreshQueueBadge();
 }
 
