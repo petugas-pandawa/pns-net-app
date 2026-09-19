@@ -666,11 +666,16 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
       msgEl.innerHTML = '<span class="msg-err">' + resp.error + '</span>';
       return;
     }
+    if (!resp.token || !resp.user) {
+      msgEl.innerHTML = '<span class="msg-err">Respons server tidak lengkap (kemungkinan permintaan dialihkan jadi GET). Coba lagi.</span>';
+      console.log('Login response tidak lengkap:', resp);
+      return;
+    }
     await saveSession(resp.token, resp.user);
     msgEl.textContent = '';
     await showAppArea(resp.user);
   } catch (err) {
-    msgEl.innerHTML = '<span class="msg-err">Gagal terhubung ke server. Kalau Anda offline, login pertama memang wajib online dulu.</span>';
+    msgEl.innerHTML = '<span class="msg-err">Gagal terhubung ke server. Detail: ' + (err && err.message ? err.message : String(err)) + '</span>';
   }
 });
 
