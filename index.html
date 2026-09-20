@@ -233,7 +233,7 @@
 // ============================================================
 // KONFIGURASI — GANTI SESUAI DEPLOYMENT APPS SCRIPT ANDA
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbxL5jbQiC02TSmD7Ys183w4l2S3pHQSnEEY324Qok_Uj9zejoMios2KPIkCJkxRjiKSuA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyr8TF3wLwnNdXfmsJ83x2I9MugfpQs1OaITGlyvoBusyIfenVm7l2eqNjGofhLJYlI6A/exec';
 
 // ============================================================
 // KONFIGURASI MASTER <-> OBJECT STORE INDEXEDDB
@@ -250,7 +250,7 @@ const MASTER_CONFIG = {
   MASTER_SUMBER_PELANGGAN:{ store: 'master_sumber_pelanggan',keyPath: 'id_sumber' },
   MASTER_JENIS_PEMASANGAN:{ store: 'master_jenis_pemasangan',keyPath: 'id_jenis' },
   MASTER_SUB_WILAYAH:     { store: 'master_sub_wilayah',     keyPath: 'id_sub_wilayah', parentField: 'parent_id_desa' },
-  CALON_PELANGGAN:        { store: 'calon_pelanggan',        keyPath: 'id_calon_pelanggan' }
+  TRANSAKSI_CALON_PELANGGAN: { store: 'calon_pelanggan',     keyPath: 'id_calon_pelanggan' }
 };
 
 const DB_NAME = 'pnsnet_local';
