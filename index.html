@@ -402,7 +402,10 @@ function makeLocalId() {
 }
 
 async function enqueueSyncItem(entityType, payload) {
-  const localId = makeLocalId();
+  // PENTING: pakai local_id yang SAMA dengan yang sudah dipakai di record datanya
+  // (dikirim lewat payload.local_id) — jangan bikin id acak baru di sini, supaya
+  // nanti proses hapus-record-sementara (rekonsiliasi) bisa menemukan recordnya.
+  const localId = payload.local_id || makeLocalId();
   await idbPut('sync_queue', {
     local_id: localId,
     entity_type: entityType,
