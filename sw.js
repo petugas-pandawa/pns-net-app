@@ -3,7 +3,7 @@
 // walau HP benar-benar tanpa internet. Data (via sync) tetap lewat IndexedDB,
 // bukan lewat cache ini.
 
-const CACHE_NAME = 'pnsnet-shell-v3'; // dinaikkan lagi (Fase 9: Form Calon Pelanggan)
+const CACHE_NAME = 'pnsnet-shell-v4'; // dinaikkan lagi (Fase 10: Pemasangan + ubah status)
 const SHELL_FILES = [
   './',
   './index.html',
