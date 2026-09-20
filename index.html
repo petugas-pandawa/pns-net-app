@@ -271,6 +271,14 @@
       <div id="pmList" style="font-size:13px; color:var(--text-dim);">Belum ada data.</div>
     </div>
 
+    <div class="card" id="pelangganCard" style="display:none;">
+      <h2>Pelanggan Aktif</h2>
+      <p style="font-size:12px; color:var(--text-dim);">
+        Muncul otomatis begitu Pemasangan ditandai SELESAI — tidak ada form manual, data diambil dari Calon Pelanggan + Pemasangan.
+      </p>
+      <div id="plList" style="font-size:13px; color:var(--text-dim);">Belum ada data.</div>
+    </div>
+
   </div>
 
 </main>
@@ -298,11 +306,12 @@ const MASTER_CONFIG = {
   MASTER_SUB_WILAYAH:     { store: 'master_sub_wilayah',     keyPath: 'id_sub_wilayah', parentField: 'parent_id_desa' },
   TRANSAKSI_CALON_PELANGGAN: { store: 'calon_pelanggan',     keyPath: 'id_calon_pelanggan' },
   TRANSAKSI_PEMASANGAN:      { store: 'pemasangan',           keyPath: 'id_pemasangan' },
-  MASTER_TEKNISI:             { store: 'master_teknisi',       keyPath: 'id_teknisi' }
+  MASTER_TEKNISI:             { store: 'master_teknisi',       keyPath: 'id_teknisi' },
+  PELANGGAN:                   { store: 'pelanggan',            keyPath: 'id_pelanggan' }
 };
 
 const DB_NAME = 'pnsnet_local';
-const DB_VERSION = 4; // dinaikkan 3 -> 4 karena menambah object store pemasangan & master_teknisi
+const DB_VERSION = 5; // dinaikkan 4 -> 5 karena menambah object store pelanggan
 
 // Dipakai untuk rekonsiliasi: setelah entity_type ini berhasil sync, hapus
 // record sementara (keyed by local_id) dari store terkait, supaya baris
@@ -608,6 +617,7 @@ async function runSync() {
     await refreshQueueBadge();
     await refreshCpQueueBadge();
     await refreshPmQueueBadge();
+    if (currentDesaId) await refreshPelangganList();
   } catch (err) {
     document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Sync gagal: ' + err.message + ' (kalau offline, ini wajar — data lama tetap dipakai)</span>';
   } finally {
@@ -1019,6 +1029,17 @@ document.getElementById('pmList').addEventListener('click', async (e) => {
   await refreshPmQueueBadge();
 });
 
+async function refreshPelangganList() {
+  const listEl = document.getElementById('plList');
+  const rows = await idbGetAll('pelanggan');
+  const filtered = currentDesaId ? rows.filter(r => r.id_desa === currentDesaId) : rows;
+  if (filtered.length === 0) { listEl.textContent = 'Belum ada pelanggan aktif untuk desa ini.'; return; }
+  listEl.innerHTML = filtered.map(r =>
+    '<div class="cp-item"><span class="cp-name">' + r.nama + '</span> — ' + r.no_hp +
+    '<br><span class="status-label">Aktif sejak ' + (r.tanggal_aktif || '').slice(0, 10) + '</span></div>'
+  ).join('');
+}
+
 document.getElementById('btnSubmitPM').addEventListener('click', async () => {
   const idCalonPelanggan = document.getElementById('pmCalonPelanggan').value;
   const idJenis = document.getElementById('pmJenis').value;
@@ -1111,6 +1132,7 @@ document.getElementById('selKecamatan').addEventListener('change', (e) => {
   document.getElementById('subWilayahCard').style.display = 'none';
   document.getElementById('calonPelangganCard').style.display = 'none';
   document.getElementById('pemasanganCard').style.display = 'none';
+  document.getElementById('pelangganCard').style.display = 'none';
 });
 
 document.getElementById('selDesa').addEventListener('change', async (e) => {
@@ -1118,10 +1140,12 @@ document.getElementById('selDesa').addEventListener('change', async (e) => {
   const card = document.getElementById('subWilayahCard');
   const cpCard = document.getElementById('calonPelangganCard');
   const pmCard = document.getElementById('pemasanganCard');
-  if (!currentDesaId) { card.style.display = 'none'; cpCard.style.display = 'none'; pmCard.style.display = 'none'; return; }
+  const plCard = document.getElementById('pelangganCard');
+  if (!currentDesaId) { card.style.display = 'none'; cpCard.style.display = 'none'; pmCard.style.display = 'none'; plCard.style.display = 'none'; return; }
   card.style.display = 'block';
   cpCard.style.display = 'block';
   pmCard.style.display = 'block';
+  plCard.style.display = 'block';
   document.getElementById('inputSubWilayahNama').value = '';
   document.getElementById('subWilayahMsg').textContent = '';
   renderSimilarWarning([]);
@@ -1131,6 +1155,7 @@ document.getElementById('selDesa').addEventListener('change', async (e) => {
   await loadCalonPelangganDropdownForPemasangan();
   await refreshPemasanganList();
   await refreshPmQueueBadge();
+  await refreshPelangganList();
 });
 
 async function showAppArea(user) {
