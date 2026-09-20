@@ -119,6 +119,32 @@
   .cp-item .cp-name { color: var(--text); font-weight: 600; }
   .cp-item .cp-sync-pending { color: #eab308; }
   .cp-item .cp-sync-ok { color: var(--ok); }
+  .status-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .status-row select {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .status-row button {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 12px;
+    margin-top: 0;
+  }
+  .status-label {
+    display: inline-block;
+    font-size: 11px;
+    background: rgba(59,130,246,.15);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-top: 4px;
+  }
 </style>
 </head>
 <body>
@@ -225,6 +251,26 @@
       <div id="cpList" style="font-size:13px; color:var(--text-dim);">Belum ada data.</div>
     </div>
 
+    <div class="card" id="pemasanganCard" style="display:none;">
+      <h2>Pemasangan <span id="pmQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
+      <label for="pmCalonPelanggan">Calon Pelanggan</label>
+      <select id="pmCalonPelanggan"><option value="">-- pilih calon pelanggan --</option></select>
+      <label for="pmJenis">Jenis Pemasangan</label>
+      <select id="pmJenis"><option value="">-- pilih jenis --</option></select>
+      <label for="pmTeknisi">Teknisi (opsional)</label>
+      <select id="pmTeknisi"><option value="">-- belum ditentukan --</option></select>
+      <label for="pmTanggal">Tanggal Jadwal</label>
+      <input type="date" id="pmTanggal">
+      <label for="pmCatatan">Catatan</label>
+      <input type="text" id="pmCatatan" placeholder="Opsional">
+
+      <button id="btnSubmitPM">Jadwalkan Pemasangan</button>
+      <div id="pmMsg" style="font-size:13px; margin-top:8px;"></div>
+
+      <h2 style="margin-top:18px;">Daftar Pemasangan (Local DB)</h2>
+      <div id="pmList" style="font-size:13px; color:var(--text-dim);">Belum ada data.</div>
+    </div>
+
   </div>
 
 </main>
@@ -250,18 +296,21 @@ const MASTER_CONFIG = {
   MASTER_SUMBER_PELANGGAN:{ store: 'master_sumber_pelanggan',keyPath: 'id_sumber' },
   MASTER_JENIS_PEMASANGAN:{ store: 'master_jenis_pemasangan',keyPath: 'id_jenis' },
   MASTER_SUB_WILAYAH:     { store: 'master_sub_wilayah',     keyPath: 'id_sub_wilayah', parentField: 'parent_id_desa' },
-  TRANSAKSI_CALON_PELANGGAN: { store: 'calon_pelanggan',     keyPath: 'id_calon_pelanggan' }
+  TRANSAKSI_CALON_PELANGGAN: { store: 'calon_pelanggan',     keyPath: 'id_calon_pelanggan' },
+  TRANSAKSI_PEMASANGAN:      { store: 'pemasangan',           keyPath: 'id_pemasangan' },
+  MASTER_TEKNISI:             { store: 'master_teknisi',       keyPath: 'id_teknisi' }
 };
 
 const DB_NAME = 'pnsnet_local';
-const DB_VERSION = 3; // dinaikkan 2 -> 3 karena menambah object store calon_pelanggan
+const DB_VERSION = 4; // dinaikkan 3 -> 4 karena menambah object store pemasangan & master_teknisi
 
 // Dipakai untuk rekonsiliasi: setelah entity_type ini berhasil sync, hapus
 // record sementara (keyed by local_id) dari store terkait, supaya baris
 // resmi dari server (dengan ID asli) yang tampil setelah sync_pull berikutnya.
 const ENTITY_TEMP_STORE_MAP = {
   'MASTER_SUB_WILAYAH_CREATE': 'master_sub_wilayah',
-  'CALON_PELANGGAN_CREATE': 'calon_pelanggan'
+  'CALON_PELANGGAN_CREATE': 'calon_pelanggan',
+  'PEMASANGAN_CREATE': 'pemasangan'
 };
 let dbInstance = null;
 
@@ -550,8 +599,15 @@ async function runSync() {
     await loadPaketDropdown();
     await loadSumberDropdown();
     if (currentDesaId) await refreshCPList();
+    await loadJenisPemasanganDropdown();
+    await loadTeknisiDropdown();
+    if (currentDesaId) {
+      await loadCalonPelangganDropdownForPemasangan();
+      await refreshPemasanganList();
+    }
     await refreshQueueBadge();
     await refreshCpQueueBadge();
+    await refreshPmQueueBadge();
   } catch (err) {
     document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Sync gagal: ' + err.message + ' (kalau offline, ini wajar — data lama tetap dipakai)</span>';
   } finally {
@@ -755,12 +811,24 @@ async function refreshCPList() {
   }
   const pendingQueue = await getPendingQueue();
   const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
-  listEl.innerHTML = filtered.map(r => {
+  const statuses = await getStatusListByKelompok('CALON_PELANGGAN');
+
+  const htmlParts = [];
+  for (const r of filtered) {
     const isPending = pendingLocalIds.has(r.id_calon_pelanggan) || r._pending;
-    return '<div class="cp-item"><span class="cp-name">' + r.nama + '</span> — ' + r.no_hp +
-      '<br><span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' +
-      (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span></div>';
-  }).join('');
+    const namaStatus = await getStatusNama(r.id_status_proses);
+    htmlParts.push(
+      '<div class="cp-item" data-id="' + r.id_calon_pelanggan + '">' +
+      '<span class="cp-name">' + r.nama + '</span> — ' + r.no_hp +
+      '<br><span class="status-label">' + namaStatus + '</span> ' +
+      '<span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' + (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span>' +
+      (isPending ? '' :
+        '<div class="status-row">' + statusSelectHtml('sel-status-cp', statuses, r.id_status_proses) +
+        '<button class="btn-ubah-status-cp">Ubah</button></div>') +
+      '</div>'
+    );
+  }
+  listEl.innerHTML = htmlParts.join('');
 }
 
 document.getElementById('btnSubmitCP').addEventListener('click', async () => {
@@ -805,6 +873,191 @@ document.getElementById('btnSubmitCP').addEventListener('click', async () => {
   msgEl.innerHTML = '<span class="msg-ok">Tersimpan di Local DB. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
   await refreshCPList();
   await refreshCpQueueBadge();
+  await loadCalonPelangganDropdownForPemasangan();
+});
+
+// ============================================================
+// STATUS HELPERS (dipakai Calon Pelanggan & Pemasangan)
+// ============================================================
+async function getStatusListByKelompok(kelompok) {
+  const rows = await idbGetAll('master_status');
+  return rows
+    .filter(r => r.kelompok === kelompok && r.status === 'AKTIF')
+    .sort((a, b) => Number(a.urutan) - Number(b.urutan));
+}
+
+async function getStatusNama(idStatus) {
+  if (!idStatus) return '(belum ada status)';
+  const rows = await idbGetAll('master_status');
+  const found = rows.find(r => r.id_status === idStatus);
+  return found ? found.nama_status : '(status tidak dikenal)';
+}
+
+function statusSelectHtml(selectClass, statuses, currentId) {
+  return '<select class="' + selectClass + '">' +
+    statuses.map(s => '<option value="' + s.kode_status + '"' + (s.id_status === currentId ? ' selected' : '') + '>' + s.nama_status + '</option>').join('') +
+    '</select>';
+}
+
+// ============================================================
+// UBAH STATUS CALON PELANGGAN (klik dari Daftar Lokal)
+// ============================================================
+document.getElementById('cpList').addEventListener('click', async (e) => {
+  if (!e.target.classList.contains('btn-ubah-status-cp')) return;
+  const item = e.target.closest('.cp-item');
+  const idCalonPelanggan = item.dataset.id;
+  const select = item.querySelector('.sel-status-cp');
+  const kodeStatusBaru = select.value;
+
+  const localId = makeLocalId();
+  await enqueueSyncItem('CALON_PELANGGAN_UPDATE_STATUS', {
+    local_id: localId, id_calon_pelanggan: idCalonPelanggan, kode_status_baru: kodeStatusBaru, catatan: ''
+  });
+  e.target.textContent = 'Menunggu sync...';
+  e.target.disabled = true;
+  await refreshCpQueueBadge();
+});
+
+// ============================================================
+// FORM PEMASANGAN (Fase 10)
+// ============================================================
+async function loadJenisPemasanganDropdown() {
+  const sel = document.getElementById('pmJenis');
+  sel.innerHTML = '<option value="">-- pilih jenis --</option>';
+  const rows = await idbGetAll('master_jenis_pemasangan');
+  rows.filter(r => r.status === 'AKTIF').forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id_jenis;
+    opt.textContent = r.nama + ' — Rp' + Number(r.biaya).toLocaleString('id-ID');
+    sel.appendChild(opt);
+  });
+}
+
+async function loadTeknisiDropdown() {
+  const sel = document.getElementById('pmTeknisi');
+  sel.innerHTML = '<option value="">-- belum ditentukan --</option>';
+  const rows = await idbGetAll('master_teknisi');
+  rows.filter(r => r.status === 'AKTIF').forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id_teknisi;
+    opt.textContent = r.nama;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadCalonPelangganDropdownForPemasangan() {
+  const sel = document.getElementById('pmCalonPelanggan');
+  sel.innerHTML = '<option value="">-- pilih calon pelanggan --</option>';
+  const rows = await idbGetAll('calon_pelanggan');
+  const pendingQueue = await getPendingQueue();
+  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
+  rows
+    .filter(r => r.id_desa === currentDesaId && !r._pending && !pendingLocalIds.has(r.id_calon_pelanggan))
+    .forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.id_calon_pelanggan;
+      opt.textContent = r.nama + ' — ' + r.no_hp;
+      sel.appendChild(opt);
+    });
+}
+
+async function refreshPmQueueBadge() {
+  const pending = await getPendingQueue();
+  const pmPending = pending.filter(q => q.entity_type === 'PEMASANGAN_CREATE' || q.entity_type === 'PEMASANGAN_UPDATE_STATUS');
+  const badge = document.getElementById('pmQueueBadge');
+  if (pmPending.length > 0) {
+    badge.textContent = pmPending.length + ' menunggu sync';
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+async function refreshPemasanganList() {
+  const listEl = document.getElementById('pmList');
+  const rows = await idbGetAll('pemasangan');
+  if (rows.length === 0) { listEl.textContent = 'Belum ada data pemasangan.'; return; }
+
+  const pendingQueue = await getPendingQueue();
+  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
+  const statuses = await getStatusListByKelompok('PEMASANGAN');
+  const cpRows = await idbGetAll('calon_pelanggan');
+
+  const htmlParts = [];
+  for (const r of rows) {
+    const isPending = pendingLocalIds.has(r.id_pemasangan) || r._pending;
+    const cp = cpRows.find(c => c.id_calon_pelanggan === r.id_calon_pelanggan);
+    const namaCp = cp ? cp.nama : '(calon pelanggan tidak ditemukan)';
+    const namaStatus = await getStatusNama(r.id_status_proses);
+    htmlParts.push(
+      '<div class="cp-item" data-id="' + r.id_pemasangan + '">' +
+      '<span class="cp-name">' + namaCp + '</span> — ' + (r.tanggal_jadwal || 'belum dijadwalkan') +
+      '<br><span class="status-label">' + namaStatus + '</span> ' +
+      '<span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' + (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span>' +
+      (isPending ? '' :
+        '<div class="status-row">' + statusSelectHtml('sel-status-pm', statuses, r.id_status_proses) +
+        '<button class="btn-ubah-status-pm">Ubah</button></div>') +
+      '</div>'
+    );
+  }
+  listEl.innerHTML = htmlParts.join('');
+}
+
+document.getElementById('pmList').addEventListener('click', async (e) => {
+  if (!e.target.classList.contains('btn-ubah-status-pm')) return;
+  const item = e.target.closest('.cp-item');
+  const idPemasangan = item.dataset.id;
+  const select = item.querySelector('.sel-status-pm');
+  const kodeStatusBaru = select.value;
+
+  const localId = makeLocalId();
+  await enqueueSyncItem('PEMASANGAN_UPDATE_STATUS', {
+    local_id: localId, id_pemasangan: idPemasangan, kode_status_baru: kodeStatusBaru, catatan: ''
+  });
+  e.target.textContent = 'Menunggu sync...';
+  e.target.disabled = true;
+  await refreshPmQueueBadge();
+});
+
+document.getElementById('btnSubmitPM').addEventListener('click', async () => {
+  const idCalonPelanggan = document.getElementById('pmCalonPelanggan').value;
+  const idJenis = document.getElementById('pmJenis').value;
+  const idTeknisi = document.getElementById('pmTeknisi').value || null;
+  const tanggal = document.getElementById('pmTanggal').value;
+  const catatan = document.getElementById('pmCatatan').value.trim();
+  const msgEl = document.getElementById('pmMsg');
+
+  if (!idCalonPelanggan || !idJenis) {
+    msgEl.innerHTML = '<span class="msg-err">Calon Pelanggan dan Jenis Pemasangan wajib dipilih.</span>';
+    return;
+  }
+
+  const session = await getSession();
+  const localId = makeLocalId();
+  const now = new Date().toISOString();
+
+  const localRecord = {
+    id_pemasangan: localId,
+    id_calon_pelanggan: idCalonPelanggan, id_teknisi: idTeknisi, id_jenis_pemasangan: idJenis,
+    tanggal_jadwal: tanggal, id_status_proses: '', catatan, status: 'AKTIF', version: 0,
+    created_by: session && session.user ? session.user.username : '',
+    updated_by: session && session.user ? session.user.username : '',
+    created_at: now, updated_at: now,
+    _pending: true
+  };
+  await idbPut('pemasangan', localRecord);
+
+  await enqueueSyncItem('PEMASANGAN_CREATE', {
+    local_id: localId, id_calon_pelanggan: idCalonPelanggan, id_teknisi: idTeknisi,
+    id_jenis_pemasangan: idJenis, tanggal_jadwal: tanggal, catatan
+  });
+
+  document.getElementById('pmTanggal').value = '';
+  document.getElementById('pmCatatan').value = '';
+  msgEl.innerHTML = '<span class="msg-ok">Tersimpan di Local DB. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
+  await refreshPemasanganList();
+  await refreshPmQueueBadge();
+  await refreshCPList(); // status Calon Pelanggan akan ikut berubah setelah sync
 });
 
 // ============================================================
@@ -857,21 +1110,27 @@ document.getElementById('selKecamatan').addEventListener('change', (e) => {
   currentDesaId = '';
   document.getElementById('subWilayahCard').style.display = 'none';
   document.getElementById('calonPelangganCard').style.display = 'none';
+  document.getElementById('pemasanganCard').style.display = 'none';
 });
 
 document.getElementById('selDesa').addEventListener('change', async (e) => {
   currentDesaId = e.target.value;
   const card = document.getElementById('subWilayahCard');
   const cpCard = document.getElementById('calonPelangganCard');
-  if (!currentDesaId) { card.style.display = 'none'; cpCard.style.display = 'none'; return; }
+  const pmCard = document.getElementById('pemasanganCard');
+  if (!currentDesaId) { card.style.display = 'none'; cpCard.style.display = 'none'; pmCard.style.display = 'none'; return; }
   card.style.display = 'block';
   cpCard.style.display = 'block';
+  pmCard.style.display = 'block';
   document.getElementById('inputSubWilayahNama').value = '';
   document.getElementById('subWilayahMsg').textContent = '';
   renderSimilarWarning([]);
   await loadSubWilayahDropdown(currentDesaId);
   await refreshCPList();
   await refreshCpQueueBadge();
+  await loadCalonPelangganDropdownForPemasangan();
+  await refreshPemasanganList();
+  await refreshPmQueueBadge();
 });
 
 async function showAppArea(user) {
@@ -883,6 +1142,8 @@ async function showAppArea(user) {
   await loadKabupatenDropdown();
   await loadPaketDropdown();
   await loadSumberDropdown();
+  await loadJenisPemasanganDropdown();
+  await loadTeknisiDropdown();
   await refreshQueueBadge();
 }
 
