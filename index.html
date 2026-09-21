@@ -229,6 +229,21 @@
       </p>
     </div>
 
+    <div class="card" id="odpCard" style="display:none;">
+      <h2>ODP <span id="odpQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
+      <label for="odpNama">Nama ODP</label>
+      <input type="text" id="odpNama" placeholder="mis. ODP-BGK-01">
+      <label for="odpAlamat">Alamat / Lokasi</label>
+      <input type="text" id="odpAlamat" placeholder="Opsional">
+      <label for="odpKapasitas">Kapasitas Port</label>
+      <input type="number" id="odpKapasitas" placeholder="mis. 8" min="1">
+      <button id="btnSubmitOdp">Tambah ODP</button>
+      <div id="odpMsg" style="font-size:13px; margin-top:8px;"></div>
+
+      <h2 style="margin-top:18px;">Daftar ODP di Desa Ini</h2>
+      <div id="odpList" style="font-size:13px; color:var(--text-dim);">Belum ada ODP.</div>
+    </div>
+
     <div class="card" id="calonPelangganCard" style="display:none;">
       <h2>Form Calon Pelanggan <span id="cpQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
       <p style="font-size:12px; color:var(--text-dim);">Wilayah &amp; Dusun mengikuti pilihan dropdown di kartu sebelumnya.</p>
@@ -257,6 +272,10 @@
       <select id="pmCalonPelanggan"><option value="">-- pilih calon pelanggan --</option></select>
       <label for="pmJenis">Jenis Pemasangan</label>
       <select id="pmJenis"><option value="">-- pilih jenis --</option></select>
+      <label for="pmOdp">ODP</label>
+      <select id="pmOdp"><option value="">-- belum pilih ODP --</option></select>
+      <label for="pmPort">Port</label>
+      <select id="pmPort" disabled><option value="">-- pilih ODP dulu --</option></select>
       <label for="pmTeknisi">Teknisi (opsional)</label>
       <select id="pmTeknisi"><option value="">-- belum ditentukan --</option></select>
       <label for="pmTanggal">Tanggal Jadwal</label>
@@ -307,11 +326,13 @@ const MASTER_CONFIG = {
   TRANSAKSI_CALON_PELANGGAN: { store: 'calon_pelanggan',     keyPath: 'id_calon_pelanggan' },
   TRANSAKSI_PEMASANGAN:      { store: 'pemasangan',           keyPath: 'id_pemasangan' },
   MASTER_TEKNISI:             { store: 'master_teknisi',       keyPath: 'id_teknisi' },
-  PELANGGAN:                   { store: 'pelanggan',            keyPath: 'id_pelanggan' }
+  PELANGGAN:                   { store: 'pelanggan',            keyPath: 'id_pelanggan' },
+  MASTER_ODP:                  { store: 'master_odp',           keyPath: 'id_odp', parentField: 'id_desa' },
+  MASTER_PORT_ODP:             { store: 'master_port_odp',      keyPath: 'id_port', parentField: 'id_odp' }
 };
 
 const DB_NAME = 'pnsnet_local';
-const DB_VERSION = 5; // dinaikkan 4 -> 5 karena menambah object store pelanggan
+const DB_VERSION = 6; // dinaikkan 5 -> 6 karena menambah object store master_odp & master_port_odp
 
 // Dipakai untuk rekonsiliasi: setelah entity_type ini berhasil sync, hapus
 // record sementara (keyed by local_id) dari store terkait, supaya baris
@@ -319,7 +340,8 @@ const DB_VERSION = 5; // dinaikkan 4 -> 5 karena menambah object store pelanggan
 const ENTITY_TEMP_STORE_MAP = {
   'MASTER_SUB_WILAYAH_CREATE': 'master_sub_wilayah',
   'CALON_PELANGGAN_CREATE': 'calon_pelanggan',
-  'PEMASANGAN_CREATE': 'pemasangan'
+  'PEMASANGAN_CREATE': 'pemasangan',
+  'MASTER_ODP_CREATE': 'master_odp'
 };
 let dbInstance = null;
 
@@ -613,10 +635,13 @@ async function runSync() {
     if (currentDesaId) {
       await loadCalonPelangganDropdownForPemasangan();
       await refreshPemasanganList();
+      await refreshOdpList();
+      await loadOdpDropdownForPemasangan();
     }
     await refreshQueueBadge();
     await refreshCpQueueBadge();
     await refreshPmQueueBadge();
+    await refreshOdpQueueBadge();
     if (currentDesaId) await refreshPelangganList();
   } catch (err) {
     document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Sync gagal: ' + err.message + ' (kalau offline, ini wajar — data lama tetap dipakai)</span>';
@@ -1040,9 +1065,112 @@ async function refreshPelangganList() {
   ).join('');
 }
 
+// ============================================================
+// ODP & PORT (Fase 12)
+// ============================================================
+async function refreshOdpQueueBadge() {
+  const pending = await getPendingQueue();
+  const odpPending = pending.filter(q => q.entity_type === 'MASTER_ODP_CREATE');
+  const badge = document.getElementById('odpQueueBadge');
+  if (odpPending.length > 0) {
+    badge.textContent = odpPending.length + ' menunggu sync';
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+async function refreshOdpList() {
+  const listEl = document.getElementById('odpList');
+  const odps = await idbGetByParent('master_odp', currentDesaId);
+  if (odps.length === 0) { listEl.textContent = 'Belum ada ODP di desa ini.'; return; }
+  const allPorts = await idbGetAll('master_port_odp');
+  const pendingQueue = await getPendingQueue();
+  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
+
+  listEl.innerHTML = odps.map(o => {
+    const isPending = pendingLocalIds.has(o.id_odp) || o._pending;
+    const ports = allPorts.filter(pt => pt.id_odp === o.id_odp);
+    const tersedia = ports.filter(pt => pt.status === 'TERSEDIA').length;
+    return '<div class="cp-item"><span class="cp-name">' + o.nama_odp + '</span>' +
+      '<br><span class="status-label">' + tersedia + '/' + (ports.length || o.kapasitas_port) + ' port tersedia</span> ' +
+      '<span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' + (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span></div>';
+  }).join('');
+}
+
+document.getElementById('btnSubmitOdp').addEventListener('click', async () => {
+  const nama = document.getElementById('odpNama').value.trim();
+  const alamat = document.getElementById('odpAlamat').value.trim();
+  const kapasitas = document.getElementById('odpKapasitas').value;
+  const msgEl = document.getElementById('odpMsg');
+
+  if (!currentDesaId) { msgEl.innerHTML = '<span class="msg-err">Pilih Desa dulu.</span>'; return; }
+  if (!nama || !kapasitas || Number(kapasitas) < 1) {
+    msgEl.innerHTML = '<span class="msg-err">Nama ODP dan Kapasitas Port (angka > 0) wajib diisi.</span>';
+    return;
+  }
+
+  const session = await getSession();
+  const localId = makeLocalId();
+  const now = new Date().toISOString();
+
+  await idbPut('master_odp', {
+    id_odp: localId, nama_odp: nama, id_desa: currentDesaId, alamat, latitude: '', longitude: '',
+    kapasitas_port: Number(kapasitas), status: 'AKTIF', tanggal_instalasi: '', version: 0,
+    created_by: session && session.user ? session.user.username : '',
+    updated_by: session && session.user ? session.user.username : '',
+    created_at: now, updated_at: now, _pending: true
+  });
+
+  await enqueueSyncItem('MASTER_ODP_CREATE', {
+    local_id: localId, nama_odp: nama, id_desa: currentDesaId, alamat, kapasitas_port: kapasitas
+  });
+
+  document.getElementById('odpNama').value = '';
+  document.getElementById('odpAlamat').value = '';
+  document.getElementById('odpKapasitas').value = '';
+  msgEl.innerHTML = '<span class="msg-ok">Tersimpan. Port akan otomatis dibuat oleh server begitu tersinkron.</span>';
+  await refreshOdpList();
+  await refreshOdpQueueBadge();
+});
+
+async function loadOdpDropdownForPemasangan() {
+  const sel = document.getElementById('pmOdp');
+  sel.innerHTML = '<option value="">-- belum pilih ODP --</option>';
+  const odps = await idbGetByParent('master_odp', currentDesaId);
+  odps.filter(o => o.status === 'AKTIF' && !o._pending).forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o.id_odp;
+    opt.textContent = o.nama_odp;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadPortDropdown(idOdp) {
+  const sel = document.getElementById('pmPort');
+  sel.innerHTML = '<option value="">-- pilih port --</option>';
+  sel.disabled = !idOdp;
+  if (!idOdp) { sel.innerHTML = '<option value="">-- pilih ODP dulu --</option>'; return; }
+  const ports = await idbGetByParent('master_port_odp', idOdp);
+  const available = ports.filter(p => p.status === 'TERSEDIA');
+  if (available.length === 0) {
+    sel.innerHTML = '<option value="">-- tidak ada port tersedia --</option>';
+    return;
+  }
+  available.sort((a, b) => Number(a.nomor_port) - Number(b.nomor_port)).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id_port;
+    opt.textContent = 'Port ' + p.nomor_port;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('pmOdp').addEventListener('change', (e) => loadPortDropdown(e.target.value));
+
 document.getElementById('btnSubmitPM').addEventListener('click', async () => {
   const idCalonPelanggan = document.getElementById('pmCalonPelanggan').value;
   const idJenis = document.getElementById('pmJenis').value;
+  const idPort = document.getElementById('pmPort').value || null;
   const idTeknisi = document.getElementById('pmTeknisi').value || null;
   const tanggal = document.getElementById('pmTanggal').value;
   const catatan = document.getElementById('pmCatatan').value.trim();
@@ -1059,7 +1187,7 @@ document.getElementById('btnSubmitPM').addEventListener('click', async () => {
 
   const localRecord = {
     id_pemasangan: localId,
-    id_calon_pelanggan: idCalonPelanggan, id_teknisi: idTeknisi, id_jenis_pemasangan: idJenis,
+    id_calon_pelanggan: idCalonPelanggan, id_teknisi: idTeknisi, id_jenis_pemasangan: idJenis, id_port: idPort,
     tanggal_jadwal: tanggal, id_status_proses: '', catatan, status: 'AKTIF', version: 0,
     created_by: session && session.user ? session.user.username : '',
     updated_by: session && session.user ? session.user.username : '',
@@ -1070,11 +1198,13 @@ document.getElementById('btnSubmitPM').addEventListener('click', async () => {
 
   await enqueueSyncItem('PEMASANGAN_CREATE', {
     local_id: localId, id_calon_pelanggan: idCalonPelanggan, id_teknisi: idTeknisi,
-    id_jenis_pemasangan: idJenis, tanggal_jadwal: tanggal, catatan
+    id_jenis_pemasangan: idJenis, id_port: idPort, tanggal_jadwal: tanggal, catatan
   });
 
   document.getElementById('pmTanggal').value = '';
   document.getElementById('pmCatatan').value = '';
+  document.getElementById('pmOdp').value = '';
+  loadPortDropdown('');
   msgEl.innerHTML = '<span class="msg-ok">Tersimpan di Local DB. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
   await refreshPemasanganList();
   await refreshPmQueueBadge();
@@ -1133,6 +1263,7 @@ document.getElementById('selKecamatan').addEventListener('change', (e) => {
   document.getElementById('calonPelangganCard').style.display = 'none';
   document.getElementById('pemasanganCard').style.display = 'none';
   document.getElementById('pelangganCard').style.display = 'none';
+  document.getElementById('odpCard').style.display = 'none';
 });
 
 document.getElementById('selDesa').addEventListener('change', async (e) => {
@@ -1141,11 +1272,13 @@ document.getElementById('selDesa').addEventListener('change', async (e) => {
   const cpCard = document.getElementById('calonPelangganCard');
   const pmCard = document.getElementById('pemasanganCard');
   const plCard = document.getElementById('pelangganCard');
-  if (!currentDesaId) { card.style.display = 'none'; cpCard.style.display = 'none'; pmCard.style.display = 'none'; plCard.style.display = 'none'; return; }
+  const odpCard = document.getElementById('odpCard');
+  if (!currentDesaId) { card.style.display = 'none'; cpCard.style.display = 'none'; pmCard.style.display = 'none'; plCard.style.display = 'none'; odpCard.style.display = 'none'; return; }
   card.style.display = 'block';
   cpCard.style.display = 'block';
   pmCard.style.display = 'block';
   plCard.style.display = 'block';
+  odpCard.style.display = 'block';
   document.getElementById('inputSubWilayahNama').value = '';
   document.getElementById('subWilayahMsg').textContent = '';
   renderSimilarWarning([]);
@@ -1156,6 +1289,9 @@ document.getElementById('selDesa').addEventListener('change', async (e) => {
   await refreshPemasanganList();
   await refreshPmQueueBadge();
   await refreshPelangganList();
+  await refreshOdpList();
+  await refreshOdpQueueBadge();
+  await loadOdpDropdownForPemasangan();
 });
 
 async function showAppArea(user) {
