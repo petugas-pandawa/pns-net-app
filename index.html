@@ -185,6 +185,22 @@
       <div id="syncLog"></div>
     </div>
 
+    <div class="card" id="modemCard" style="display:none;">
+      <h2>Modem / Inventori <span id="modemQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
+      <p style="font-size:12px; color:var(--text-dim);">Company-wide — tidak terikat desa tertentu.</p>
+      <label for="modemMerk">Merk</label>
+      <input type="text" id="modemMerk" placeholder="mis. ZTE, Huawei, CIOT">
+      <label for="modemSerial">Serial Number</label>
+      <input type="text" id="modemSerial" placeholder="mis. SN123456789">
+      <label for="modemKeterangan">Keterangan</label>
+      <input type="text" id="modemKeterangan" placeholder="Opsional">
+      <button id="btnSubmitModem">Daftarkan Modem</button>
+      <div id="modemMsg" style="font-size:13px; margin-top:8px;"></div>
+
+      <h2 style="margin-top:18px;">Daftar Modem (Local DB)</h2>
+      <div id="modemList" style="font-size:13px; color:var(--text-dim);">Belum ada modem terdaftar.</div>
+    </div>
+
     <div class="card">
       <h2>Contoh: Dropdown Wilayah (dari Local DB / IndexedDB)</h2>
       <label for="selKabupaten">Kabupaten</label>
@@ -330,11 +346,13 @@ const MASTER_CONFIG = {
   MASTER_TEKNISI:             { store: 'master_teknisi',       keyPath: 'id_teknisi' },
   PELANGGAN:                   { store: 'pelanggan',            keyPath: 'id_pelanggan' },
   MASTER_ODP:                  { store: 'master_odp',           keyPath: 'id_odp', parentField: 'id_desa' },
-  MASTER_PORT_ODP:             { store: 'master_port_odp',      keyPath: 'id_port', parentField: 'id_odp' }
+  MASTER_PORT_ODP:             { store: 'master_port_odp',      keyPath: 'id_port', parentField: 'id_odp' },
+  MASTER_MODEM:                 { store: 'master_modem',         keyPath: 'id_modem' },
+  MODEM_RIWAYAT:                { store: 'modem_riwayat',        keyPath: 'id_riwayat', parentField: 'id_modem' }
 };
 
 const DB_NAME = 'pnsnet_local';
-const DB_VERSION = 6; // dinaikkan 5 -> 6 karena menambah object store master_odp & master_port_odp
+const DB_VERSION = 7; // dinaikkan 6 -> 7 karena menambah object store master_modem & modem_riwayat
 
 // Dipakai untuk rekonsiliasi: setelah entity_type ini berhasil sync, hapus
 // record sementara (keyed by local_id) dari store terkait, supaya baris
@@ -343,7 +361,8 @@ const ENTITY_TEMP_STORE_MAP = {
   'MASTER_SUB_WILAYAH_CREATE': 'master_sub_wilayah',
   'CALON_PELANGGAN_CREATE': 'calon_pelanggan',
   'PEMASANGAN_CREATE': 'pemasangan',
-  'MASTER_ODP_CREATE': 'master_odp'
+  'MASTER_ODP_CREATE': 'master_odp',
+  'MASTER_MODEM_CREATE': 'master_modem'
 };
 let dbInstance = null;
 
@@ -644,6 +663,8 @@ async function runSync() {
     await refreshCpQueueBadge();
     await refreshPmQueueBadge();
     await refreshOdpQueueBadge();
+    await refreshModemList();
+    await refreshModemQueueBadge();
     if (currentDesaId) await refreshPelangganList();
   } catch (err) {
     document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Sync gagal: ' + err.message + ' (kalau offline, ini wajar — data lama tetap dipakai)</span>';
@@ -1061,11 +1082,129 @@ async function refreshPelangganList() {
   const rows = await idbGetAll('pelanggan');
   const filtered = currentDesaId ? rows.filter(r => r.id_desa === currentDesaId) : rows;
   if (filtered.length === 0) { listEl.textContent = 'Belum ada pelanggan aktif untuk desa ini.'; return; }
-  listEl.innerHTML = filtered.map(r =>
-    '<div class="cp-item"><span class="cp-name">' + r.nama + '</span> — ' + r.no_hp +
-    '<br><span class="status-label">Aktif sejak ' + (r.tanggal_aktif || '').slice(0, 10) + '</span></div>'
-  ).join('');
+
+  const allModems = await idbGetAll('master_modem');
+  const availableModems = allModems.filter(m => m.status === 'SIAP_PAKAI' && !m._pending);
+
+  listEl.innerHTML = filtered.map(r => {
+    const modemTerpasang = allModems.find(m => m.id_pelanggan === r.id_pelanggan);
+    const modemInfo = modemTerpasang
+      ? '<span class="status-label">Modem: ' + modemTerpasang.merk + ' (' + modemTerpasang.serial_number + ')</span>'
+      : (availableModems.length > 0
+          ? '<div class="status-row"><select class="sel-modem-assign">' +
+            availableModems.map(m => '<option value="' + m.id_modem + '">' + m.merk + ' — ' + m.serial_number + '</option>').join('') +
+            '</select><button class="btn-pasang-modem">Pasang Modem</button></div>'
+          : '<span style="font-size:11px; color:var(--text-dim);">(belum ada modem SIAP_PAKAI)</span>');
+    return '<div class="cp-item" data-id="' + r.id_pelanggan + '"><span class="cp-name">' + r.nama + '</span> — ' + r.no_hp +
+      '<br><span class="status-label">Aktif sejak ' + (r.tanggal_aktif || '').slice(0, 10) + '</span> ' + modemInfo + '</div>';
+  }).join('');
 }
+
+document.getElementById('plList').addEventListener('click', async (e) => {
+  if (!e.target.classList.contains('btn-pasang-modem')) return;
+  const item = e.target.closest('.cp-item');
+  const idPelanggan = item.dataset.id;
+  const select = item.querySelector('.sel-modem-assign');
+  const idModem = select.value;
+
+  const localId = makeLocalId();
+  await enqueueSyncItem('MODEM_ASSIGN', { local_id: localId, id_modem: idModem, id_pelanggan: idPelanggan, catatan: '' });
+  e.target.textContent = 'Menunggu sync...';
+  e.target.disabled = true;
+  await refreshModemQueueBadge();
+});
+
+// ============================================================
+// MODEM / INVENTORI (Fase 13)
+// ============================================================
+async function refreshModemList() {
+  const listEl = document.getElementById('modemList');
+  const rows = await idbGetAll('master_modem');
+  if (rows.length === 0) { listEl.textContent = 'Belum ada modem terdaftar.'; return; }
+
+  const pendingQueue = await getPendingQueue();
+  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
+  const plRows = await idbGetAll('pelanggan');
+
+  const statusLabel = { SIAP_PAKAI: 'Siap Pakai', TERPAKAI: 'Terpakai', RUSAK: 'Rusak', TIDAK_LAYAK_PAKAI: 'Tidak Layak Pakai' };
+
+  listEl.innerHTML = rows.map(m => {
+    const isPending = pendingLocalIds.has(m.id_modem) || m._pending;
+    const pelanggan = plRows.find(p => p.id_pelanggan === m.id_pelanggan);
+    const info = pelanggan ? ' → ' + pelanggan.nama : '';
+    const releaseControl = (m.status === 'TERPAKAI' && !isPending)
+      ? '<div class="status-row"><select class="sel-modem-release">' +
+        '<option value="SIAP_PAKAI">Lepas — kembali Siap Pakai</option>' +
+        '<option value="RUSAK">Lepas — Rusak</option>' +
+        '<option value="TIDAK_LAYAK_PAKAI">Lepas — Tidak Layak Pakai</option>' +
+        '</select><button class="btn-release-modem">Lepas</button></div>'
+      : '';
+    return '<div class="cp-item" data-id="' + m.id_modem + '">' +
+      '<span class="cp-name">' + m.merk + ' — ' + m.serial_number + '</span>' + info +
+      '<br><span class="status-label">' + (statusLabel[m.status] || m.status) + '</span> ' +
+      '<span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' + (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span>' +
+      releaseControl + '</div>';
+  }).join('');
+}
+
+async function refreshModemQueueBadge() {
+  const pending = await getPendingQueue();
+  const modemPending = pending.filter(q => ['MASTER_MODEM_CREATE', 'MODEM_ASSIGN', 'MODEM_RELEASE'].includes(q.entity_type));
+  const badge = document.getElementById('modemQueueBadge');
+  if (modemPending.length > 0) {
+    badge.textContent = modemPending.length + ' menunggu sync';
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+document.getElementById('modemList').addEventListener('click', async (e) => {
+  if (!e.target.classList.contains('btn-release-modem')) return;
+  const item = e.target.closest('.cp-item');
+  const idModem = item.dataset.id;
+  const select = item.querySelector('.sel-modem-release');
+  const statusBaru = select.value;
+
+  const localId = makeLocalId();
+  await enqueueSyncItem('MODEM_RELEASE', { local_id: localId, id_modem: idModem, status_baru: statusBaru, catatan: '' });
+  e.target.textContent = 'Menunggu sync...';
+  e.target.disabled = true;
+  await refreshModemQueueBadge();
+});
+
+document.getElementById('btnSubmitModem').addEventListener('click', async () => {
+  const merk = document.getElementById('modemMerk').value.trim();
+  const serial = document.getElementById('modemSerial').value.trim();
+  const keterangan = document.getElementById('modemKeterangan').value.trim();
+  const msgEl = document.getElementById('modemMsg');
+
+  if (!merk || !serial) {
+    msgEl.innerHTML = '<span class="msg-err">Merk dan Serial Number wajib diisi.</span>';
+    return;
+  }
+
+  const session = await getSession();
+  const localId = makeLocalId();
+  const now = new Date().toISOString();
+
+  await idbPut('master_modem', {
+    id_modem: localId, merk, serial_number: serial, id_pelanggan: '', status: 'SIAP_PAKAI', keterangan,
+    version: 0,
+    created_by: session && session.user ? session.user.username : '',
+    updated_by: session && session.user ? session.user.username : '',
+    created_at: now, updated_at: now, _pending: true
+  });
+
+  await enqueueSyncItem('MASTER_MODEM_CREATE', { local_id: localId, merk, serial_number: serial, keterangan });
+
+  document.getElementById('modemMerk').value = '';
+  document.getElementById('modemSerial').value = '';
+  document.getElementById('modemKeterangan').value = '';
+  msgEl.innerHTML = '<span class="msg-ok">Tersimpan. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
+  await refreshModemList();
+  await refreshModemQueueBadge();
+});
 
 // ============================================================
 // JALUR WILAYAH OTOMATIS (untuk isian Alamat/Lokasi ODP, dsb)
@@ -1335,6 +1474,9 @@ async function showAppArea(user) {
   await loadSumberDropdown();
   await loadJenisPemasanganDropdown();
   await loadTeknisiDropdown();
+  document.getElementById('modemCard').style.display = 'block';
+  await refreshModemList();
+  await refreshModemQueueBadge();
   await refreshQueueBadge();
 }
 
