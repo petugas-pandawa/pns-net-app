@@ -3,7 +3,7 @@
 // walau HP benar-benar tanpa internet. Data (via sync) tetap lewat IndexedDB,
 // bukan lewat cache ini.
 
-const CACHE_NAME = 'pnsnet-shell-v6'; // dinaikkan lagi (Fase 12: ODP & Port)
+const CACHE_NAME = 'pnsnet-shell-v7'; // dinaikkan lagi (alamat ODP otomatis dari jalur wilayah)
 const SHELL_FILES = [
   './',
   './index.html',
