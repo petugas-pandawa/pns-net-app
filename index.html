@@ -233,8 +233,10 @@
       <h2>ODP <span id="odpQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
       <label for="odpNama">Nama ODP</label>
       <input type="text" id="odpNama" placeholder="mis. ODP-BGK-01">
-      <label for="odpAlamat">Alamat / Lokasi</label>
-      <input type="text" id="odpAlamat" placeholder="Opsional">
+      <label for="odpAlamat">Alamat / Lokasi (otomatis dari wilayah yang dipilih di atas)</label>
+      <input type="text" id="odpAlamat" readonly placeholder="Pilih Kabupaten/Kecamatan/Desa/Dusun dulu">
+      <label for="odpCatatanLokasi">Catatan lokasi tambahan (opsional)</label>
+      <input type="text" id="odpCatatanLokasi" placeholder="mis. dekat pasar, sebelah masjid">
       <label for="odpKapasitas">Kapasitas Port</label>
       <input type="number" id="odpKapasitas" placeholder="mis. 8" min="1">
       <button id="btnSubmitOdp">Tambah ODP</button>
@@ -1066,6 +1068,30 @@ async function refreshPelangganList() {
 }
 
 // ============================================================
+// JALUR WILAYAH OTOMATIS (untuk isian Alamat/Lokasi ODP, dsb)
+// Dibentuk dari teks yang sedang dipilih di dropdown Kabupaten/Kecamatan/
+// Desa/Dusun — supaya konsisten, tidak diketik manual bebas.
+// ============================================================
+function getWilayahPathString() {
+  const parts = [];
+  ['selKabupaten', 'selKecamatan', 'selDesa'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel && sel.value && sel.selectedOptions[0]) parts.push(sel.selectedOptions[0].textContent.trim());
+  });
+  const subSel = document.getElementById('selSubWilayah');
+  if (subSel && subSel.value && subSel.selectedOptions[0]) parts.push(subSel.selectedOptions[0].textContent.trim());
+  return parts.length ? '/' + parts.join('/') : '';
+}
+
+function autoFillOdpAlamat() {
+  const el = document.getElementById('odpAlamat');
+  if (!el) return;
+  el.value = getWilayahPathString();
+}
+
+document.getElementById('selSubWilayah').addEventListener('change', autoFillOdpAlamat);
+
+// ============================================================
 // ODP & PORT (Fase 12)
 // ============================================================
 async function refreshOdpQueueBadge() {
@@ -1100,7 +1126,9 @@ async function refreshOdpList() {
 
 document.getElementById('btnSubmitOdp').addEventListener('click', async () => {
   const nama = document.getElementById('odpNama').value.trim();
-  const alamat = document.getElementById('odpAlamat').value.trim();
+  const pathWilayah = document.getElementById('odpAlamat').value.trim();
+  const catatanLokasi = document.getElementById('odpCatatanLokasi').value.trim();
+  const alamat = catatanLokasi ? (pathWilayah + ' (' + catatanLokasi + ')') : pathWilayah;
   const kapasitas = document.getElementById('odpKapasitas').value;
   const msgEl = document.getElementById('odpMsg');
 
@@ -1127,8 +1155,9 @@ document.getElementById('btnSubmitOdp').addEventListener('click', async () => {
   });
 
   document.getElementById('odpNama').value = '';
-  document.getElementById('odpAlamat').value = '';
+  document.getElementById('odpCatatanLokasi').value = '';
   document.getElementById('odpKapasitas').value = '';
+  autoFillOdpAlamat();
   msgEl.innerHTML = '<span class="msg-ok">Tersimpan. Port akan otomatis dibuat oleh server begitu tersinkron.</span>';
   await refreshOdpList();
   await refreshOdpQueueBadge();
@@ -1292,6 +1321,7 @@ document.getElementById('selDesa').addEventListener('change', async (e) => {
   await refreshOdpList();
   await refreshOdpQueueBadge();
   await loadOdpDropdownForPemasangan();
+  autoFillOdpAlamat();
 });
 
 async function showAppArea(user) {
