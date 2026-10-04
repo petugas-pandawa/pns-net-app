@@ -12,7 +12,7 @@
 #
 # Backend murni Python standard library (http.server), tidak ada
 # dependency tambahan. Logika modem 100% reuse dari ciot_setup.py
-# — file ini hanya lapisan tampilan.
+# — file ini hanya lapisan tampilan..
 # ============================================================
 
 import io
