@@ -1,1513 +1,3403 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PNS.NET — Operasional</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#FF8C42">
+<title>PNS.NET — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --accent: #3b82f6;
-    --text: #e2e8f0;
-    --text-dim: #94a3b8;
-    --ok: #22c55e;
-    --err: #ef4444;
-    --border: #334155;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, Roboto, Segoe UI, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-  }
-  header {
-    padding: 16px 20px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  header h1 { font-size: 16px; margin: 0; }
-  #connStatus { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
-  .online { background: rgba(34,197,94,.15); color: var(--ok); }
-  .offline { background: rgba(239,68,68,.15); color: var(--err); }
-  main { padding: 16px; max-width: 480px; margin: 0 auto; }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
-    margin-bottom: 16px;
-  }
-  .card h2 { font-size: 14px; margin: 0 0 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
-  label { display: block; font-size: 13px; margin: 10px 0 4px; color: var(--text-dim); }
-  input, select {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: #0b1220;
-    color: var(--text);
-    font-size: 15px;
-  }
-  button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    background: var(--accent);
-    color: white;
-    font-size: 15px;
-    font-weight: 600;
-    margin-top: 14px;
-    cursor: pointer;
-  }
-  button:disabled { opacity: .5; }
-  button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
-  #loginMsg, #syncMsg { font-size: 13px; margin-top: 10px; }
-  .msg-err { color: var(--err); }
-  .msg-ok { color: var(--ok); }
-  #syncLog {
-    font-size: 12px;
-    color: var(--text-dim);
-    background: #0b1220;
-    border-radius: 8px;
-    padding: 10px;
-    max-height: 160px;
-    overflow-y: auto;
-    margin-top: 10px;
-    white-space: pre-wrap;
-    display: none;
-  }
-  .hidden { display: none !important; }
-  .userbar { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-dim); }
-  .userbar b { color: var(--text); }
-  .pill { font-size: 11px; background: rgba(59,130,246,.15); color: var(--accent); padding: 2px 8px; border-radius: 999px; }
-  .warn-box {
-    background: rgba(234,179,8,.12);
-    border: 1px solid rgba(234,179,8,.4);
-    color: #eab308;
-    font-size: 12px;
-    border-radius: 8px;
-    padding: 10px;
-    margin-top: 8px;
-    display: none;
-  }
-  .warn-box ul { margin: 6px 0 0; padding-left: 18px; }
-  .row-btns { display: flex; gap: 8px; margin-top: 10px; }
-  .row-btns button { margin-top: 0; }
-  .btn-sm { padding: 8px; font-size: 13px; }
-  .queue-badge {
-    font-size: 11px;
-    background: rgba(234,179,8,.15);
-    color: #eab308;
-    padding: 2px 8px;
-    border-radius: 999px;
-    margin-left: 6px;
-  }
-  .cp-item {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .cp-item:last-child { border-bottom: none; }
-  .cp-item .cp-name { color: var(--text); font-weight: 600; }
-  .cp-item .cp-sync-pending { color: #eab308; }
-  .cp-item .cp-sync-ok { color: var(--ok); }
-  .status-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    margin-top: 6px;
-  }
-  .status-row select {
-    flex: 1;
-    padding: 6px 8px;
-    font-size: 12px;
-  }
-  .status-row button {
-    width: auto;
-    padding: 6px 10px;
-    font-size: 12px;
-    margin-top: 0;
-  }
-  .status-label {
-    display: inline-block;
-    font-size: 11px;
-    background: rgba(59,130,246,.15);
-    color: var(--accent);
-    padding: 2px 8px;
-    border-radius: 999px;
-    margin-top: 4px;
-  }
+/* ── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --accent:       #FF8C42;
+  --accent-soft:  #FFE8D6;
+  --accent-deep:  #E06A1A;
+  --base:         #FFF8F3;
+  --surface:      #FFFFFF;
+  --surface2:     #FFF0E6;
+  --border:       #F0D8C8;
+  --text:         #1A0F05;
+  --text2:        #6B4226;
+  --text3:        #A07050;
+  --success:      #2D9E6B;
+  --success-soft: #D6F0E4;
+  --warning:      #D4860A;
+  --warning-soft: #FEF3D6;
+  --danger:       #D63B3B;
+  --danger-soft:  #FDDADA;
+  --info:         #2A6FD4;
+  --info-soft:    #D6E6FA;
+  --nav-h:        56px;
+  --sidebar-w:    240px;
+  --radius:       14px;
+  --radius-sm:    8px;
+  --shadow:       0 2px 12px rgba(255,140,66,.10);
+  --shadow-md:    0 4px 24px rgba(255,140,66,.14);
+}
+[data-theme="dark"] {
+  --accent:       #FF8C42;
+  --accent-soft:  #2A1A08;
+  --accent-deep:  #FFAA6A;
+  --base:         #080E17;
+  --surface:      #0D1B2A;
+  --surface2:     #142233;
+  --border:       #1E3248;
+  --text:         #EFF4FA;
+  --text2:        #8EB0CC;
+  --text3:        #506A80;
+  --success:      #3CC88A;
+  --success-soft: #0D2E1E;
+  --warning:      #F0A83A;
+  --warning-soft: #2A1E08;
+  --danger:       #F06060;
+  --danger-soft:  #2A0E0E;
+  --info:         #5A9FF0;
+  --info-soft:    #0E1E38;
+  --shadow:       0 2px 12px rgba(0,0,0,.35);
+  --shadow-md:    0 4px 24px rgba(0,0,0,.45);
+}
+
+/* ── RESET ────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--base);
+  color:var(--text);
+  min-height:100dvh;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  transition:background .25s,color .25s;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+
+/* ── LAYOUT ─────────────────────────────────────────── */
+.app{display:flex;min-height:100dvh}
+
+/* Sidebar — desktop */
+.sidebar{
+  width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100dvh;
+  z-index:100;
+  transition:transform .28s cubic-bezier(.4,0,.2,1),background .25s;
+}
+.sidebar-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:20px 18px 16px;
+  border-bottom:1px solid var(--border);
+}
+.logo-mark{
+  width:36px;height:36px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.logo-text{font-size:15px;font-weight:700;color:var(--text);line-height:1.2}
+.logo-sub{font-size:10px;color:var(--text3);font-weight:400;margin-top:1px}
+
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.nav-section{font-size:10px;font-weight:600;color:var(--text3);
+  padding:8px 8px 4px;letter-spacing:.06em;margin-top:6px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:var(--radius-sm);
+  font-size:13.5px;font-weight:500;color:var(--text2);
+  transition:background .15s,color .15s;
+  cursor:pointer;
+}
+.nav-item:hover{background:var(--accent-soft);color:var(--accent)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav-item .icon{width:18px;text-align:center;font-size:16px;flex-shrink:0}
+.nav-item .badge{
+  margin-left:auto;background:var(--accent);color:#fff;
+  font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;
+  min-width:18px;text-align:center;
+}
+
+.sidebar-footer{
+  padding:12px 10px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;font-size:13px;flex-shrink:0;
+}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:13px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:11px;color:var(--text3)}
+.btn-icon{
+  width:30px;height:30px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text3);transition:background .15s,color .15s;flex-shrink:0;
+}
+.btn-icon:hover{background:var(--accent-soft);color:var(--accent)}
+
+/* Main content */
+.main{
+  flex:1;
+  margin-left:var(--sidebar-w);
+  display:flex;flex-direction:column;
+  min-height:100dvh;
+}
+
+/* Topbar */
+.topbar{
+  height:var(--nav-h);
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 20px;gap:12px;
+  position:sticky;top:0;z-index:50;
+  transition:background .25s;
+}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text);flex:1}
+.topbar-btn{
+  width:36px;height:36px;border-radius:var(--radius-sm);
+  background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);font-size:16px;
+  transition:background .15s,color .15s;
+  cursor:pointer;border:1px solid var(--border);
+}
+.topbar-btn:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.burger{display:none}
+.notif-dot{
+  position:relative;
+}
+.notif-dot::after{
+  content:'';width:7px;height:7px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--surface);
+  position:absolute;top:6px;right:6px;
+}
+
+/* Page content */
+.page{padding:20px;max-width:1200px;width:100%}
+.page-header{margin-bottom:20px}
+.page-greeting{font-size:20px;font-weight:700;color:var(--text);line-height:1.2}
+.page-sub{font-size:13px;color:var(--text3);margin-top:3px}
+
+/* ── STATS CARDS ─────────────────────────────────────── */
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(168px,1fr));
+  gap:12px;margin-bottom:20px;
+}
+.stat-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:16px;
+  cursor:pointer;
+  transition:box-shadow .2s,transform .15s,border-color .2s;
+  position:relative;overflow:hidden;
+}
+.stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);border-color:var(--accent)}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--card-accent,var(--accent));
+  border-radius:var(--radius) var(--radius) 0 0;
+}
+.stat-icon{
+  width:36px;height:36px;border-radius:var(--radius-sm);
+  background:var(--card-soft,var(--accent-soft));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;margin-bottom:10px;
+}
+.stat-value{
+  font-size:26px;font-weight:700;color:var(--text);
+  line-height:1;font-variant-numeric:tabular-nums;
+  margin-bottom:4px;
+}
+.stat-label{font-size:12px;color:var(--text3);font-weight:500}
+.stat-delta{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:11px;font-weight:600;margin-top:6px;
+  padding:2px 6px;border-radius:20px;
+}
+.delta-up{background:var(--success-soft);color:var(--success)}
+.delta-down{background:var(--danger-soft);color:var(--danger)}
+.delta-neu{background:var(--warning-soft);color:var(--warning)}
+
+/* drag handle */
+.drag-handle{
+  position:absolute;top:10px;right:10px;
+  font-size:12px;color:var(--text3);opacity:0;
+  transition:opacity .15s;cursor:grab;
+}
+.stat-card:hover .drag-handle{opacity:1}
+
+/* ── GRID 2 COL ──────────────────────────────────────── */
+.dash-grid{
+  display:grid;
+  grid-template-columns:1fr 340px;
+  gap:16px;align-items:start;
+}
+
+/* ── PANEL ───────────────────────────────────────────── */
+.panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+}
+.panel-head{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;border-bottom:1px solid var(--border);
+}
+.panel-title{font-size:13.5px;font-weight:700;color:var(--text);flex:1}
+.panel-action{
+  font-size:12px;color:var(--accent);font-weight:600;cursor:pointer;
+  padding:4px 8px;border-radius:6px;
+  transition:background .15s;
+}
+.panel-action:hover{background:var(--accent-soft)}
+
+/* Activity list */
+.activity-list{display:flex;flex-direction:column}
+.activity-item{
+  display:flex;gap:12px;padding:12px 16px;
+  border-bottom:1px solid var(--border);
+  transition:background .15s;cursor:pointer;
+}
+.activity-item:last-child{border-bottom:none}
+.activity-item:hover{background:var(--surface2)}
+.act-dot{
+  width:8px;height:8px;border-radius:50%;
+  flex-shrink:0;margin-top:5px;
+}
+.act-body{flex:1;min-width:0}
+.act-text{font-size:13px;color:var(--text);line-height:1.4}
+.act-text b{font-weight:600}
+.act-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.act-badge{
+  font-size:10px;font-weight:600;padding:2px 7px;
+  border-radius:20px;flex-shrink:0;margin-top:3px;
+}
+
+/* Pipeline */
+.pipeline{display:flex;flex-direction:column;gap:0}
+.pipe-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 16px;border-bottom:1px solid var(--border);
+  transition:background .15s;cursor:pointer;
+}
+.pipe-item:last-child{border-bottom:none}
+.pipe-item:hover{background:var(--surface2)}
+.pipe-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:var(--accent-soft);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;
+}
+.pipe-info{flex:1;min-width:0}
+.pipe-name{font-size:13px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pipe-sub{font-size:11px;color:var(--text3)}
+.phase-chip{
+  font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;
+  white-space:nowrap;flex-shrink:0;
+}
+.phase-baru     {background:var(--info-soft);color:var(--info)}
+.phase-survey   {background:var(--warning-soft);color:var(--warning)}
+.phase-menunggu {background:var(--accent-soft);color:var(--accent)}
+.phase-proses   {background:var(--success-soft);color:var(--success)}
+
+/* ODP Status */
+.odp-list{display:flex;flex-direction:column;gap:0}
+.odp-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 16px;border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.odp-item:last-child{border-bottom:none}
+.odp-item:hover{background:var(--surface2)}
+.odp-name{font-size:13px;font-weight:600;color:var(--text);flex:1}
+.odp-bar-wrap{width:90px}
+.odp-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden}
+.odp-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.fill-ok   {background:var(--success)}
+.fill-warn {background:var(--warning)}
+.fill-full {background:var(--danger)}
+.odp-count{font-size:11px;color:var(--text3);width:38px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── THEME & SETTINGS PANEL ─────────────────────────── */
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:300px;
+  background:var(--surface);border-left:1px solid var(--border);
+  z-index:200;display:flex;flex-direction:column;
+  transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  box-shadow:var(--shadow-md);
+}
+.drawer.open{transform:translateX(0)}
+.drawer-head{
+  display:flex;align-items:center;gap:10px;
+  padding:16px;border-bottom:1px solid var(--border);
+}
+.drawer-title{font-size:14px;font-weight:700;color:var(--text);flex:1}
+.drawer-body{flex:1;overflow-y:auto;padding:16px}
+.setting-section{font-size:11px;font-weight:600;color:var(--text3);
+  letter-spacing:.06em;margin:14px 0 8px}
+.theme-swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{
+  width:36px;height:36px;border-radius:50%;cursor:pointer;
+  border:3px solid transparent;transition:border-color .15s,transform .15s;
+}
+.swatch:hover,.swatch.active{border-color:var(--text);transform:scale(1.1)}
+.toggle-row{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+}
+.toggle-label{font-size:13px;color:var(--text);flex:1}
+.toggle{
+  width:42px;height:24px;border-radius:12px;
+  background:var(--border);position:relative;cursor:pointer;
+  transition:background .2s;flex-shrink:0;
+}
+.toggle.on{background:var(--accent)}
+.toggle::after{
+  content:'';position:absolute;
+  width:18px;height:18px;border-radius:50%;background:#fff;
+  top:3px;left:3px;transition:transform .2s;
+}
+.toggle.on::after{transform:translateX(18px)}
+.card-toggle-list{display:flex;flex-direction:column;gap:6px}
+.card-toggle-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:var(--radius-sm);
+  background:var(--surface2);cursor:pointer;
+  transition:background .15s;
+}
+.card-toggle-item:hover{background:var(--accent-soft)}
+.card-toggle-icon{font-size:16px}
+.card-toggle-name{font-size:12px;color:var(--text);flex:1;font-weight:500}
+.card-check{width:16px;height:16px;border-radius:4px;border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:background .15s,border-color .15s;}
+.card-check.checked{background:var(--accent);border-color:var(--accent);color:#fff;font-size:10px}
+
+/* overlay */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.35);
+  z-index:190;opacity:0;pointer-events:none;
+  transition:opacity .3s;
+}
+.overlay.show{opacity:1;pointer-events:auto}
+
+/* ── BOTTOM NAV (mobile) ─────────────────────────────── */
+.bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));
+  z-index:100;
+}
+.bottom-nav-inner{display:flex}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:6px 4px;cursor:pointer;
+  font-size:10px;font-weight:500;color:var(--text3);
+  transition:color .15s;
+  position:relative;
+}
+.bn-item.active{color:var(--accent)}
+.bn-item .icon{font-size:20px;line-height:1}
+.bn-badge{
+  position:absolute;top:4px;right:calc(50% - 18px);
+  width:16px;height:16px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:9px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--surface);
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────── */
+@media(max-width:900px){
+  .dash-grid{grid-template-columns:1fr}
+}
+@media(max-width:680px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .burger{display:flex}
+  .bottom-nav{display:block}
+  .main{padding-bottom:calc(60px + env(safe-area-inset-bottom,0px))}
+  .page{padding:14px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+}
+@media(min-width:681px){
+  .bottom-nav{display:none}
+}
+
+/* ── QUICK ACTION FAB ────────────────────────────────── */
+.fab{
+  position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  color:#fff;font-size:24px;
+  display:none;align-items:center;justify-content:center;
+  box-shadow:0 4px 16px rgba(255,140,66,.45);
+  cursor:pointer;transition:transform .2s,box-shadow .2s;
+  z-index:80;
+}
+.fab:hover{transform:scale(1.08);box-shadow:0 6px 24px rgba(255,140,66,.55)}
+@media(max-width:680px){
+  .fab{display:flex;bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+}
+
+/* ── ANIM ────────────────────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.page{animation:fadeUp .28s ease both}
+
+/* ── DAFTAR CALON ────────────────────────────────────── */
+.list-page{padding:20px;max-width:900px;width:100%}
+.list-toolbar{
+  display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;
+}
+.search-wrap{
+  flex:1;min-width:180px;position:relative;
+}
+.search-wrap input{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:9px 12px 9px 36px;
+  font-size:13.5px;color:var(--text);font-family:inherit;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.search-wrap input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 15%,transparent);
+}
+.search-icon{
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  font-size:15px;color:var(--text3);pointer-events:none;
+}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;
+  border:1.5px solid var(--border);color:var(--text3);
+  cursor:pointer;transition:all .15s;background:var(--surface);
+  white-space:nowrap;
+}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.active{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+.list-stats{
+  display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;
+}
+.list-stat{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:8px 14px;
+  font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;
+}
+.list-stat b{font-size:14px;font-weight:700;color:var(--text)}
+
+/* Card list calon */
+.calon-list{display:flex;flex-direction:column;gap:10px}
+.calon-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  transition:box-shadow .2s,border-color .2s;cursor:pointer;
+}
+.calon-card:hover{box-shadow:var(--shadow-md);border-color:var(--accent)}
+.calon-card-head{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;
+}
+.calon-avatar{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+}
+.calon-main{flex:1;min-width:0}
+.calon-nama{font-size:14px;font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calon-meta{font-size:12px;color:var(--text3);margin-top:2px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.calon-dot{color:var(--border)}
+.calon-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.phase-pill{
+  font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;
+  white-space:nowrap;
+}
+.ph-BARU           {background:#D6E6FA;color:#2A6FD4}
+.ph-DIHUBUNGI      {background:#FFE8D6;color:#D4680A}
+.ph-SURVEY         {background:#FEF3D6;color:#D4860A}
+.ph-MENUNGGU       {background:#E8E0FA;color:#6B4ED4}
+.ph-PROSES_PASANG  {background:#D6F0E4;color:#2D9E6B}
+.ph-DITUNDA        {background:#F0EDED;color:#888780}
+.ph-TIDAK_TERJANGKAU{background:#FDDADA;color:#D63B3B}
+.ph-BATAL          {background:#FDDADA;color:#D63B3B}
+.calon-date{font-size:11px;color:var(--text3)}
+
+/* Expand detail */
+.calon-detail{
+  border-top:1px solid var(--border);
+  padding:0;max-height:0;overflow:hidden;
+  transition:max-height .3s cubic-bezier(.4,0,.2,1),padding .3s;
+}
+.calon-detail.open{max-height:600px;padding:14px 16px}
+.detail-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;
+  margin-bottom:14px;
+}
+.detail-item{font-size:12px}
+.detail-label{color:var(--text3);margin-bottom:2px;font-size:11px;font-weight:600}
+.detail-val{color:var(--text);font-weight:500}
+
+/* Aksi fase */
+.fase-actions{margin-bottom:12px}
+.fase-title{font-size:11px;font-weight:600;color:var(--text3);
+  letter-spacing:.06em;margin-bottom:8px}
+.fase-buttons{display:flex;gap:6px;flex-wrap:wrap}
+.fase-btn{
+  padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;
+  cursor:pointer;border:1.5px solid var(--border);
+  background:var(--surface2);color:var(--text2);
+  transition:all .15s;font-family:inherit;
+}
+.fase-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.fase-btn.current{border-color:var(--accent);background:var(--accent);color:#fff}
+.fase-btn.disabled{opacity:.35;pointer-events:none}
+
+/* Action buttons */
+.calon-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn-sm{
+  padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;
+  cursor:pointer;border:none;font-family:inherit;
+  display:inline-flex;align-items:center;gap:5px;transition:all .15s;
+}
+.btn-sm-primary{background:var(--accent);color:#fff}
+.btn-sm-primary:hover{filter:brightness(1.08)}
+.btn-sm-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-sm-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm-danger{background:var(--danger-soft);color:var(--danger)}
+.btn-sm-danger:hover{background:var(--danger);color:#fff}
+
+/* Empty state */
+.empty-state{
+  text-align:center;padding:48px 20px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty-sub{font-size:13px;color:var(--text3)}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;gap:6px;
+  justify-content:center;margin-top:16px;flex-wrap:wrap}
+.pg-btn{
+  width:32px;height:32px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text2);font-size:13px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;font-family:inherit;
+}
+.pg-btn:hover{border-color:var(--accent);color:var(--accent)}
+.pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.pg-btn:disabled{opacity:.35;pointer-events:none}
+
+/* ── FORM PEMASANGAN ──────────────────────────────────── */
+.foto-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.foto-box{
+  border:2px dashed var(--border);border-radius:var(--radius);
+  overflow:hidden;position:relative;cursor:pointer;
+  background:var(--surface2);transition:border-color .2s,background .2s;
+  min-height:130px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.foto-box:hover,.foto-box.drag{border-color:var(--accent);background:var(--accent-soft)}
+.foto-box input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.foto-box-icon{font-size:28px;margin-bottom:6px}
+.foto-box-label{font-size:11px;font-weight:600;color:var(--text2);text-align:center;padding:0 8px}
+.foto-box-sub{font-size:10px;color:var(--text3);margin-top:2px;text-align:center}
+.foto-preview{width:100%;height:130px;object-fit:cover;display:block}
+.foto-box-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,.55);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .2s;
+}
+.foto-box:hover .foto-box-overlay{opacity:1}
+.foto-retake{
+  background:rgba(255,255,255,.92);color:#1a1a2e;
+  border:none;border-radius:6px;padding:5px 10px;
+  font-size:11px;font-weight:700;cursor:pointer;
+}
+.foto-status{
+  font-size:10px;font-weight:600;padding:3px 8px;
+  border-radius:0 0 var(--radius) var(--radius);
+  text-align:center;width:100%;
+}
+.foto-ok{background:var(--success-soft);color:var(--success)}
+.foto-empty{background:var(--surface2);color:var(--text3)}
+
+/* OPM meter visual */
+.opm-meter{margin-top:6px}
+.opm-bar-wrap{
+  height:10px;border-radius:5px;background:var(--border);
+  overflow:hidden;margin:6px 0 4px;
+}
+.opm-bar-fill{
+  height:100%;border-radius:5px;
+  background:linear-gradient(90deg,var(--success),var(--warning),var(--danger));
+  transition:width .4s;
+}
+.opm-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text3)}
+.opm-result{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;margin-top:6px;
+}
+.opm-good{background:var(--success-soft);color:var(--success)}
+.opm-warn{background:var(--warning-soft);color:var(--warning)}
+.opm-bad {background:var(--danger-soft);color:var(--danger)}
+
+/* WiFi section */
+.wifi-preview{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:12px 14px;margin-top:8px;
+}
+.wifi-preview-head{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px}
+.wifi-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.wifi-row:last-child{margin-bottom:0}
+.wifi-band{
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
+  background:var(--accent-soft);color:var(--accent);flex-shrink:0;width:40px;text-align:center;
+}
+.wifi-ssid{font-size:13px;font-weight:600;color:var(--text);flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wifi-pass{font-size:11px;color:var(--text3)}
+.pass-toggle{
+  background:none;border:none;cursor:pointer;font-size:14px;color:var(--text3);
+  padding:2px;transition:color .15s;
+}
+.pass-toggle:hover{color:var(--accent)}
+
+/* Timer */
+.timer-display{
+  font-size:28px;font-weight:700;color:var(--text);
+  font-variant-numeric:tabular-nums;letter-spacing:2px;
+  text-align:center;padding:10px 0;
+}
+.timer-btns{display:flex;gap:8px;justify-content:center;margin-top:6px}
+
+/* OCR mini badge */
+.ocr-mini{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;padding:2px 8px;border-radius:10px;
+  background:var(--success-soft);color:var(--success);
+  font-weight:600;margin-left:6px;
+}
+
+/* Teknisi selector */
+.teknisi-list{display:flex;flex-direction:column;gap:6px}
+.teknisi-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--border);background:var(--surface2);
+  cursor:pointer;transition:all .15s;
+}
+.teknisi-item.selected{
+  border-color:var(--accent);background:var(--accent-soft);
+}
+.teknisi-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  color:#fff;font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.teknisi-nama{font-size:13px;font-weight:600;color:var(--text);flex:1}
+.teknisi-jabatan{font-size:11px;color:var(--text3)}
+.teknisi-check{
+  width:18px;height:18px;border-radius:50%;
+  border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;transition:all .15s;flex-shrink:0;
+}
+.teknisi-item.selected .teknisi-check{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+
+@media(max-width:480px){
+  .foto-upload-grid{grid-template-columns:1fr}
+}
+.form-page{padding:20px;max-width:640px;width:100%}
+.form-steps{display:flex;align-items:center;gap:0;margin-bottom:24px}
+.step-node{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  flex:1;position:relative;
+}
+.step-node:not(:last-child)::after{
+  content:'';position:absolute;top:16px;left:calc(50% + 16px);
+  right:calc(-50% + 16px);height:2px;
+  background:var(--border);z-index:0;transition:background .3s;
+}
+.step-node.done:not(:last-child)::after{background:var(--accent)}
+.step-circle{
+  width:32px;height:32px;border-radius:50%;
+  border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--text3);
+  background:var(--surface);z-index:1;transition:all .25s;
+}
+.step-node.active .step-circle{
+  border-color:var(--accent);background:var(--accent);color:#fff;
+}
+.step-node.done .step-circle{
+  border-color:var(--accent);background:var(--accent);color:#fff;
+}
+.step-lbl{font-size:10px;font-weight:500;color:var(--text3)}
+.step-node.active .step-lbl{color:var(--accent);font-weight:600}
+
+.form-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;margin-bottom:14px;
+}
+.form-card-head{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.form-card-title{font-size:13.5px;font-weight:700;color:var(--text);flex:1}
+.form-card-body{padding:16px;display:flex;flex-direction:column;gap:14px}
+
+.field{display:flex;flex-direction:column;gap:5px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label{font-size:12px;font-weight:600;color:var(--text2)}
+.field label span{color:var(--accent);margin-left:2px}
+.field input,.field select,.field textarea{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:10px 12px;
+  font-size:14px;color:var(--text);font-family:inherit;
+  transition:border-color .15s,box-shadow .15s;outline:none;
+  width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 15%,transparent);
+}
+.field input::placeholder{color:var(--text3)}
+.field textarea{resize:vertical;min-height:72px}
+.field-hint{font-size:11px;color:var(--text3)}
+.field-ocr-result{
+  display:none;background:var(--success-soft);
+  border:1px solid var(--success);border-radius:var(--radius-sm);
+  padding:8px 12px;font-size:12px;color:var(--success);
+  display:none;align-items:center;gap:6px;margin-top:4px;
+}
+.field-ocr-result.show{display:flex}
+
+/* KTP Upload area */
+.ktp-upload{
+  border:2px dashed var(--border);border-radius:var(--radius);
+  padding:20px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;
+  position:relative;overflow:hidden;
+  background:var(--surface2);
+}
+.ktp-upload:hover,.ktp-upload.drag{
+  border-color:var(--accent);background:var(--accent-soft);
+}
+.ktp-upload input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;
+}
+.ktp-upload-icon{font-size:32px;margin-bottom:8px}
+.ktp-upload-text{font-size:13px;font-weight:600;color:var(--text)}
+.ktp-upload-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.ktp-preview{
+  display:none;position:relative;
+  border-radius:var(--radius-sm);overflow:hidden;
+}
+.ktp-preview img{width:100%;height:160px;object-fit:cover;display:block}
+.ktp-preview-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  opacity:0;transition:opacity .2s;
+}
+.ktp-preview:hover .ktp-preview-overlay{opacity:1}
+.btn-preview-action{
+  background:rgba(255,255,255,.9);color:#1a1a2e;
+  border:none;border-radius:6px;padding:6px 12px;
+  font-size:12px;font-weight:600;cursor:pointer;
+}
+.ocr-status{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:500;margin-top:8px;
+}
+.ocr-scanning{background:var(--info-soft);color:var(--info)}
+.ocr-done{background:var(--success-soft);color:var(--success)}
+.ocr-offline{background:var(--warning-soft);color:var(--warning)}
+.ocr-spin{display:inline-block;animation:spin .8s linear infinite}
+
+/* Paket cards */
+.paket-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.paket-card{
+  border:2px solid var(--border);border-radius:var(--radius-sm);
+  padding:12px;cursor:pointer;transition:all .15s;
+  background:var(--surface2);
+}
+.paket-card:hover{border-color:var(--accent)}
+.paket-card.selected{
+  border-color:var(--accent);background:var(--accent-soft);
+}
+.paket-speed{font-size:20px;font-weight:700;color:var(--text)}
+.paket-price{font-size:12px;color:var(--text3);margin-top:2px}
+.paket-check{
+  width:18px;height:18px;border-radius:50%;
+  border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;margin-top:6px;transition:all .15s;
+}
+.paket-card.selected .paket-check{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+
+/* Form nav buttons */
+.form-nav{
+  display:flex;align-items:center;gap:10px;
+  padding:16px 0 0;
+}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 20px;border-radius:var(--radius-sm);
+  font-size:13.5px;font-weight:600;cursor:pointer;
+  transition:all .15s;border:none;font-family:inherit;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  color:#fff;flex:1;justify-content:center;
+}
+.btn-primary:hover{filter:brightness(1.08);box-shadow:0 4px 12px color-mix(in srgb,var(--accent) 40%,transparent)}
+.btn-secondary{
+  background:var(--surface2);color:var(--text2);
+  border:1px solid var(--border);
+}
+.btn-secondary:hover{background:var(--border)}
+.btn-ghost{
+  background:transparent;color:var(--text3);font-size:13px;
+}
+.btn:disabled{opacity:.45;pointer-events:none}
+
+/* Konfirmasi summary */
+.summary-row{
+  display:flex;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--border);font-size:13px;
+}
+.summary-row:last-child{border-bottom:none}
+.summary-label{color:var(--text3);width:130px;flex-shrink:0;font-size:12px}
+.summary-val{color:var(--text);font-weight:500;flex:1}
+
+/* Success state */
+.success-screen{
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;padding:40px 20px;
+}
+.success-icon{font-size:64px;margin-bottom:16px;animation:pop .4s cubic-bezier(.4,0,.2,1)}
+.success-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px}
+.success-sub{font-size:14px;color:var(--text3);margin-bottom:24px;line-height:1.6}
+@keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* Tags */
+.tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;
+}
+.tag-online{background:var(--success-soft);color:var(--success)}
+.tag-offline{background:var(--warning-soft);color:var(--warning)}
+
+@media(max-width:680px){
+  .field-row{grid-template-columns:1fr}
+  .paket-grid{grid-template-columns:repeat(2,1fr)}
+  .form-page{padding:14px}
+}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>PNS.NET — Operasional</h1>
-  <span id="connStatus" class="online">Online</span>
-</header>
+<!-- Overlay sidebar mobile -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
-<main>
-
-  <!-- LOGIN CARD -->
-  <div class="card" id="loginCard">
-    <h2>Login</h2>
-    <label for="username">Username</label>
-    <input type="text" id="username" autocomplete="username">
-    <label for="password">Password</label>
-    <input type="password" id="password" autocomplete="current-password">
-    <button id="btnLogin">Masuk</button>
-    <div id="loginMsg"></div>
+<!-- ── SIDEBAR ──────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <svg width="36" height="36" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="225" cy="788" rx="120" ry="121" fill="#E30613"/>
+        <rect x="362" y="598" width="127" height="308" rx="16.5" fill="#E30613"/>
+        <rect x="517" y="525" width="118" height="381" rx="15.34" fill="#E30613"/>
+        <rect x="661" y="454" width="124" height="452" rx="16.12" fill="#1A4FBF"/>
+        <rect x="809" y="377" width="128" height="529" rx="16.64" fill="#1A4FBF"/>
+        <rect x="963" y="280" width="130" height="626" rx="16.9" fill="#FF7A00"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">PNS.NET</div>
+      <div class="logo-sub">PT. Pandawa Nusantara Solusindo</div>
+    </div>
   </div>
 
-  <!-- APP AREA (muncul setelah login) -->
-  <div id="appArea" class="hidden">
+  <nav class="sidebar-nav">
+    <div class="nav-section">Utama</div>
+    <div class="nav-item active" onclick="setPage('dashboard')">
+      <span class="icon">⊞</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="setPage('pelanggan')">
+      <span class="icon">👤</span> Pelanggan
+      <span class="badge">3</span>
+    </div>
+    <div class="nav-item" onclick="setPage('calon')">
+      <span class="icon">📋</span> Calon Pelanggan
+      <span class="badge">7</span>
+    </div>
+    <div class="nav-item" onclick="setPage('pemasangan')">
+      <span class="icon">🔧</span> Pemasangan
+    </div>
 
-    <div class="card">
-      <div class="userbar">
-        <span>Login sebagai <b id="userLabel"></b> <span class="pill" id="roleLabel"></span></span>
-        <a href="#" id="btnLogout" style="color:var(--err); font-size:12px;">Keluar</a>
+    <div class="nav-section">Jaringan</div>
+    <div class="nav-item" onclick="setPage('topologi')">
+      <span class="icon">🌐</span> Topologi FO
+    </div>
+    <div class="nav-item" onclick="setPage('gangguan')">
+      <span class="icon">⚠️</span> Gangguan
+      <span class="badge">1</span>
+    </div>
+
+    <div class="nav-section">Operasional</div>
+    <div class="nav-item" onclick="setPage('keuangan')">
+      <span class="icon">💰</span> Keuangan
+    </div>
+    <div class="nav-item" onclick="setPage('inventori')">
+      <span class="icon">📦</span> Inventori
+    </div>
+    <div class="nav-item" onclick="setPage('wilayah')">
+      <span class="icon">🗺️</span> Wilayah
+    </div>
+
+    <div class="nav-section">Sistem</div>
+    <div class="nav-item" onclick="setPage('sdm')">
+      <span class="icon">👥</span> Staf & Karyawan
+    </div>
+    <div class="nav-item" onclick="openSettings()">
+      <span class="icon">⚙️</span> Pengaturan
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="avatar" id="sidebarAvatar">A</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Administrator</div>
+      <div class="user-role" id="sidebarRole">Direktur</div>
+    </div>
+    <button class="btn-icon" title="Keluar" onclick="logout()">🚪</button>
+  </div>
+</aside>
+
+<!-- ── MAIN ─────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="topbar-btn burger" onclick="toggleSidebar()">☰</button>
+    <div class="topbar-title" id="pageTitle">Dashboard</div>
+    <button class="topbar-btn notif-dot" title="Notifikasi">🔔</button>
+    <button class="topbar-btn" title="Sinkronisasi" onclick="doSync(this)">🔄</button>
+    <button class="topbar-btn" title="Pengaturan" onclick="openSettings()">⚙️</button>
+  </header>
+
+  <!-- Page content -->
+  <div class="page" id="pageContent">
+
+    <div class="page-header">
+      <div class="page-greeting" id="greeting">Selamat pagi, Admin 👋</div>
+      <div class="page-sub" id="dateStr"></div>
+    </div>
+
+    <!-- Stats cards -->
+    <div class="stats-grid" id="statsGrid">
+      <!-- dikontrol JS -->
+    </div>
+
+    <!-- Dash grid -->
+    <div class="dash-grid">
+
+      <!-- Aktivitas terbaru -->
+      <div>
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Aktivitas Terbaru</div>
+            <div class="panel-action">Lihat semua</div>
+          </div>
+          <div class="activity-list" id="activityList">
+            <!-- dikontrol JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Kolom kanan -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Pipeline calon -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Pipeline Calon</div>
+            <div class="panel-action" onclick="setPage('calon_form')">+ Tambah</div>
+          </div>
+          <div class="pipeline" id="pipelineList">
+            <!-- dikontrol JS -->
+          </div>
+        </div>
+
+        <!-- Status ODP -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Status ODP</div>
+            <div class="panel-action" onclick="setPage('topologi')">Peta</div>
+          </div>
+          <div class="odp-list" id="odpList">
+            <!-- dikontrol JS -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FORM PEMASANGAN ────────────────────────────────── -->
+<div id="formPemasanganPage" style="display:none">
+<div class="form-page">
+
+  <!-- Info calon di atas -->
+  <div class="form-card" id="pem_calonInfo" style="margin-bottom:14px">
+    <div class="form-card-head" style="background:var(--accent-soft)">
+      <span style="font-size:18px">👤</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)" id="pem_namaCabon">—</div>
+        <div style="font-size:11px;color:var(--text3)" id="pem_infoCabon">—</div>
+      </div>
+      <span class="phase-pill ph-PROSES_PASANG">Proses Pasang</span>
+    </div>
+  </div>
+
+  <!-- Stepper 5 langkah -->
+  <div class="form-steps" id="pemSteps" style="margin-bottom:24px">
+    <div class="step-node active" data-pstep="0"><div class="step-circle">1</div><div class="step-lbl">Jadwal</div></div>
+    <div class="step-node" data-pstep="1"><div class="step-circle">2</div><div class="step-lbl">Jaringan</div></div>
+    <div class="step-node" data-pstep="2"><div class="step-circle">3</div><div class="step-lbl">Modem</div></div>
+    <div class="step-node" data-pstep="3"><div class="step-circle">4</div><div class="step-lbl">WiFi</div></div>
+    <div class="step-node" data-pstep="4"><div class="step-circle">5</div><div class="step-lbl">Selesai</div></div>
+  </div>
+
+  <!-- STEP 1: Jadwal & Teknisi -->
+  <div id="pstep0" class="step-content">
+    <div class="form-card">
+      <div class="form-card-head"><span style="font-size:18px">📅</span>
+        <div class="form-card-title">Jadwal Pemasangan</div></div>
+      <div class="form-card-body">
+        <div class="field-row">
+          <div class="field">
+            <label>Tanggal<span>*</span></label>
+            <input type="date" id="pem_tgl" oninput="validatePem0()">
+          </div>
+          <div class="field">
+            <label>Jam Mulai<span>*</span></label>
+            <input type="time" id="pem_jam" oninput="validatePem0()">
+          </div>
+        </div>
+        <div class="field">
+          <label>Timer Durasi Pemasangan</label>
+          <div class="timer-display" id="pem_timer">00:00:00</div>
+          <div class="timer-btns">
+            <button class="btn btn-secondary" style="flex:1" onclick="timerStart()">▶ Mulai</button>
+            <button class="btn btn-secondary" style="flex:1" onclick="timerPause()">⏸ Jeda</button>
+            <button class="btn btn-secondary" style="flex:1" onclick="timerReset()">⟳ Reset</button>
+          </div>
+          <div class="field-hint" style="margin-top:6px">Timer otomatis mencatat durasi kerja lapangan</div>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <h2>Sinkronisasi Data</h2>
-      <div id="versionSummary" style="font-size:13px; color:var(--text-dim);">Memuat status lokal...</div>
-      <button id="btnSync">Sync Sekarang</button>
-      <div id="syncMsg"></div>
-      <div id="syncLog"></div>
-    </div>
-
-    <div class="card" id="modemCard" style="display:none;">
-      <h2>Modem / Inventori <span id="modemQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
-      <p style="font-size:12px; color:var(--text-dim);">Company-wide — tidak terikat desa tertentu.</p>
-      <label for="modemMerk">Merk</label>
-      <input type="text" id="modemMerk" placeholder="mis. ZTE, Huawei, CIOT">
-      <label for="modemSerial">Serial Number</label>
-      <input type="text" id="modemSerial" placeholder="mis. SN123456789">
-      <label for="modemKeterangan">Keterangan</label>
-      <input type="text" id="modemKeterangan" placeholder="Opsional">
-      <button id="btnSubmitModem">Daftarkan Modem</button>
-      <div id="modemMsg" style="font-size:13px; margin-top:8px;"></div>
-
-      <h2 style="margin-top:18px;">Daftar Modem (Local DB)</h2>
-      <div id="modemList" style="font-size:13px; color:var(--text-dim);">Belum ada modem terdaftar.</div>
-    </div>
-
-    <div class="card">
-      <h2>Contoh: Dropdown Wilayah (dari Local DB / IndexedDB)</h2>
-      <label for="selKabupaten">Kabupaten</label>
-      <select id="selKabupaten"><option value="">-- pilih kabupaten --</option></select>
-      <label for="selKecamatan">Kecamatan</label>
-      <select id="selKecamatan" disabled><option value="">-- pilih kecamatan --</option></select>
-      <label for="selDesa">Desa/Kelurahan</label>
-      <select id="selDesa" disabled><option value="">-- pilih desa/kelurahan --</option></select>
-      <p style="font-size:12px; color:var(--text-dim); margin-top:10px;">
-        Dropdown ini SELALU dibaca dari IndexedDB (Local DB), bukan dari internet —
-        coba aktifkan Airplane Mode lalu reload halaman ini, dropdown tetap berfungsi
-        selama sudah pernah sync sebelumnya.
-      </p>
-    </div>
-
-    <div class="card" id="subWilayahCard" style="display:none;">
-      <h2>Dusun / Lingkungan <span id="queueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
-      <label for="selSubWilayah">Pilih yang sudah ada</label>
-      <select id="selSubWilayah"><option value="">-- pilih dusun/lingkungan --</option></select>
-
-      <label for="inputSubWilayahNama">Atau tambah baru</label>
-      <input type="text" id="inputSubWilayahNama" placeholder="mis. Dusun Mekar Jaya">
-      <select id="selJenisSub" style="margin-top:8px;">
-        <option value="DUSUN">Dusun</option>
-        <option value="LINGKUNGAN">Lingkungan</option>
-        <option value="KAMPUNG">Kampung</option>
-        <option value="BANJAR">Banjar</option>
-        <option value="LAINNYA">Lainnya</option>
-      </select>
-
-      <div id="subWilayahWarn" class="warn-box"></div>
-
-      <div class="row-btns">
-        <button id="btnCheckSubWilayah" class="secondary btn-sm">Cek Kemiripan</button>
-        <button id="btnAddSubWilayah" class="btn-sm">Tambahkan</button>
+    <div class="form-card">
+      <div class="form-card-head"><span style="font-size:18px">👷</span>
+        <div class="form-card-title">Teknisi Bertugas</div>
+        <span style="font-size:12px;color:var(--text3)" id="pem_teknisiCount">0 dipilih</span>
       </div>
-      <div id="subWilayahMsg" style="font-size:13px; margin-top:8px;"></div>
-      <p style="font-size:11px; color:var(--text-dim); margin-top:10px;">
-        Data baru langsung tersimpan di Local DB (bisa dipakai walau offline) dan masuk
-        antrean Sync Queue — otomatis terkirim ke server saat "Sync Sekarang" berikutnya
-        dilakukan dalam kondisi online.
-      </p>
+      <div class="form-card-body">
+        <div class="teknisi-list" id="pem_teknisiList"></div>
+      </div>
     </div>
 
-    <div class="card" id="odpCard" style="display:none;">
-      <h2>ODP <span id="odpQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
-      <label for="odpNama">Nama ODP</label>
-      <input type="text" id="odpNama" placeholder="mis. ODP-BGK-01">
-      <label for="odpAlamat">Alamat / Lokasi (otomatis dari wilayah yang dipilih di atas)</label>
-      <input type="text" id="odpAlamat" readonly placeholder="Pilih Kabupaten/Kecamatan/Desa/Dusun dulu">
-      <label for="odpCatatanLokasi">Catatan lokasi tambahan (opsional)</label>
-      <input type="text" id="odpCatatanLokasi" placeholder="mis. dekat pasar, sebelah masjid">
-      <label for="odpKapasitas">Kapasitas Port</label>
-      <input type="number" id="odpKapasitas" placeholder="mis. 8" min="1">
-      <button id="btnSubmitOdp">Tambah ODP</button>
-      <div id="odpMsg" style="font-size:13px; margin-top:8px;"></div>
-
-      <h2 style="margin-top:18px;">Daftar ODP di Desa Ini</h2>
-      <div id="odpList" style="font-size:13px; color:var(--text-dim);">Belum ada ODP.</div>
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="cancelPemasangan()">✕ Batal</button>
+      <button class="btn btn-primary" id="btnPem0Next" onclick="goPemStep(1)" disabled>Selanjutnya →</button>
     </div>
-
-    <div class="card" id="calonPelangganCard" style="display:none;">
-      <h2>Form Calon Pelanggan <span id="cpQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
-      <p style="font-size:12px; color:var(--text-dim);">Wilayah &amp; Dusun mengikuti pilihan dropdown di kartu sebelumnya.</p>
-
-      <label for="cpNama">Nama Calon Pelanggan</label>
-      <input type="text" id="cpNama" placeholder="Nama lengkap">
-      <label for="cpNoHp">No. HP</label>
-      <input type="text" id="cpNoHp" placeholder="08xxxxxxxxxx" inputmode="numeric">
-      <label for="cpAlamat">Alamat</label>
-      <input type="text" id="cpAlamat" placeholder="Alamat lengkap (opsional)">
-      <label for="cpPaket">Paket</label>
-      <select id="cpPaket"><option value="">-- pilih paket --</option></select>
-      <label for="cpSumber">Sumber Pelanggan</label>
-      <select id="cpSumber"><option value="">-- pilih sumber --</option></select>
-
-      <button id="btnSubmitCP">Simpan Calon Pelanggan</button>
-      <div id="cpMsg" style="font-size:13px; margin-top:8px;"></div>
-
-      <h2 style="margin-top:18px;">Daftar Lokal (Local DB)</h2>
-      <div id="cpList" style="font-size:13px; color:var(--text-dim);">Belum ada data.</div>
-    </div>
-
-    <div class="card" id="pemasanganCard" style="display:none;">
-      <h2>Pemasangan <span id="pmQueueBadge" class="queue-badge hidden">0 menunggu sync</span></h2>
-      <label for="pmCalonPelanggan">Calon Pelanggan</label>
-      <select id="pmCalonPelanggan"><option value="">-- pilih calon pelanggan --</option></select>
-      <label for="pmJenis">Jenis Pemasangan</label>
-      <select id="pmJenis"><option value="">-- pilih jenis --</option></select>
-      <label for="pmOdp">ODP</label>
-      <select id="pmOdp"><option value="">-- belum pilih ODP --</option></select>
-      <label for="pmPort">Port</label>
-      <select id="pmPort" disabled><option value="">-- pilih ODP dulu --</option></select>
-      <label for="pmTeknisi">Teknisi (opsional)</label>
-      <select id="pmTeknisi"><option value="">-- belum ditentukan --</option></select>
-      <label for="pmTanggal">Tanggal Jadwal</label>
-      <input type="date" id="pmTanggal">
-      <label for="pmCatatan">Catatan</label>
-      <input type="text" id="pmCatatan" placeholder="Opsional">
-
-      <button id="btnSubmitPM">Jadwalkan Pemasangan</button>
-      <div id="pmMsg" style="font-size:13px; margin-top:8px;"></div>
-
-      <h2 style="margin-top:18px;">Daftar Pemasangan (Local DB)</h2>
-      <div id="pmList" style="font-size:13px; color:var(--text-dim);">Belum ada data.</div>
-    </div>
-
-    <div class="card" id="pelangganCard" style="display:none;">
-      <h2>Pelanggan Aktif</h2>
-      <p style="font-size:12px; color:var(--text-dim);">
-        Muncul otomatis begitu Pemasangan ditandai SELESAI — tidak ada form manual, data diambil dari Calon Pelanggan + Pemasangan.
-      </p>
-      <div id="plList" style="font-size:13px; color:var(--text-dim);">Belum ada data.</div>
-    </div>
-
   </div>
 
-</main>
+  <!-- STEP 2: Jaringan (ODP, Port, Server) -->
+  <div id="pstep1" class="step-content" style="display:none">
+    <div class="form-card">
+      <div class="form-card-head"><span style="font-size:18px">🔌</span>
+        <div class="form-card-title">Koneksi Jaringan</div></div>
+      <div class="form-card-body">
+        <div class="field">
+          <label>Server / Username PPPoE<span>*</span></label>
+          <select id="pem_server" onchange="validatePem1()">
+            <option value="">— Pilih server —</option>
+            <option value="sv-001">@ogoamas — Server Pusat</option>
+            <option value="sv-002">@bangkir — Sub Server</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>ODP<span>*</span></label>
+            <select id="pem_odp" onchange="onOdpChange();validatePem1()">
+              <option value="">— Pilih ODP —</option>
+              <option value="odp1">ODP-TTL-001 (1 port sisa)</option>
+              <option value="odp2">ODP-TTL-002 (2 port sisa)</option>
+              <option value="odp3">ODP-DGL-001 (3 port sisa)</option>
+              <option value="odp4">ODP-DGL-003 (5 port sisa)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Port<span>*</span></label>
+            <select id="pem_port" onchange="validatePem1()" disabled>
+              <option value="">— Pilih port —</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Preview Username PPPoE</label>
+          <div style="background:var(--surface2);border:1px solid var(--border);
+            border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;
+            font-family:var(--font-mono,monospace);color:var(--accent);font-weight:600"
+            id="pem_usernamePreview">
+            — isi data di atas untuk generate username —
+          </div>
+          <div class="field-hint">Format: {urut}{namaktp}.{desa}@{server}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="goPemStep(0)">← Kembali</button>
+      <button class="btn btn-primary" id="btnPem1Next" onclick="goPemStep(2)" disabled>Selanjutnya →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Modem (Foto ONT + OCR + OPM) -->
+  <div id="pstep2" class="step-content" style="display:none">
+    <!-- Foto belakang ONT -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">📡</span>
+        <div class="form-card-title">Foto Belakang ONT / Modem</div>
+        <span id="pem_ontOcrTag" class="tag tag-online">● OCR Aktif</span>
+      </div>
+      <div class="form-card-body">
+        <div class="foto-box" id="ontFotoBox">
+          <input type="file" accept="image/*" capture="environment"
+            onchange="handleOntFoto(this)">
+          <div id="ontPlaceholder">
+            <div class="foto-box-icon">📷</div>
+            <div class="foto-box-label">Foto Belakang ONT</div>
+            <div class="foto-box-sub">Label SN, MAC, Password WiFi</div>
+          </div>
+          <img id="ontPreviewImg" class="foto-preview" src="" alt="" style="display:none">
+          <div class="foto-box-overlay">
+            <button class="foto-retake" onclick="retakeOnt(event)">🔄 Ulang Foto</button>
+          </div>
+        </div>
+        <div id="ontOcrStatus" style="display:none"></div>
+
+        <!-- Hasil OCR ONT -->
+        <div class="field-row" style="margin-top:4px">
+          <div class="field">
+            <label>Serial Number <span id="snOcrBadge" class="ocr-mini" style="display:none">✨ OCR</span></label>
+            <input type="text" id="pem_sn" placeholder="SN dari label modem"
+              oninput="validatePem2()">
+          </div>
+          <div class="field">
+            <label>MAC Address</label>
+            <input type="text" id="pem_mac" placeholder="A4:B2:39:xx:xx:xx">
+          </div>
+        </div>
+        <div class="field">
+          <label>Password WiFi Default (dari label)
+            <span id="passOcrBadge" class="ocr-mini" style="display:none">✨ OCR</span>
+          </label>
+          <input type="text" id="pem_passDefault"
+            placeholder="Password bawaan untuk pairing awal"
+            oninput="updateWifiPreview()">
+          <div class="field-hint">Digunakan teknisi untuk akses panel modem — tidak ditampilkan ke pelanggan</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Foto OPM -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">📊</span>
+        <div class="form-card-title">Pengukuran OPM</div>
+      </div>
+      <div class="form-card-body">
+        <div class="foto-upload-grid">
+          <div class="foto-box" id="opmFotoBox">
+            <input type="file" accept="image/*" capture="environment"
+              onchange="handleOpmFoto(this)">
+            <div id="opmPlaceholder">
+              <div class="foto-box-icon">📷</div>
+              <div class="foto-box-label">Foto Layar OPM</div>
+              <div class="foto-box-sub">Di sisi ONT (dalam rumah)</div>
+            </div>
+            <img id="opmPreviewImg" class="foto-preview" src="" alt="" style="display:none">
+            <div class="foto-box-overlay">
+              <button class="foto-retake" onclick="retakeOpm(event)">🔄 Ulang</button>
+            </div>
+          </div>
+          <div>
+            <div class="field">
+              <label>Nilai OPM (dBm)<span>*</span></label>
+              <input type="number" id="pem_opm" step="0.1" min="-40" max="0"
+                placeholder="-18.5" oninput="updateOpmMeter();validatePem2()">
+            </div>
+            <div class="opm-meter" id="opmMeter" style="display:none">
+              <div class="opm-bar-wrap">
+                <div class="opm-bar-fill" id="opmBarFill" style="width:0%"></div>
+              </div>
+              <div class="opm-labels"><span>-40</span><span>-27</span><span>-15</span><span>0</span></div>
+              <div class="opm-result" id="opmResult"></div>
+            </div>
+          </div>
+        </div>
+        <div class="field-hint" style="margin-top:4px">
+          📍 Ukur di sisi input ONT dalam rumah — lebih aman dari pada di tiang ODP
+        </div>
+      </div>
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="goPemStep(1)">← Kembali</button>
+      <button class="btn btn-primary" id="btnPem2Next" onclick="goPemStep(3)" disabled>Selanjutnya →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Setting WiFi -->
+  <div id="pstep3" class="step-content" style="display:none">
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">📶</span>
+        <div class="form-card-title">Setting WiFi Pelanggan</div>
+      </div>
+      <div class="form-card-body">
+        <div style="background:var(--info-soft);border:1px solid var(--info);
+          border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;
+          color:var(--info);margin-bottom:4px;display:flex;gap:8px;align-items:flex-start">
+          <span style="flex-shrink:0">ℹ️</span>
+          <span>Tanyakan ke pelanggan nama WiFi dan password yang diinginkan. Setting akan dikirim otomatis ke modem via CIOT tool.</span>
+        </div>
+
+        <!-- 2.4 GHz -->
+        <div style="font-size:11px;font-weight:700;color:var(--text3);
+          letter-spacing:.06em;margin:8px 0 6px">WIFI 2.4 GHz</div>
+        <div class="field">
+          <label>Nama WiFi (SSID)<span>*</span></label>
+          <input type="text" id="pem_ssid" placeholder="Contoh: RumahBudi" maxlength="32"
+            oninput="updateWifiPreview();validatePem3()">
+        </div>
+        <div class="field">
+          <label>Password WiFi<span>*</span></label>
+          <div style="position:relative">
+            <input type="password" id="pem_wifipass" placeholder="Min. 8 karakter" maxlength="63"
+              oninput="updateWifiPreview();validatePem3()"
+              style="padding-right:40px">
+            <button class="pass-toggle" style="position:absolute;right:10px;top:50%;transform:translateY(-50%)"
+              onclick="togglePassVis('pem_wifipass',this)">👁</button>
+          </div>
+        </div>
+
+        <!-- 5 GHz -->
+        <div style="display:flex;align-items:center;gap:10px;margin:10px 0 6px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em">WIFI 5 GHz</div>
+          <div class="toggle" id="wifi5Toggle" onclick="toggle5Ghz(this)"></div>
+          <span style="font-size:11px;color:var(--text3)" id="wifi5Label">Nonaktif</span>
+        </div>
+        <div id="wifi5Section" style="display:none">
+          <div class="field">
+            <label>Nama WiFi 5GHz</label>
+            <input type="text" id="pem_ssid5" placeholder="Contoh: RumahBudi_5G" maxlength="32"
+              oninput="updateWifiPreview()">
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="wifi-preview" id="wifiPreviewBox">
+          <div class="wifi-preview-head">📶 PREVIEW SETTING WiFi</div>
+          <div class="wifi-row">
+            <span class="wifi-band">2.4G</span>
+            <span class="wifi-ssid" id="prev_ssid">—</span>
+          </div>
+          <div class="wifi-row" style="margin-bottom:8px">
+            <span class="wifi-band" style="background:transparent;color:var(--text3)"></span>
+            <span class="wifi-pass" id="prev_pass">Password: —</span>
+            <button class="pass-toggle" onclick="togglePassPreview()">👁</button>
+          </div>
+          <div id="prev5Ghz" style="display:none">
+            <div class="wifi-row">
+              <span class="wifi-band">5G</span>
+              <span class="wifi-ssid" id="prev_ssid5">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">💳</span>
+        <div class="form-card-title">Status Pembayaran</div>
+      </div>
+      <div class="form-card-body">
+        <div class="field">
+          <label>Pembayaran Pemasangan<span>*</span></label>
+          <select id="pem_statusBayar" onchange="validatePem3()">
+            <option value="">— Pilih status —</option>
+            <option value="LUNAS_CASH">Lunas — Cash</option>
+            <option value="LUNAS_TRANSFER">Lunas — Transfer</option>
+            <option value="BELUM_BAYAR">Belum Bayar</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Catatan Teknisi</label>
+          <textarea id="pem_catatanTeknisi"
+            placeholder="Panjang kabel tarik, kondisi ODP, kendala lapangan..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="goPemStep(2)">← Kembali</button>
+      <button class="btn btn-primary" id="btnPem3Next" onclick="goPemStep(4)" disabled>Review & Kirim →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5: Ringkasan & Submit -->
+  <div id="pstep4" class="step-content" style="display:none">
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">✅</span>
+        <div class="form-card-title">Ringkasan Pemasangan</div>
+      </div>
+      <div class="form-card-body" id="pemSummaryBody"></div>
+    </div>
+
+    <!-- Foto terlampir -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">📷</span>
+        <div class="form-card-title">Foto Terlampir</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px">
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:4px">ONT / MODEM</div>
+          <img id="pemSumOnt" src="" alt="" style="width:100%;height:90px;
+            object-fit:cover;border-radius:8px;background:var(--surface2);display:block">
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:4px">LAYAR OPM</div>
+          <img id="pemSumOpm" src="" alt="" style="width:100%;height:90px;
+            object-fit:cover;border-radius:8px;background:var(--surface2);display:block">
+        </div>
+      </div>
+    </div>
+
+    <div id="pemOfflineWarn" style="display:none;
+      background:var(--warning-soft);border:1px solid var(--warning);
+      border-radius:var(--radius-sm);padding:10px 14px;
+      font-size:12px;color:var(--warning);margin-bottom:14px;
+      align-items:center;gap:8px">
+      📴 Offline — laporan disimpan lokal & dikirim saat ada koneksi.
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="goPemStep(3)">← Kembali</button>
+      <button class="btn btn-primary" id="btnPemSubmit" onclick="submitPemasangan()">
+        🚀 Kirim Laporan Selesai
+      </button>
+    </div>
+  </div>
+
+  <!-- SUKSES -->
+  <div id="pemStepSuccess" style="display:none">
+    <div class="form-card">
+      <div class="success-screen">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">Pemasangan Selesai!</div>
+        <div class="success-sub" id="pemSuccessMsg">
+          Laporan terkirim. Notifikasi dikirim ke Telegram topik Teknis & Pemasangan.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px">
+          <button class="btn btn-primary" onclick="setPage('calon')">← Daftar Calon</button>
+          <button class="btn btn-secondary" onclick="setPage('pelanggan')">Lihat Pelanggan Aktif</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ── DAFTAR CALON PELANGGAN ─────────────────────────── -->
+<div id="listCalonPage" style="display:none">
+<div class="list-page">
+
+  <!-- Toolbar -->
+  <div class="list-toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="calonSearch" placeholder="Cari nama, HP, lokasi..."
+        oninput="filterCalon()">
+    </div>
+    <button class="btn btn-primary" style="white-space:nowrap;flex:0"
+      onclick="setPage('calon_form')">+ Calon Baru</button>
+  </div>
+
+  <!-- Filter chips fase -->
+  <div class="filter-chips" id="filterChips" style="margin-bottom:14px">
+    <div class="chip active" data-fase="SEMUA" onclick="setFaseFilter('SEMUA',this)">Semua</div>
+    <div class="chip" data-fase="BARU" onclick="setFaseFilter('BARU',this)">🆕 Baru</div>
+    <div class="chip" data-fase="DIHUBUNGI" onclick="setFaseFilter('DIHUBUNGI',this)">📞 Dihubungi</div>
+    <div class="chip" data-fase="SURVEY" onclick="setFaseFilter('SURVEY',this)">🏠 Survey</div>
+    <div class="chip" data-fase="MENUNGGU" onclick="setFaseFilter('MENUNGGU',this)">⏳ Menunggu</div>
+    <div class="chip" data-fase="PROSES_PASANG" onclick="setFaseFilter('PROSES_PASANG',this)">🔧 Proses Pasang</div>
+    <div class="chip" data-fase="DITUNDA" onclick="setFaseFilter('DITUNDA',this)">⏸ Ditunda</div>
+    <div class="chip" data-fase="BATAL" onclick="setFaseFilter('BATAL',this)">✕ Batal</div>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="list-stats" id="calonStats"></div>
+
+  <!-- List -->
+  <div class="calon-list" id="calonList"></div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="calonPagination"></div>
+
+</div>
+</div>
+
+<!-- ── FORM CALON PELANGGAN ───────────────────────────── -->
+<div id="formCalonPage" style="display:none">
+<div class="form-page">
+
+  <!-- Stepper -->
+  <div class="form-steps" id="formSteps">
+    <div class="step-node active" data-step="0">
+      <div class="step-circle">1</div>
+      <div class="step-lbl">Identitas</div>
+    </div>
+    <div class="step-node" data-step="1">
+      <div class="step-circle">2</div>
+      <div class="step-lbl">Lokasi</div>
+    </div>
+    <div class="step-node" data-step="2">
+      <div class="step-circle">3</div>
+      <div class="step-lbl">Paket</div>
+    </div>
+    <div class="step-node" data-step="3">
+      <div class="step-circle">4</div>
+      <div class="step-lbl">Konfirmasi</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Identitas -->
+  <div id="step0" class="step-content">
+    <!-- KTP Upload -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">🪪</span>
+        <div class="form-card-title">Foto KTP</div>
+        <span id="ocrModeTag" class="tag tag-online">● Online · Vision API</span>
+      </div>
+      <div class="form-card-body">
+        <div id="ktpUploadArea" class="ktp-upload">
+          <input type="file" id="ktpFileInput" accept="image/*" capture="environment"
+            onchange="handleKtpFile(this)">
+          <div id="ktpPlaceholder">
+            <div class="ktp-upload-icon">📷</div>
+            <div class="ktp-upload-text">Foto atau Upload KTP</div>
+            <div class="ktp-upload-sub">Klik untuk ambil foto · JPG, PNG · Maks 5MB</div>
+          </div>
+          <div id="ktpPreview" class="ktp-preview" style="display:none">
+            <img id="ktpImg" src="" alt="KTP">
+            <div class="ktp-preview-overlay">
+              <button class="btn-preview-action" onclick="retakeKtp(event)">🔄 Ulang</button>
+            </div>
+          </div>
+        </div>
+        <div id="ocrStatus" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Data diri -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">👤</span>
+        <div class="form-card-title">Data Diri</div>
+      </div>
+      <div class="form-card-body">
+        <div class="field">
+          <label>Nama Lengkap (sesuai KTP)<span>*</span></label>
+          <input type="text" id="f_nama" placeholder="Akan terisi otomatis dari OCR..."
+            oninput="validateStep0()">
+          <div id="ocrResultNama" class="field-ocr-result">
+            <span>✨</span><span id="ocrResultText"></span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>NIK</label>
+            <input type="text" id="f_nik" placeholder="16 digit NIK" maxlength="16"
+              oninput="this.value=this.value.replace(/\D/g,'');validateStep0()">
+          </div>
+          <div class="field">
+            <label>No. HP / WhatsApp<span>*</span></label>
+            <input type="tel" id="f_hp" placeholder="0812xxxxxxxx"
+              oninput="validateStep0()">
+          </div>
+        </div>
+        <div class="field">
+          <label>Catatan</label>
+          <textarea id="f_catatan" placeholder="Informasi tambahan (opsional)..."></textarea>
+        </div>
+        <div class="field">
+          <label>Sumber Informasi</label>
+          <select id="f_sumber">
+            <option value="">— Pilih sumber —</option>
+            <option>Referral Pelanggan</option>
+            <option>Media Sosial</option>
+            <option>Brosur / Spanduk</option>
+            <option>Kunjungan Langsung</option>
+            <option>Telepon / WhatsApp</option>
+            <option>Word of Mouth</option>
+            <option>Lainnya</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="cancelForm()">✕ Batal</button>
+      <button class="btn btn-primary" id="btnStep0Next" onclick="goStep(1)" disabled>
+        Selanjutnya →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Lokasi -->
+  <div id="step1" class="step-content" style="display:none">
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">📍</span>
+        <div class="form-card-title">Lokasi Pemasangan</div>
+      </div>
+      <div class="form-card-body">
+        <div class="field">
+          <label>Kabupaten / Kota<span>*</span></label>
+          <select id="f_kab" onchange="onKabChange();validateStep1()">
+            <option value="">— Pilih kabupaten —</option>
+            <option value="tolitoli">Kab. Toli-Toli</option>
+            <option value="donggala" disabled>Kab. Donggala (nonaktif)</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Kecamatan<span>*</span></label>
+            <select id="f_kec" onchange="onKecChange();validateStep1()" disabled>
+              <option value="">— Pilih kecamatan —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Desa / Kelurahan<span>*</span></label>
+            <select id="f_desa" onchange="validateStep1()" disabled>
+              <option value="">— Pilih desa —</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Dusun / Lingkungan</label>
+          <input type="text" id="f_dusun" placeholder="Nama dusun atau lingkungan...">
+          <div class="field-hint">Jika belum ada di daftar, ketik langsung — akan ditambahkan sebagai entri baru.</div>
+        </div>
+        <div class="field">
+          <label>Alamat Detail</label>
+          <textarea id="f_alamat" placeholder="No. rumah, RT/RW, patokan lokasi..." style="min-height:56px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="goStep(0)">← Kembali</button>
+      <button class="btn btn-primary" id="btnStep1Next" onclick="goStep(2)" disabled>
+        Selanjutnya →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Paket -->
+  <div id="step2" class="step-content" style="display:none">
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">📦</span>
+        <div class="form-card-title">Pilih Paket Internet</div>
+      </div>
+      <div class="form-card-body">
+        <div class="paket-grid" id="paketGrid"></div>
+      </div>
+    </div>
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">🔌</span>
+        <div class="form-card-title">Jenis Pemasangan</div>
+      </div>
+      <div class="form-card-body">
+        <div class="field">
+          <label>Jenis / Promo Pemasangan<span>*</span></label>
+          <select id="f_jenis_pasang" onchange="validateStep2()">
+            <option value="">— Pilih jenis —</option>
+            <option value="normal">Normal — Rp150.000</option>
+            <option value="promo_gratis">Promo Gratis — Rp0</option>
+            <option value="promo_diskon">Promo Diskon 50% — Rp75.000</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="goStep(1)">← Kembali</button>
+      <button class="btn btn-primary" id="btnStep2Next" onclick="goStep(3)" disabled>
+        Review & Simpan →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Konfirmasi -->
+  <div id="step3" class="step-content" style="display:none">
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">✅</span>
+        <div class="form-card-title">Ringkasan Pendaftaran</div>
+      </div>
+      <div class="form-card-body" id="summaryBody">
+        <!-- diisi JS -->
+      </div>
+    </div>
+
+    <!-- Foto KTP preview kecil -->
+    <div class="form-card" id="summaryKtpCard" style="display:none">
+      <div class="form-card-head">
+        <span style="font-size:18px">🪪</span>
+        <div class="form-card-title">Foto KTP Terlampir</div>
+      </div>
+      <div style="padding:12px 16px">
+        <img id="summaryKtpImg" src="" alt="KTP"
+          style="width:100%;max-height:140px;object-fit:cover;border-radius:8px">
+      </div>
+    </div>
+
+    <!-- Simpan offline warning -->
+    <div id="offlineWarning" style="display:none;
+      background:var(--warning-soft);border:1px solid var(--warning);
+      border-radius:var(--radius-sm);padding:10px 14px;
+      font-size:12px;color:var(--warning);margin-bottom:14px;
+      display:none;align-items:center;gap:8px">
+      📴 Tidak ada koneksi — data akan disimpan lokal dan disinkronkan saat online.
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="goStep(2)">← Kembali</button>
+      <button class="btn btn-primary" id="btnSubmit" onclick="submitCalon()">
+        💾 Simpan Calon Pelanggan
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 5: Sukses -->
+  <div id="stepSuccess" style="display:none">
+    <div class="form-card">
+      <div class="success-screen">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">Calon Pelanggan Tersimpan!</div>
+        <div class="success-sub" id="successMsg">
+          Data berhasil disimpan dan notifikasi telah dikirim ke Telegram.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px">
+          <button class="btn btn-primary" onclick="resetForm()">
+            + Daftarkan Calon Lain
+          </button>
+          <button class="btn btn-secondary" onclick="setPage('calon')">
+            ← Kembali ke Daftar Calon
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- FAB mobile -->
+<button class="fab" onclick="setPage('calon_form')" title="Daftar Calon Baru">+</button>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <div class="bn-item active" onclick="setPage('dashboard')">
+      <span class="icon">⊞</span>Dashboard
+    </div>
+    <div class="bn-item" onclick="setPage('pelanggan')">
+      <span class="icon">👤</span>Pelanggan
+      <span class="bn-badge">3</span>
+    </div>
+    <div class="bn-item" onclick="setPage('calon')">
+      <span class="icon">📋</span>Calon
+    </div>
+    <div class="bn-item" onclick="setPage('topologi')">
+      <span class="icon">🌐</span>Jaringan
+    </div>
+    <div class="bn-item" onclick="openSettings()">
+      <span class="icon">⚙️</span>Pengaturan
+    </div>
+  </div>
+</nav>
+
+<!-- ── DRAWER PENGATURAN ──────────────────────────────── -->
+<div class="overlay" id="drawerOverlay" onclick="closeSettings()"></div>
+<div class="drawer" id="settingsDrawer">
+  <div class="drawer-head">
+    <div class="drawer-title">⚙️ Pengaturan</div>
+    <button class="btn-icon" onclick="closeSettings()">✕</button>
+  </div>
+  <div class="drawer-body">
+
+    <div class="setting-section">TEMA</div>
+    <div class="toggle-row">
+      <span class="toggle-label">Mode Gelap</span>
+      <div class="toggle" id="darkToggle" onclick="toggleDark()"></div>
+    </div>
+
+    <div class="setting-section">WARNA AKSEN</div>
+    <div class="theme-swatches" id="swatches"></div>
+
+    <div class="setting-section">KARTU DASHBOARD</div>
+    <div class="card-toggle-list" id="cardToggleList"></div>
+
+  </div>
+</div>
 
 <script>
-// ============================================================
-// KONFIGURASI — GANTI SESUAI DEPLOYMENT APPS SCRIPT ANDA
-// ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbyr8TF3wLwnNdXfmsJ83x2I9MugfpQs1OaITGlyvoBusyIfenVm7l2eqNjGofhLJYlI6A/exec';
+// ── DATA DEMO ──────────────────────────────────────────────
+const ALL_CARDS = [
+  { id:'pelanggan_aktif', icon:'👤', label:'Pelanggan Aktif',
+    value:142, delta:'+5', type:'up',
+    accent:'#2A6FD4', soft:'#D6E6FA' },
+  { id:'calon_pipeline', icon:'📋', label:'Calon Pipeline',
+    value:7, delta:'+2', type:'up',
+    accent:'#FF8C42', soft:'#FFE8D6' },
+  { id:'pemasangan_bulan', icon:'🔧', label:'Pasang Bulan Ini',
+    value:12, delta:'+3', type:'up',
+    accent:'#2D9E6B', soft:'#D6F0E4' },
+  { id:'port_tersedia', icon:'🔌', label:'Port Tersedia',
+    value:34, delta:'-4', type:'down',
+    accent:'#6B4ED4', soft:'#E8E0FA' },
+  { id:'tagihan_pending', icon:'💰', label:'Menunggu Konfirmasi',
+    value:3, delta:'', type:'neu',
+    accent:'#D4860A', soft:'#FEF3D6' },
+  { id:'stok_kritis', icon:'📦', label:'Stok Kritis',
+    value:2, delta:'', type:'neu',
+    accent:'#D63B3B', soft:'#FDDADA' },
+  { id:'gangguan_aktif', icon:'⚠️', label:'Gangguan Aktif',
+    value:1, delta:'', type:'neu',
+    accent:'#D4860A', soft:'#FEF3D6' },
+  { id:'pendapatan_bulan', icon:'📈', label:'Pendapatan Bulan Ini',
+    value:'Rp32,7jt', delta:'+12%', type:'up',
+    accent:'#2D9E6B', soft:'#D6F0E4' },
+];
 
-// ============================================================
-// KONFIGURASI MASTER <-> OBJECT STORE INDEXEDDB
-// ============================================================
-const MASTER_CONFIG = {
-  MASTER_PROVINSI:        { store: 'master_provinsi',        keyPath: 'id_internal' },
-  MASTER_KABUPATEN:       { store: 'master_kabupaten',       keyPath: 'id_internal', parentField: 'parent_id_internal' },
-  MASTER_KECAMATAN:       { store: 'master_kecamatan',       keyPath: 'id_internal', parentField: 'parent_id_internal' },
-  MASTER_DESA:            { store: 'master_desa',            keyPath: 'id_internal', parentField: 'parent_id_internal' },
-  MASTER_PAKET:           { store: 'master_paket',           keyPath: 'id_paket' },
-  MASTER_ROLE:            { store: 'master_role',            keyPath: 'id_role' },
-  MASTER_PERMISSION:      { store: 'master_permission',      keyPath: 'id_permission' },
-  MASTER_STATUS:          { store: 'master_status',          keyPath: 'id_status' },
-  MASTER_SUMBER_PELANGGAN:{ store: 'master_sumber_pelanggan',keyPath: 'id_sumber' },
-  MASTER_JENIS_PEMASANGAN:{ store: 'master_jenis_pemasangan',keyPath: 'id_jenis' },
-  MASTER_SUB_WILAYAH:     { store: 'master_sub_wilayah',     keyPath: 'id_sub_wilayah', parentField: 'parent_id_desa' },
-  TRANSAKSI_CALON_PELANGGAN: { store: 'calon_pelanggan',     keyPath: 'id_calon_pelanggan' },
-  TRANSAKSI_PEMASANGAN:      { store: 'pemasangan',           keyPath: 'id_pemasangan' },
-  MASTER_TEKNISI:             { store: 'master_teknisi',       keyPath: 'id_teknisi' },
-  PELANGGAN:                   { store: 'pelanggan',            keyPath: 'id_pelanggan' },
-  MASTER_ODP:                  { store: 'master_odp',           keyPath: 'id_odp', parentField: 'id_desa' },
-  MASTER_PORT_ODP:             { store: 'master_port_odp',      keyPath: 'id_port', parentField: 'id_odp' },
-  MASTER_MODEM:                 { store: 'master_modem',         keyPath: 'id_modem' },
-  MODEM_RIWAYAT:                { store: 'modem_riwayat',        keyPath: 'id_riwayat', parentField: 'id_modem' }
+const ACTIVITIES = [
+  { dot:'#2D9E6B', text:'<b>Budi Santoso</b> resmi jadi pelanggan aktif',
+    meta:'10 menit lalu · Dipasang Andi', badge:'Aktif', bc:'#D6F0E4', bct:'#2D9E6B' },
+  { dot:'#FF8C42', text:'<b>Siti Rahayu</b> mendaftar sebagai calon pelanggan',
+    meta:'32 menit lalu · CS Rina', badge:'Calon Baru', bc:'#FFE8D6', bct:'#FF8C42' },
+  { dot:'#D4860A', text:'Setoran cash <b>Rp820.000</b> dari Rina menunggu konfirmasi kasir',
+    meta:'1 jam lalu · 3 pelanggan', badge:'Pending', bc:'#FEF3D6', bct:'#D4860A' },
+  { dot:'#D63B3B', text:'Gangguan dilaporkan oleh <b>Ahmad Fauzi</b> — internet mati',
+    meta:'2 jam lalu · ODP-TTL-001', badge:'Gangguan', bc:'#FDDADA', bct:'#D63B3B' },
+  { dot:'#2A6FD4', text:'Stok kabel drop menipis — sisa <b>2 rol</b>',
+    meta:'3 jam lalu · Gudang', badge:'Inventori', bc:'#D6E6FA', bct:'#2A6FD4' },
+  { dot:'#2D9E6B', text:'Pemasangan <b>Doni Kurniawan</b> selesai — 2j 15m',
+    meta:'5 jam lalu · Teknisi Andi', badge:'Selesai', bc:'#D6F0E4', bct:'#2D9E6B' },
+];
+
+const PIPELINE = [
+  { initials:'BS', nama:'Budi Santoso', sub:'Tambu · 10 Mbps', phase:'PROSES PASANG', pc:'phase-proses' },
+  { initials:'SR', nama:'Siti Rahayu', sub:'Bangkir · 10 Mbps', phase:'BARU', pc:'phase-baru' },
+  { initials:'AF', nama:'Ahmad Fauzi', sub:'Puse · 15 Mbps', phase:'SURVEY', pc:'phase-survey' },
+  { initials:'DK', nama:'Dian Kusuma', sub:'Tambu · 5 Mbps', phase:'MENUNGGU', pc:'phase-menunggu' },
+  { initials:'RP', nama:'Rini Prasetyo', sub:'Bangkir · 10 Mbps', phase:'DIHUBUNGI', pc:'phase-baru' },
+];
+
+const ODP_DATA = [
+  { nama:'ODP-TTL-001', terpakai:7, total:8 },
+  { nama:'ODP-TTL-002', terpakai:2, total:4 },
+  { nama:'ODP-DGL-001', terpakai:5, total:8 },
+  { nama:'ODP-DGL-002', terpakai:8, total:8 },
+  { nama:'ODP-DGL-003', terpakai:3, total:8 },
+];
+
+const ACCENTS = [
+  { name:'Orange Candy', light:'#FF8C42', dark:'#0D1B2A' },
+  { name:'Ocean Blue',   light:'#2A6FD4', dark:'#0A1628' },
+  { name:'Forest Green', light:'#2D9E6B', dark:'#0A1E14' },
+  { name:'Violet',       light:'#7C4ED4', dark:'#13092A' },
+  { name:'Rose',         light:'#D4436B', dark:'#2A0A14' },
+];
+
+// ── STATE ─────────────────────────────────────────────────
+let activeCards = JSON.parse(
+  localStorage.getItem('pnsnet_cards') ||
+  JSON.stringify(['pelanggan_aktif','calon_pipeline','pemasangan_bulan','port_tersedia','tagihan_pending','stok_kritis'])
+);
+let isDark   = localStorage.getItem('pnsnet_dark') === 'true';
+let accentIdx= parseInt(localStorage.getItem('pnsnet_accent') || '0');
+
+// ── INIT ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme();
+  setDateGreeting();
+  renderStats();
+  renderActivities();
+  renderPipeline();
+  renderOdp();
+  renderSwatches();
+  renderCardToggles();
+});
+
+function setDateGreeting() {
+  const now  = new Date();
+  const h    = now.getHours();
+  const sapa = h < 12 ? 'pagi' : h < 15 ? 'siang' : h < 18 ? 'sore' : 'malam';
+  document.getElementById('greeting').textContent = `Selamat ${sapa}, Admin 👋`;
+  document.getElementById('dateStr').textContent  =
+    now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+// ── RENDER STATS ─────────────────────────────────────────
+function renderStats() {
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = ALL_CARDS
+    .filter(c => activeCards.includes(c.id))
+    .map(c => `
+      <div class="stat-card" style="--card-accent:${c.accent};--card-soft:${c.soft}">
+        <span class="drag-handle">⋮⋮</span>
+        <div class="stat-icon">${c.icon}</div>
+        <div class="stat-value">${c.value}</div>
+        <div class="stat-label">${c.label}</div>
+        ${c.delta ? `<div class="stat-delta delta-${c.type}">${c.type==='up'?'↑':c.type==='down'?'↓':'—'} ${c.delta}</div>` : ''}
+      </div>
+    `).join('');
+}
+
+// ── RENDER ACTIVITIES ────────────────────────────────────
+function renderActivities() {
+  document.getElementById('activityList').innerHTML = ACTIVITIES.map(a => `
+    <div class="activity-item">
+      <div class="act-dot" style="background:${a.dot}"></div>
+      <div class="act-body">
+        <div class="act-text">${a.text}</div>
+        <div class="act-meta">${a.meta}</div>
+      </div>
+      <div class="act-badge" style="background:${a.bc};color:${a.bct}">${a.badge}</div>
+    </div>
+  `).join('');
+}
+
+// ── RENDER PIPELINE ──────────────────────────────────────
+function renderPipeline() {
+  document.getElementById('pipelineList').innerHTML = PIPELINE.map(p => `
+    <div class="pipe-item">
+      <div class="pipe-avatar">${p.initials}</div>
+      <div class="pipe-info">
+        <div class="pipe-name">${p.nama}</div>
+        <div class="pipe-sub">${p.sub}</div>
+      </div>
+      <div class="phase-chip ${p.pc}">${p.phase}</div>
+    </div>
+  `).join('');
+}
+
+// ── RENDER ODP ───────────────────────────────────────────
+function renderOdp() {
+  document.getElementById('odpList').innerHTML = ODP_DATA.map(o => {
+    const pct  = Math.round(o.terpakai / o.total * 100);
+    const cls  = pct >= 100 ? 'fill-full' : pct >= 75 ? 'fill-warn' : 'fill-ok';
+    return `
+      <div class="odp-item">
+        <div class="odp-name">${o.nama}</div>
+        <div class="odp-bar-wrap">
+          <div class="odp-bar">
+            <div class="odp-bar-fill ${cls}" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="odp-count">${o.terpakai}/${o.total}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── THEME ────────────────────────────────────────────────
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  const dt = document.getElementById('darkToggle');
+  if (dt) dt.classList.toggle('on', isDark);
+  const a = ACCENTS[accentIdx];
+  document.documentElement.style.setProperty('--accent', isDark ? a.light : a.light);
+  document.documentElement.style.setProperty('--base',   isDark ? a.dark  : '#FFF8F3');
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if (mc) mc.setAttribute('content', a.light);
+}
+
+function toggleDark() {
+  isDark = !isDark;
+  localStorage.setItem('pnsnet_dark', isDark);
+  applyTheme();
+}
+
+function renderSwatches() {
+  document.getElementById('swatches').innerHTML = ACCENTS.map((a,i) => `
+    <div class="swatch ${i===accentIdx?'active':''}"
+      style="background:${a.light}"
+      title="${a.name}"
+      onclick="setAccent(${i})">
+    </div>
+  `).join('');
+}
+
+function setAccent(i) {
+  accentIdx = i;
+  localStorage.setItem('pnsnet_accent', i);
+  applyTheme();
+  renderSwatches();
+}
+
+// ── CARD TOGGLES ─────────────────────────────────────────
+function renderCardToggles() {
+  document.getElementById('cardToggleList').innerHTML = ALL_CARDS.map(c => {
+    const on = activeCards.includes(c.id);
+    return `
+      <div class="card-toggle-item" onclick="toggleCard('${c.id}')">
+        <span class="card-toggle-icon">${c.icon}</span>
+        <span class="card-toggle-name">${c.label}</span>
+        <div class="card-check ${on?'checked':''}">${on?'✓':''}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleCard(id) {
+  if (activeCards.includes(id)) {
+    if (activeCards.length <= 2) return; // minimal 2 kartu
+    activeCards = activeCards.filter(c => c !== id);
+  } else {
+    activeCards.push(id);
+  }
+  localStorage.setItem('pnsnet_cards', JSON.stringify(activeCards));
+  renderStats();
+  renderCardToggles();
+}
+
+// ── SETTINGS DRAWER ───────────────────────────────────────
+function openSettings() {
+  document.getElementById('settingsDrawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('show');
+}
+function closeSettings() {
+  document.getElementById('settingsDrawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('show');
+}
+
+// ── SIDEBAR (mobile) ─────────────────────────────────────
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('overlay');
+  const open = s.classList.toggle('open');
+  o.classList.toggle('show', open);
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ── NAV ──────────────────────────────────────────────────
+function setPage(page) {
+  closeSidebar();
+  timerPause();
+  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  document.getElementById('pageContent').style.display='block';
+
+  if(page==='calon_form')   { openFormCalon();   return; }
+  if(page==='calon')        { openListCalon();   return; }
+  if(page==='pemasangan_form'){ openFormPemasangan(window._calonForPemasangan); return; }
+
+  const titles={
+    dashboard:'Dashboard',pelanggan:'Pelanggan',pemasangan:'Pemasangan',
+    topologi:'Topologi FO',gangguan:'Gangguan',keuangan:'Keuangan',
+    inventori:'Inventori',wilayah:'Wilayah',sdm:'Staf & Karyawan'
+  };
+  document.getElementById('pageTitle').textContent=titles[page]||page;
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.classList.toggle('active',el.textContent.trim().toLowerCase().includes(
+      page==='dashboard'?'dashboard':page));
+  });
+  document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
+}
+
+function logout() {
+  if (confirm('Yakin ingin keluar?')) {
+    localStorage.removeItem('pnsnet_token');
+    alert('Berhasil keluar.');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// DAFTAR CALON PELANGGAN
+// ════════════════════════════════════════════════════════
+
+const DEMO_CALON = [
+  { id:'c001', nama_ktp:'Budi Santoso', no_hp:'0812-3456-7890',
+    id_status_proses:'PROSES_PASANG',
+    nama_desa:'Tambu', nama_kec:'Dampal Selatan', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'Dusun Pantai', alamat_detail:'Depan masjid Nurul Iman',
+    paket:'10 Mbps', harga:'Rp230.000/bln',
+    jenis_pasang:'Normal', sumber:'Referral Pelanggan',
+    created_at:'2026-09-28T09:14:00Z', foto_ktp:true,
+    catatan:'Rumah di ujung jalan masuk' },
+  { id:'c002', nama_ktp:'Siti Rahayu', no_hp:'0813-9876-5432',
+    id_status_proses:'BARU',
+    nama_desa:'Bangkir', nama_kec:'Bangkir', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'', alamat_detail:'',
+    paket:'10 Mbps', harga:'Rp230.000/bln',
+    jenis_pasang:'Promo Gratis', sumber:'Media Sosial',
+    created_at:'2026-09-28T10:30:00Z', foto_ktp:false, catatan:'' },
+  { id:'c003', nama_ktp:'Ahmad Fauzi', no_hp:'0821-1111-2222',
+    id_status_proses:'SURVEY',
+    nama_desa:'Puse', nama_kec:'Bangkir', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'RT 02', alamat_detail:'Samping kantor desa',
+    paket:'15 Mbps', harga:'Rp280.000/bln',
+    jenis_pasang:'Normal', sumber:'Word of Mouth',
+    created_at:'2026-09-27T14:00:00Z', foto_ktp:true, catatan:'Tanya soal paket 5G' },
+  { id:'c004', nama_ktp:'Dian Kusuma', no_hp:'0831-5555-6666',
+    id_status_proses:'MENUNGGU',
+    nama_desa:'Tambu', nama_kec:'Dampal Selatan', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'Dusun Dalam', alamat_detail:'',
+    paket:'5 Mbps', harga:'Rp175.000/bln',
+    jenis_pasang:'Normal', sumber:'Kunjungan Langsung',
+    created_at:'2026-09-26T08:00:00Z', foto_ktp:false, catatan:'' },
+  { id:'c005', nama_ktp:'Rini Prasetyo', no_hp:'0812-7777-8888',
+    id_status_proses:'DIHUBUNGI',
+    nama_desa:'Bangkir', nama_kec:'Bangkir', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'', alamat_detail:'',
+    paket:'10 Mbps', harga:'Rp230.000/bln',
+    jenis_pasang:'Promo Diskon 50%', sumber:'Brosur / Spanduk',
+    created_at:'2026-09-25T16:20:00Z', foto_ktp:false, catatan:'' },
+  { id:'c006', nama_ktp:'Hendra Wijaya', no_hp:'0853-3333-4444',
+    id_status_proses:'DITUNDA',
+    nama_desa:'Ogoamas I', nama_kec:'Ogodeide', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'', alamat_detail:'',
+    paket:'20 Mbps', harga:'Rp340.000/bln',
+    jenis_pasang:'Normal', sumber:'Telepon / WhatsApp',
+    created_at:'2026-09-24T11:00:00Z', foto_ktp:false,
+    catatan:'Rumah belum siap, minta ditunda 2 minggu' },
+  { id:'c007', nama_ktp:'Nurlaila Amir', no_hp:'0812-9999-0000',
+    id_status_proses:'BARU',
+    nama_desa:'Buntuna', nama_kec:'Baolan', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'', alamat_detail:'',
+    paket:'10 Mbps', harga:'Rp230.000/bln',
+    jenis_pasang:'Normal', sumber:'Referral Pelanggan',
+    created_at:'2026-09-28T13:45:00Z', foto_ktp:true, catatan:'' },
+];
+
+const FASE_ORDER = ['BARU','DIHUBUNGI','SURVEY','MENUNGGU','PROSES_PASANG','DITUNDA','TIDAK_TERJANGKAU','BATAL'];
+const FASE_LABEL = {
+  BARU:'🆕 Baru', DIHUBUNGI:'📞 Dihubungi', SURVEY:'🏠 Survey',
+  MENUNGGU:'⏳ Menunggu', PROSES_PASANG:'🔧 Proses Pasang',
+  DITUNDA:'⏸ Ditunda', TIDAK_TERJANGKAU:'📡 Tidak Terjangkau', BATAL:'✕ Batal'
 };
 
-const DB_NAME = 'pnsnet_local';
-const DB_VERSION = 7; // dinaikkan 6 -> 7 karena menambah object store master_modem & modem_riwayat
+let calonData       = [...DEMO_CALON];
+let calonFaseFilter = 'SEMUA';
+let calonSearch     = '';
+let calonPage       = 1;
+const CALON_PER_PAGE= 5;
+let expandedId      = null;
 
-// Dipakai untuk rekonsiliasi: setelah entity_type ini berhasil sync, hapus
-// record sementara (keyed by local_id) dari store terkait, supaya baris
-// resmi dari server (dengan ID asli) yang tampil setelah sync_pull berikutnya.
-const ENTITY_TEMP_STORE_MAP = {
-  'MASTER_SUB_WILAYAH_CREATE': 'master_sub_wilayah',
-  'CALON_PELANGGAN_CREATE': 'calon_pelanggan',
-  'PEMASANGAN_CREATE': 'pemasangan',
-  'MASTER_ODP_CREATE': 'master_odp',
-  'MASTER_MODEM_CREATE': 'master_modem'
-};
-let dbInstance = null;
+// ── Buka halaman daftar calon ─────────────────────────
+function openListCalon() {
+  ['pageContent','formCalonPage','formPemasanganPage'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  document.getElementById('listCalonPage').style.display='block';
+  document.getElementById('pageTitle').textContent='Calon Pelanggan';
+  renderCalonPage();
+}
 
-// ============================================================
-// INDEXEDDB — buka & buat schema
-// ============================================================
-function openDb() {
-  return new Promise((resolve, reject) => {
-    if (dbInstance) return resolve(dbInstance);
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      Object.values(MASTER_CONFIG).forEach(cfg => {
-        if (!db.objectStoreNames.contains(cfg.store)) {
-          const os = db.createObjectStore(cfg.store, { keyPath: cfg.keyPath });
-          if (cfg.parentField) os.createIndex('by_parent', cfg.parentField, { unique: false });
-        }
-      });
-      if (!db.objectStoreNames.contains('sync_meta')) {
-        db.createObjectStore('sync_meta', { keyPath: 'master_name' });
-      }
-      if (!db.objectStoreNames.contains('sync_queue')) {
-        db.createObjectStore('sync_queue', { keyPath: 'local_id' });
-      }
-      if (!db.objectStoreNames.contains('session')) {
-        db.createObjectStore('session', { keyPath: 'key' });
-      }
-    };
-    req.onsuccess = (e) => { dbInstance = e.target.result; resolve(dbInstance); };
-    req.onerror = (e) => reject(e.target.error);
+function renderCalonPage() {
+  renderCalonStats();
+  renderCalonList();
+}
+
+// ── Stats ────────────────────────────────────────────
+function renderCalonStats() {
+  const counts = {};
+  FASE_ORDER.forEach(f => counts[f] = 0);
+  calonData.forEach(c => { if (counts[c.id_status_proses] !== undefined) counts[c.id_status_proses]++; });
+  const total = calonData.length;
+
+  document.getElementById('calonStats').innerHTML = `
+    <div class="list-stat"><b>${total}</b> Total</div>
+    <div class="list-stat"><b>${counts.BARU}</b> Baru</div>
+    <div class="list-stat"><b>${counts.SURVEY}</b> Survey</div>
+    <div class="list-stat"><b>${counts.MENUNGGU + counts.PROSES_PASANG}</b> Proses</div>
+    <div class="list-stat"><b>${counts.DITUNDA}</b> Ditunda</div>
+  `;
+}
+
+// ── Filter ───────────────────────────────────────────
+function setFaseFilter(fase, el) {
+  calonFaseFilter = fase;
+  calonPage = 1;
+  document.querySelectorAll('#filterChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderCalonList();
+}
+
+function filterCalon() {
+  calonSearch = document.getElementById('calonSearch').value.toLowerCase().trim();
+  calonPage   = 1;
+  renderCalonList();
+}
+
+function getFiltered() {
+  return calonData.filter(c => {
+    const matchFase = calonFaseFilter === 'SEMUA' || c.id_status_proses === calonFaseFilter;
+    const matchSearch = !calonSearch ||
+      c.nama_ktp.toLowerCase().includes(calonSearch) ||
+      c.no_hp.includes(calonSearch) ||
+      c.nama_desa.toLowerCase().includes(calonSearch) ||
+      c.nama_kab.toLowerCase().includes(calonSearch);
+    return matchFase && matchSearch;
   });
 }
 
-function idbGet(storeName, key) {
-  return openDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readonly');
-    const req = tx.objectStore(storeName).get(key);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  }));
+// ── Render list ──────────────────────────────────────
+function renderCalonList() {
+  const filtered  = getFiltered();
+  const total     = filtered.length;
+  const totalPage = Math.ceil(total / CALON_PER_PAGE) || 1;
+  if (calonPage > totalPage) calonPage = totalPage;
+
+  const start = (calonPage - 1) * CALON_PER_PAGE;
+  const items = filtered.slice(start, start + CALON_PER_PAGE);
+  const container = document.getElementById('calonList');
+
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Tidak ada calon ditemukan</div>
+        <div class="empty-sub">Coba ubah filter atau kata kunci pencarian</div>
+      </div>`;
+    document.getElementById('calonPagination').innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = items.map(c => renderCalonCard(c)).join('');
+  renderPagination(total, totalPage);
 }
 
-function idbGetAll(storeName) {
-  return openDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readonly');
-    const req = tx.objectStore(storeName).getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  }));
+function renderCalonCard(c) {
+  const initials = c.nama_ktp.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const tgl      = formatTgl(c.created_at);
+  const isOpen   = expandedId === c.id;
+  const fase     = c.id_status_proses;
+
+  // Tentukan aksi fase selanjutnya yang tersedia
+  const faseIdx   = FASE_ORDER.indexOf(fase);
+  const nextFases = FASE_ORDER.filter((f,i) => i !== faseIdx &&
+    !['BATAL','TIDAK_TERJANGKAU'].includes(f));
+
+  return `
+  <div class="calon-card" id="card_${c.id}">
+    <div class="calon-card-head" onclick="toggleCard('${c.id}')">
+      <div class="calon-avatar">${initials}</div>
+      <div class="calon-main">
+        <div class="calon-nama">${c.nama_ktp}</div>
+        <div class="calon-meta">
+          <span>📱 ${c.no_hp}</span>
+          <span class="calon-dot">·</span>
+          <span>📍 ${c.nama_desa}${c.nama_sub_wilayah ? ', '+c.nama_sub_wilayah : ''}</span>
+          <span class="calon-dot">·</span>
+          <span>📦 ${c.paket}</span>
+        </div>
+      </div>
+      <div class="calon-right">
+        <span class="phase-pill ph-${fase}">${FASE_LABEL[fase]||fase}</span>
+        <span class="calon-date">${tgl}</span>
+      </div>
+    </div>
+
+    <div class="calon-detail ${isOpen?'open':''}" id="detail_${c.id}">
+      <div class="detail-grid">
+        <div class="detail-item">
+          <div class="detail-label">NAMA KTP</div>
+          <div class="detail-val">${c.nama_ktp}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">NO. HP / WA</div>
+          <div class="detail-val">
+            <a href="https://wa.me/${c.no_hp.replace(/[^0-9]/g,'').replace(/^0/,'62')}"
+              onclick="event.stopPropagation()"
+              style="color:var(--success);font-weight:600">
+              📱 ${c.no_hp}
+            </a>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">WILAYAH</div>
+          <div class="detail-val">${c.nama_desa}, ${c.nama_kec}, ${c.nama_kab}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">DUSUN</div>
+          <div class="detail-val">${c.nama_sub_wilayah||'—'}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">PAKET</div>
+          <div class="detail-val">${c.paket} — ${c.harga}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">JENIS PASANG</div>
+          <div class="detail-val">${c.jenis_pasang}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">SUMBER</div>
+          <div class="detail-val">${c.sumber||'—'}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">FOTO KTP</div>
+          <div class="detail-val">${c.foto_ktp?'✅ Ada':'—'}</div>
+        </div>
+        ${c.catatan ? `
+        <div class="detail-item" style="grid-column:1/-1">
+          <div class="detail-label">CATATAN</div>
+          <div class="detail-val">${c.catatan}</div>
+        </div>` : ''}
+        ${c.alamat_detail ? `
+        <div class="detail-item" style="grid-column:1/-1">
+          <div class="detail-label">ALAMAT DETAIL</div>
+          <div class="detail-val">${c.alamat_detail}</div>
+        </div>` : ''}
+      </div>
+
+      <!-- Ubah Fase -->
+      <div class="fase-actions">
+        <div class="fase-title">UBAH FASE</div>
+        <div class="fase-buttons">
+          ${FASE_ORDER.map(f => `
+            <button class="fase-btn ${f===fase?'current':''}"
+              onclick="ubahFase('${c.id}','${f}',event)">
+              ${FASE_LABEL[f]}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Aksi -->
+      <div class="calon-actions">
+        ${fase === 'PROSES_PASANG' || fase === 'MENUNGGU' ? `
+        <button class="btn-sm btn-sm-primary"
+          onclick="bukaPemasangan('${c.id}',event)">
+          🔧 Buat Pemasangan
+        </button>` : ''}
+        <button class="btn-sm btn-sm-secondary"
+          onclick="editCalon('${c.id}',event)">
+          ✏️ Edit Data
+        </button>
+        <a href="https://wa.me/${c.no_hp.replace(/[^0-9]/g,'').replace(/^0/,'62')}?text=Halo%20${encodeURIComponent(c.nama_ktp)}%2C%20kami%20dari%20PNS.NET..."
+          onclick="event.stopPropagation()"
+          target="_blank">
+          <button class="btn-sm btn-sm-secondary">💬 WhatsApp</button>
+        </a>
+        ${!['BATAL','TIDAK_TERJANGKAU','PROSES_PASANG'].includes(fase) ? `
+        <button class="btn-sm btn-sm-danger"
+          onclick="ubahFase('${c.id}','BATAL',event)">
+          ✕ Batalkan
+        </button>` : ''}
+      </div>
+    </div>
+  </div>`;
 }
 
-function idbGetByParent(storeName, parentId) {
-  return openDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readonly');
-    const idx = tx.objectStore(storeName).index('by_parent');
-    const req = idx.getAll(parentId);
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  }));
+// ── Toggle expand ────────────────────────────────────
+function toggleCard(id) {
+  expandedId = expandedId === id ? null : id;
+  renderCalonList();
+  if (expandedId) {
+    setTimeout(() => {
+      const el = document.getElementById('card_'+id);
+      if (el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }, 100);
+  }
 }
 
-function idbPut(storeName, value) {
-  return openDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite');
-    tx.objectStore(storeName).put(value);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  }));
+// ── Ubah Fase ─────────────────────────────────────────
+function ubahFase(id, faseBaru, e) {
+  e.stopPropagation();
+  const calon = calonData.find(c => c.id === id);
+  if (!calon) return;
+  if (calon.id_status_proses === faseBaru) return;
+
+  const konfirmMsg = faseBaru === 'BATAL'
+    ? `Batalkan calon ${calon.nama_ktp}?`
+    : `Ubah fase ${calon.nama_ktp} ke "${FASE_LABEL[faseBaru]}"?`;
+
+  if (!confirm(konfirmMsg)) return;
+
+  // Update lokal dulu
+  calon.id_status_proses = faseBaru;
+
+  // Kirim ke API (jika online)
+  if (isOnline()) {
+    const token = localStorage.getItem('pnsnet_token') || '';
+    fetch(API_URL, {
+      method:'POST',
+      body: JSON.stringify({
+        action:'sync_push', token,
+        transactions:[{
+          entity_type:'CALON_UPDATE_STATUS',
+          local_id: 'upd_'+Date.now(),
+          payload:{ id_calon: id, status_baru: faseBaru }
+        }]
+      })
+    }).then(r=>r.json()).then(d=>{
+      if (!d.ok) console.warn('Gagal update fase:', d.error);
+    }).catch(()=>{});
+  }
+
+  renderCalonPage();
+
+  // Toast notif
+  showToast(`✅ Fase ${calon.nama_ktp} → ${FASE_LABEL[faseBaru]}`);
 }
 
-function idbBulkPut(storeName, values) {
-  return openDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite');
-    const os = tx.objectStore(storeName);
-    values.forEach(v => os.put(v));
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  }));
+// ── Buka form pemasangan ─────────────────────────────
+function bukaPemasangan(id, e) {
+  e.stopPropagation();
+  const calon = calonData.find(c => c.id === id);
+  if (!calon) return;
+  window._calonForPemasangan = calon;
+  setPage('pemasangan_form');
 }
 
-function idbDelete(storeName, key) {
-  return openDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite');
-    tx.objectStore(storeName).delete(key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  }));
+// ── Edit data calon ──────────────────────────────────
+function editCalon(id, e) {
+  e.stopPropagation();
+  showToast('✏️ Edit data — segera hadir!');
 }
 
-// ============================================================
-// NORMALISASI & DETEKSI KEMIRIPAN NAMA (Sub-Wilayah)
-// — cek cepat sisi client dari cache lokal, lihat blueprint §8 & Keputusan A
-// ============================================================
-function normalizeName(s) {
-  return (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+// ── Pagination ────────────────────────────────────────
+function renderPagination(total, totalPage) {
+  const el = document.getElementById('calonPagination');
+  if (totalPage <= 1) { el.innerHTML = ''; return; }
+
+  let html = `<button class="pg-btn" onclick="goPageCalon(${calonPage-1})"
+    ${calonPage<=1?'disabled':''}>‹</button>`;
+  for (let i=1; i<=totalPage; i++) {
+    html += `<button class="pg-btn ${i===calonPage?'active':''}"
+      onclick="goPageCalon(${i})">${i}</button>`;
+  }
+  html += `<button class="pg-btn" onclick="goPageCalon(${calonPage+1})"
+    ${calonPage>=totalPage?'disabled':''}>›</button>`;
+  html += `<span style="font-size:12px;color:var(--text3);margin-left:4px">
+    ${total} data</span>`;
+  el.innerHTML = html;
 }
 
-function levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  const dp = Array.from({ length: m + 1 }, (_, i) => [i].concat(Array(n).fill(0)));
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+function goPageCalon(p) {
+  calonPage = p;
+  renderCalonList();
+  document.getElementById('listCalonPage').scrollIntoView({behavior:'smooth'});
+}
+
+// ── Format tanggal ────────────────────────────────────
+function formatTgl(iso) {
+  if (!iso) return '-';
+  const d   = new Date(iso);
+  const now = new Date();
+  const diff= Math.floor((now - d) / 60000);
+  if (diff < 60)   return diff + ' mnt lalu';
+  if (diff < 1440) return Math.floor(diff/60) + ' jam lalu';
+  if (diff < 2880) return 'Kemarin';
+  return d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+}
+
+// ── Toast ─────────────────────────────────────────────
+function showToast(msg) {
+  let t = document.getElementById('pnsToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'pnsToast';
+    t.style.cssText = `
+      position:fixed;bottom:calc(80px + env(safe-area-inset-bottom,0px));
+      left:50%;transform:translateX(-50%) translateY(20px);
+      background:#1a1a2e;color:#fff;padding:10px 18px;
+      border-radius:20px;font-size:13px;font-weight:500;
+      z-index:999;opacity:0;transition:all .25s;
+      white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.3);
+    `;
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 2800);
+}
+
+// ════════════════════════════════════════════════════════
+// FORM PEMASANGAN
+// ════════════════════════════════════════════════════════
+const DEMO_TEKNISI = [
+  { id:'tek1', nama:'Andi Pratama',    jabatan:'Teknisi Senior' },
+  { id:'tek2', nama:'Doni Kurniawan', jabatan:'Teknisi' },
+  { id:'tek3', nama:'Hendra Wijaya',  jabatan:'Kepala Teknisi' },
+  { id:'tek4', nama:'Rizal Amri',     jabatan:'Teknisi' },
+];
+
+const ODP_PORTS = {
+  odp1:[{id:'p1',no:7,label:'Port 7'},{id:'p2',no:8,label:'Port 8'}],
+  odp2:[{id:'p3',no:3,label:'Port 3'},{id:'p4',no:4,label:'Port 4'}],
+  odp3:[{id:'p5',no:6,label:'Port 6'},{id:'p6',no:7,label:'Port 7'},{id:'p7',no:8,label:'Port 8'}],
+  odp4:[{id:'p8',no:4,label:'Port 4'},{id:'p9',no:5,label:'Port 5'},{id:'p10',no:6,label:'Port 6'},
+        {id:'p11',no:7,label:'Port 7'},{id:'p12',no:8,label:'Port 8'}],
+};
+
+let pemCurrentStep   = 0;
+let pemTeknisiSel    = [];
+let ontBase64        = null; let ontMime = null;
+let opmBase64        = null; let opmMime = null;
+let timerInterval    = null;
+let timerSeconds     = 0;
+let timerRunning     = false;
+let passPreviewHide  = true;
+let wifi5On          = false;
+
+function openFormPemasangan(calonData) {
+  // Sembunyikan semua halaman
+  ['pageContent','formCalonPage','listCalonPage'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
+  document.getElementById('formPemasanganPage').style.display='block';
+  document.getElementById('pageTitle').textContent='Form Pemasangan';
+
+  // Isi info calon
+  if (calonData) {
+    window._pemCalon = calonData;
+    document.getElementById('pem_namaCabon').textContent = calonData.nama_ktp;
+    document.getElementById('pem_infoCabon').textContent =
+      `${calonData.no_hp} · ${calonData.nama_desa} · ${calonData.paket}`;
+  }
+
+  // Reset
+  pemCurrentStep = 0; pemTeknisiSel = [];
+  ontBase64 = null; opmBase64 = null;
+  timerReset();
+  wifi5On = false;
+  document.getElementById('wifi5Toggle').classList.remove('on');
+  document.getElementById('wifi5Section').style.display='none';
+  document.getElementById('wifi5Label').textContent='Nonaktif';
+  ['pem_tgl','pem_jam','pem_sn','pem_mac','pem_passDefault',
+   'pem_ssid','pem_wifipass','pem_ssid5','pem_catatanTeknisi'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  ['pem_server','pem_odp','pem_port','pem_statusBayar'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('pem_port').disabled=true;
+  document.getElementById('pemStepSuccess').style.display='none';
+  document.getElementById('pem_usernamePreview').textContent='— isi data di atas untuk generate username —';
+
+  // Set tanggal hari ini
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('pem_tgl').value = today;
+
+  renderPemStep(0);
+  renderTeknisiList();
+}
+
+// ── Stepper pemasangan ───────────────────────────────
+function renderPemStep(step) {
+  for(let i=0;i<5;i++){
+    const c=document.getElementById('pstep'+i);
+    if(c) c.style.display = i===step?'block':'none';
+    const n=document.querySelector(`.step-node[data-pstep="${i}"]`);
+    if(n){
+      n.classList.toggle('active',i===step);
+      n.classList.toggle('done',i<step);
+      n.querySelector('.step-circle').textContent = i<step?'✓':i+1;
     }
   }
-  return dp[m][n];
+  document.getElementById('pemStepSuccess').style.display='none';
+  pemCurrentStep=step;
+  if(step===4) buildPemSummary();
 }
 
-function similarityRatio(a, b) {
-  const na = normalizeName(a), nb = normalizeName(b);
-  if (!na || !nb) return 0;
-  if (na === nb) return 1;
-  if (na.includes(nb) || nb.includes(na)) return 0.9;
-  const dist = levenshtein(na, nb);
-  const maxLen = Math.max(na.length, nb.length);
-  return 1 - dist / maxLen;
+function goPemStep(n){
+  renderPemStep(n);
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
-const SIMILARITY_THRESHOLD = 0.75;
-
-async function findSimilarSubWilayah(nama, idDesa) {
-  const existing = await idbGetByParent('master_sub_wilayah', idDesa);
-  return existing
-    .filter(r => r.status === 'AKTIF')
-    .map(r => ({ nama: r.nama, ratio: similarityRatio(nama, r.nama) }))
-    .filter(r => r.ratio >= SIMILARITY_THRESHOLD)
-    .sort((a, b) => b.ratio - a.ratio);
+// ── Teknisi selector ─────────────────────────────────
+function renderTeknisiList(){
+  document.getElementById('pem_teknisiList').innerHTML = DEMO_TEKNISI.map(t=>`
+    <div class="teknisi-item ${pemTeknisiSel.includes(t.id)?'selected':''}"
+      onclick="toggleTeknisi('${t.id}')">
+      <div class="teknisi-avatar">${t.nama.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div style="flex:1">
+        <div class="teknisi-nama">${t.nama}</div>
+        <div class="teknisi-jabatan">${t.jabatan}</div>
+      </div>
+      <div class="teknisi-check">${pemTeknisiSel.includes(t.id)?'✓':''}</div>
+    </div>
+  `).join('');
+  document.getElementById('pem_teknisiCount').textContent = pemTeknisiSel.length+' dipilih';
+  validatePem0();
 }
 
-// ============================================================
-// SYNC QUEUE — transaksi offline (mis. tambah sub-wilayah)
-// ============================================================
-function makeLocalId() {
-  return 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+function toggleTeknisi(id){
+  if(pemTeknisiSel.includes(id)) pemTeknisiSel=pemTeknisiSel.filter(t=>t!==id);
+  else pemTeknisiSel.push(id);
+  renderTeknisiList();
 }
 
-async function enqueueSyncItem(entityType, payload) {
-  // PENTING: pakai local_id yang SAMA dengan yang sudah dipakai di record datanya
-  // (dikirim lewat payload.local_id) — jangan bikin id acak baru di sini, supaya
-  // nanti proses hapus-record-sementara (rekonsiliasi) bisa menemukan recordnya.
-  const localId = payload.local_id || makeLocalId();
-  await idbPut('sync_queue', {
-    local_id: localId,
-    entity_type: entityType,
-    payload: payload,
-    status: 'PENDING',
-    created_at: Date.now()
+// ── Timer ─────────────────────────────────────────────
+function timerStart(){
+  if(timerRunning) return;
+  timerRunning=true;
+  timerInterval=setInterval(()=>{
+    timerSeconds++;
+    const h=String(Math.floor(timerSeconds/3600)).padStart(2,'0');
+    const m=String(Math.floor((timerSeconds%3600)/60)).padStart(2,'0');
+    const s=String(timerSeconds%60).padStart(2,'0');
+    document.getElementById('pem_timer').textContent=`${h}:${m}:${s}`;
+  },1000);
+}
+function timerPause(){
+  timerRunning=false;
+  clearInterval(timerInterval);
+}
+function timerReset(){
+  timerPause();
+  timerSeconds=0;
+  const el=document.getElementById('pem_timer');
+  if(el) el.textContent='00:00:00';
+}
+
+// ── ODP cascade ───────────────────────────────────────
+function onOdpChange(){
+  const odp   = document.getElementById('pem_odp').value;
+  const portSel = document.getElementById('pem_port');
+  portSel.innerHTML='<option value="">— Pilih port —</option>';
+  portSel.disabled = !odp;
+  if(!odp) return;
+  (ODP_PORTS[odp]||[]).forEach(p=>{
+    portSel.innerHTML+=`<option value="${p.id}">${p.label}</option>`;
   });
-  return localId;
+  updateUsernamePreview();
 }
 
-async function getPendingQueue() {
-  const all = await idbGetAll('sync_queue');
-  return all.filter(q => q.status === 'PENDING' || q.status === 'FAILED');
+function updateUsernamePreview(){
+  const svrEl = document.getElementById('pem_server');
+  const calon = window._pemCalon;
+  if(!calon||!svrEl.value) return;
+  const nama  = calon.nama_ktp.toLowerCase().replace(/[^a-z]/g,'');
+  const desa  = calon.nama_desa.toLowerCase().replace(/[^a-z]/g,'');
+  const suf   = svrEl.value==='sv-002'?'@bangkir':'@ogoamas';
+  const urut  = '0'+String(Math.floor(Math.random()*99)+43).padStart(3,'0');
+  document.getElementById('pem_usernamePreview').textContent=`${urut}${nama}.${desa}${suf}`;
 }
 
-async function updateQueueStatus(localId, status) {
-  const item = await idbGet('sync_queue', localId);
-  if (!item) return;
-  item.status = status;
-  await idbPut('sync_queue', item);
+// ── Foto ONT ──────────────────────────────────────────
+function handleOntFoto(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const src=e.target.result;
+    ontBase64=src.split(',')[1]; ontMime=file.type;
+    document.getElementById('ontPlaceholder').style.display='none';
+    document.getElementById('ontPreviewImg').src=src;
+    document.getElementById('ontPreviewImg').style.display='block';
+    runOntOcr(src);
+    validatePem2();
+  };
+  reader.readAsDataURL(file);
 }
 
-async function refreshQueueBadge() {
-  const pending = await getPendingQueue();
-  const badge = document.getElementById('queueBadge');
-  if (pending.length > 0) {
-    badge.textContent = pending.length + ' menunggu sync';
-    badge.classList.remove('hidden');
+function retakeOnt(e){
+  e.stopPropagation();
+  ontBase64=null; ontMime=null;
+  document.getElementById('ontPlaceholder').style.display='flex';
+  document.getElementById('ontPreviewImg').style.display='none';
+  document.getElementById('ontPreviewImg').src='';
+  document.getElementById('ontOcrStatus').style.display='none';
+  ['pem_sn','pem_mac','pem_passDefault'].forEach(id=>document.getElementById(id).value='');
+  ['snOcrBadge','passOcrBadge'].forEach(id=>document.getElementById(id).style.display='none');
+  validatePem2();
+}
+
+async function runOntOcr(src){
+  const st=document.getElementById('ontOcrStatus');
+  st.style.display='flex';
+  st.className='ocr-status ocr-scanning';
+  st.innerHTML='<span class="ocr-spin">⟳</span> Membaca label ONT...';
+  await new Promise(r=>setTimeout(r,1400));
+  // Simulasi OCR hasil label belakang ONT
+  const sn   = 'CIOT'+Math.random().toString(36).slice(2,10).toUpperCase();
+  const mac  = ['A4','B2','39',...Array(3).fill(0).map(()=>
+    Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase())].join(':');
+  const pass = Math.random().toString(36).slice(2,10).toUpperCase();
+
+  document.getElementById('pem_sn').value        = sn;
+  document.getElementById('pem_mac').value       = mac;
+  document.getElementById('pem_passDefault').value = pass;
+  ['snOcrBadge','passOcrBadge'].forEach(id=>{
+    document.getElementById(id).style.display='inline-flex';
+  });
+  st.className='ocr-status ocr-done';
+  st.innerHTML=`✅ OCR selesai — SN, MAC & password default terdeteksi`;
+  updateWifiPreview();
+  validatePem2();
+}
+
+// ── Foto OPM ──────────────────────────────────────────
+function handleOpmFoto(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const src=e.target.result;
+    opmBase64=src.split(',')[1]; opmMime=file.type;
+    document.getElementById('opmPlaceholder').style.display='none';
+    document.getElementById('opmPreviewImg').src=src;
+    document.getElementById('opmPreviewImg').style.display='block';
+    validatePem2();
+  };
+  reader.readAsDataURL(file);
+}
+
+function retakeOpm(e){
+  e.stopPropagation();
+  opmBase64=null; opmMime=null;
+  document.getElementById('opmPlaceholder').style.display='flex';
+  document.getElementById('opmPreviewImg').style.display='none';
+  document.getElementById('opmPreviewImg').src='';
+  validatePem2();
+}
+
+// ── OPM Meter visual ──────────────────────────────────
+function updateOpmMeter(){
+  const val=parseFloat(document.getElementById('pem_opm').value);
+  const meter=document.getElementById('opmMeter');
+  const fill=document.getElementById('opmBarFill');
+  const result=document.getElementById('opmResult');
+  if(isNaN(val)){meter.style.display='none';return;}
+  meter.style.display='block';
+  // -40 dBm (worst) → -0 dBm (best)
+  const pct = Math.max(0,Math.min(100,((val+40)/40)*100));
+  fill.style.width=pct+'%';
+  let cls,msg;
+  if(val>=-15){cls='opm-good';msg='✅ Sinyal Baik ('+val+' dBm)';}
+  else if(val>=-25){cls='opm-warn';msg='⚠️ Sinyal Lemah ('+val+' dBm) — perlu cek jalur';}
+  else{cls='opm-bad';msg='🔴 Sinyal Buruk ('+val+' dBm) — ada gangguan serius';}
+  result.className='opm-result '+cls;
+  result.textContent=msg;
+}
+
+// ── WiFi ──────────────────────────────────────────────
+function toggle5Ghz(el){
+  wifi5On=!wifi5On;
+  el.classList.toggle('on',wifi5On);
+  document.getElementById('wifi5Section').style.display=wifi5On?'block':'none';
+  document.getElementById('wifi5Label').textContent=wifi5On?'Aktif':'Nonaktif';
+  document.getElementById('prev5Ghz').style.display=wifi5On?'block':'none';
+  updateWifiPreview();
+}
+
+function updateWifiPreview(){
+  const ssid=document.getElementById('pem_ssid').value||'—';
+  const pass=document.getElementById('pem_wifipass').value;
+  const ssid5=document.getElementById('pem_ssid5').value||'—';
+  document.getElementById('prev_ssid').textContent=ssid;
+  document.getElementById('prev_pass').textContent=
+    'Password: '+(passPreviewHide&&pass?'•'.repeat(Math.min(pass.length,8)):pass||'—');
+  document.getElementById('prev_ssid5').textContent=ssid5;
+}
+
+function togglePassVis(inputId,btn){
+  const el=document.getElementById(inputId);
+  const isPass=el.type==='password';
+  el.type=isPass?'text':'password';
+  btn.textContent=isPass?'🙈':'👁';
+}
+
+function togglePassPreview(){
+  passPreviewHide=!passPreviewHide;
+  updateWifiPreview();
+}
+
+// ── Validasi per step ─────────────────────────────────
+function validatePem0(){
+  const ok=document.getElementById('pem_tgl').value &&
+            document.getElementById('pem_jam').value &&
+            pemTeknisiSel.length>0;
+  const btn=document.getElementById('btnPem0Next');
+  if(btn) btn.disabled=!ok;
+}
+function validatePem1(){
+  const ok=document.getElementById('pem_server').value &&
+            document.getElementById('pem_odp').value &&
+            document.getElementById('pem_port').value;
+  const btn=document.getElementById('btnPem1Next');
+  if(btn) btn.disabled=!ok;
+  if(document.getElementById('pem_server').value) updateUsernamePreview();
+}
+function validatePem2(){
+  const ok=document.getElementById('pem_sn').value.trim() &&
+            document.getElementById('pem_opm').value;
+  const btn=document.getElementById('btnPem2Next');
+  if(btn) btn.disabled=!ok;
+}
+function validatePem3(){
+  const ok=document.getElementById('pem_ssid').value.trim() &&
+            document.getElementById('pem_wifipass').value.length>=8 &&
+            document.getElementById('pem_statusBayar').value;
+  const btn=document.getElementById('btnPem3Next');
+  if(btn) btn.disabled=!ok;
+}
+
+// ── Ringkasan ─────────────────────────────────────────
+function buildPemSummary(){
+  const calon = window._pemCalon||{};
+  const teknisiNames = DEMO_TEKNISI.filter(t=>pemTeknisiSel.includes(t.id)).map(t=>t.nama).join(', ');
+  const svrEl=document.getElementById('pem_server');
+  const bayarEl=document.getElementById('pem_statusBayar');
+  const h=Math.floor(timerSeconds/3600),m=Math.floor((timerSeconds%3600)/60),s=timerSeconds%60;
+  const durasi=timerSeconds>0?`${h}j ${m}m ${s}d`:'—';
+
+  document.getElementById('pemSummaryBody').innerHTML=`
+    <div class="summary-row"><span class="summary-label">Pelanggan</span>
+      <span class="summary-val">${calon.nama_ktp||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">No. HP</span>
+      <span class="summary-val">${calon.no_hp||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Paket</span>
+      <span class="summary-val">${calon.paket||'—'} — ${calon.harga||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Server</span>
+      <span class="summary-val">${svrEl.options[svrEl.selectedIndex]?.text||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Tanggal</span>
+      <span class="summary-val">${document.getElementById('pem_tgl').value} · ${document.getElementById('pem_jam').value}</span></div>
+    <div class="summary-row"><span class="summary-label">Durasi</span>
+      <span class="summary-val">${durasi}</span></div>
+    <div class="summary-row"><span class="summary-label">Teknisi</span>
+      <span class="summary-val">${teknisiNames||'—'} (${pemTeknisiSel.length} orang)</span></div>
+    <div class="summary-row"><span class="summary-label">SN Modem</span>
+      <span class="summary-val">${document.getElementById('pem_sn').value||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">MAC Address</span>
+      <span class="summary-val">${document.getElementById('pem_mac').value||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Sinyal OPM</span>
+      <span class="summary-val">${document.getElementById('pem_opm').value||'—'} dBm</span></div>
+    <div class="summary-row"><span class="summary-label">SSID WiFi</span>
+      <span class="summary-val">${document.getElementById('pem_ssid').value||'—'}</span></div>
+    ${wifi5On?`<div class="summary-row"><span class="summary-label">SSID 5GHz</span>
+      <span class="summary-val">${document.getElementById('pem_ssid5').value||'—'}</span></div>`:''}
+    <div class="summary-row"><span class="summary-label">Status Bayar</span>
+      <span class="summary-val">${bayarEl.options[bayarEl.selectedIndex]?.text||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Foto ONT</span>
+      <span class="summary-val">${ontBase64?'✅ Terlampir':'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Foto OPM</span>
+      <span class="summary-val">${opmBase64?'✅ Terlampir':'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Koneksi</span>
+      <span class="summary-val">${isOnline()?'🟢 Online':'🟡 Offline — simpan lokal'}</span></div>
+  `;
+
+  // Foto preview
+  if(ontBase64){
+    document.getElementById('pemSumOnt').src=`data:${ontMime};base64,${ontBase64}`;
+    document.getElementById('pemSumOnt').style.background='none';
+  }
+  if(opmBase64){
+    document.getElementById('pemSumOpm').src=`data:${opmMime};base64,${opmBase64}`;
+    document.getElementById('pemSumOpm').style.background='none';
+  }
+
+  document.getElementById('pemOfflineWarn').style.display=!isOnline()?'flex':'none';
+}
+
+// ── Submit pemasangan ─────────────────────────────────
+async function submitPemasangan(){
+  const btn=document.getElementById('btnPemSubmit');
+  btn.disabled=true;
+  btn.innerHTML='<span class="ocr-spin">⟳</span> Mengirim laporan...';
+
+  timerPause();
+
+  const calon=window._pemCalon||{};
+  const h=Math.floor(timerSeconds/3600),m=Math.floor((timerSeconds%3600)/60);
+
+  const payload={
+    id_calon          : calon.id||'',
+    id_teknisi_list   : JSON.stringify(pemTeknisiSel),
+    id_server         : document.getElementById('pem_server').value,
+    id_port           : document.getElementById('pem_port').value,
+    tanggal_jadwal    : document.getElementById('pem_tgl').value+'T'+document.getElementById('pem_jam').value,
+    durasi_menit      : timerSeconds>0?Math.ceil(timerSeconds/60):0,
+    waktu_mulai       : document.getElementById('pem_jam').value,
+    waktu_selesai     : new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}),
+    sn_modem          : document.getElementById('pem_sn').value,
+    mac_modem         : document.getElementById('pem_mac').value,
+    password_wifi_default: document.getElementById('pem_passDefault').value,
+    ssid_wifi         : document.getElementById('pem_ssid').value,
+    password_wifi     : document.getElementById('pem_wifipass').value,
+    ssid_wifi_5g      : wifi5On?document.getElementById('pem_ssid5').value:'',
+    nilai_opm_dbm     : document.getElementById('pem_opm').value,
+    status_bayar      : document.getElementById('pem_statusBayar').value,
+    catatan_teknisi   : document.getElementById('pem_catatanTeknisi').value,
+    nama_ktp          : calon.nama_ktp||'',
+    no_hp             : calon.no_hp||'',
+    id_paket          : calon.id_paket||'',
+    nama_desa         : calon.nama_desa||'',
+    nama_odp          : document.getElementById('pem_odp').options[document.getElementById('pem_odp').selectedIndex]?.text||'',
+    username_pppoe    : document.getElementById('pem_usernamePreview').textContent,
+  };
+
+  // Simpan lokal dulu
+  saveLocal('TRANSAKSI_PEMASANGAN',{...payload,local_id:'pem_'+Date.now(),_status:'SELESAI'});
+
+  if(isOnline()){
+    try{
+      const token=localStorage.getItem('pnsnet_token')||'';
+      // Upload foto ONT
+      if(ontBase64){
+        await fetch(API_URL,{method:'POST',body:JSON.stringify({
+          action:'foto_upload',token,jenis:'ONT',
+          nama_ktp:calon.nama_ktp,nama_desa:calon.nama_desa,
+          id_server:payload.id_server,
+          tgl_daftar:new Date().toISOString().slice(0,10),
+          base64data:ontBase64,mime_type:ontMime
+        })}).then(r=>r.json()).then(d=>{if(d.ok)payload.url_foto_ont=d.data.url;});
+      }
+      // Upload foto OPM
+      if(opmBase64){
+        await fetch(API_URL,{method:'POST',body:JSON.stringify({
+          action:'foto_upload',token,jenis:'OPM',
+          nama_ktp:calon.nama_ktp,nama_desa:calon.nama_desa,
+          id_server:payload.id_server,
+          tgl_daftar:new Date().toISOString().slice(0,10),
+          base64data:opmBase64,mime_type:opmMime
+        })}).then(r=>r.json()).then(d=>{if(d.ok)payload.url_foto_opm=d.data.url;});
+      }
+      // Kirim laporan selesai
+      await fetch(API_URL,{method:'POST',body:JSON.stringify({
+        action:'sync_push',token,
+        transactions:[{
+          entity_type:'PEMASANGAN_SELESAI',
+          local_id:'pem_'+Date.now(),
+          payload
+        }]
+      })});
+    }catch(err){console.warn('Submit pemasangan error:',err);}
+  }
+
+  showPemSuccess();
+}
+
+function showPemSuccess(){
+  for(let i=0;i<5;i++){
+    const el=document.getElementById('pstep'+i);
+    if(el) el.style.display='none';
+  }
+  document.querySelectorAll('.step-node[data-pstep]').forEach(n=>{
+    n.classList.add('done');n.classList.remove('active');
+    n.querySelector('.step-circle').textContent='✓';
+  });
+  document.getElementById('pemStepSuccess').style.display='block';
+  document.getElementById('pemSuccessMsg').innerHTML=isOnline()
+    ?'✅ Laporan terkirim ke server. Notifikasi dikirim ke Telegram <b>Teknis & Pemasangan</b>.'
+    :'📴 Data tersimpan lokal. Akan disinkronkan dan notifikasi dikirim saat ada koneksi.';
+}
+
+function cancelPemasangan(){
+  if(!confirm('Batalkan form pemasangan?')) return;
+  timerPause();
+  setPage('calon');
+}
+
+// ════════════════════════════════════════════════════════
+// FORM CALON PELANGGAN
+// ════════════════════════════════════════════════════════
+
+const API_URL = 'https://script.google.com/macros/s/AKfycbyQZHQH5WLDyAiGOxz7NEbbhGXMB4fP4ANkJTN9qJjNjv4Y2xQmZRqXR1tPwvEgTnP1/exec';
+
+const PAKET_LIST = [
+  { id:'pk1', speed:'5 Mbps',  price:'Rp175.000/bln', devices:'4 perangkat' },
+  { id:'pk2', speed:'10 Mbps', price:'Rp230.000/bln', devices:'8 perangkat' },
+  { id:'pk3', speed:'15 Mbps', price:'Rp280.000/bln', devices:'12 perangkat' },
+  { id:'pk4', speed:'20 Mbps', price:'Rp340.000/bln', devices:'16 perangkat' },
+];
+
+const WILAYAH_DATA = {
+  tolitoli: {
+    label: 'Kab. Toli-Toli',
+    kec: {
+      'Baolan'    : ['Buntuna','Tambun','Baru','Lalos','Panasakan','Pangi','Tuweley'],
+      'Dako Pemean': ['Dako','Pemean','Tinabogan'],
+      'Dampal Selatan': ['Soni','Tambu','Tambu Selatan'],
+      'Bangkir'   : ['Bangkir','Puse','Lingadan'],
+      'Ogodeide'  : ['Ogoamas I','Ogoamas II','Tinompo'],
+    }
+  }
+};
+
+let currentStep  = 0;
+let selectedPaket= null;
+let ktpBase64    = null;
+let ktpMime      = null;
+let formToken    = null;
+
+// ── Cek online ────────────────────────────────────────
+function isOnline() { return navigator.onLine; }
+
+// ── Buka / tutup form ─────────────────────────────────
+function openFormCalon() {
+  ['pageContent','listCalonPage','formPemasanganPage'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  document.getElementById('formCalonPage').style.display='block';
+  document.getElementById('pageTitle').textContent='Calon Baru';
+  updateOcrModeTag();
+  renderPaketGrid();
+  currentStep=0;
+  renderStep(0);
+}
+
+function cancelForm() {
+  if (!confirm('Batalkan pendaftaran? Data yang diisi akan hilang.')) return;
+  setPage('calon');
+}
+
+function resetForm() {
+  ['f_nama','f_nik','f_hp','f_catatan','f_dusun','f_alamat']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ['f_sumber','f_kab','f_kec','f_desa','f_jenis_pasang']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ktpBase64 = null; ktpMime = null; selectedPaket = null;
+  retakeKtp(null);
+  document.getElementById('ocrStatus').style.display = 'none';
+  document.getElementById('ocrResultNama').classList.remove('show');
+  document.querySelectorAll('.paket-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('stepSuccess').style.display = 'none';
+  currentStep = 0;
+  renderStep(0);
+  openFormCalon();
+}
+
+// ── Stepper ───────────────────────────────────────────
+function renderStep(step) {
+  for (let i = 0; i < 4; i++) {
+    const content = document.getElementById('step'+i);
+    if (content) content.style.display = i === step ? 'block' : 'none';
+    const node = document.querySelector(`.step-node[data-step="${i}"]`);
+    if (node) {
+      node.classList.toggle('active', i === step);
+      node.classList.toggle('done',   i < step);
+      node.querySelector('.step-circle').textContent = i < step ? '✓' : i+1;
+    }
+  }
+  document.getElementById('stepSuccess').style.display = 'none';
+  currentStep = step;
+  if (step === 3) buildSummary();
+}
+
+function goStep(n) {
+  renderStep(n);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── OCR ──────────────────────────────────────────────
+function updateOcrModeTag() {
+  const tag = document.getElementById('ocrModeTag');
+  if (!tag) return;
+  if (isOnline()) {
+    tag.className = 'tag tag-online';
+    tag.textContent = '● Online · Vision API';
   } else {
-    badge.classList.add('hidden');
+    tag.className = 'tag tag-offline';
+    tag.textContent = '● Offline · Tesseract';
   }
 }
 
-/** Kirim semua item PENDING/FAILED di sync_queue ke server. Dipanggil di awal runSync(). */
-async function pushPendingQueue(token, log) {
-  const pending = await getPendingQueue();
-  if (pending.length === 0) return;
-  log('Mengirim ' + pending.length + ' transaksi tertunda...');
-  const transactions = pending.map(q => ({ local_id: q.local_id, entity_type: q.entity_type, payload: q.payload }));
-  const resp = await apiCall({ action: 'sync_push', token, transactions });
-  if (!resp.success) { log('sync_push GAGAL: ' + resp.error); return; }
-  for (const r of resp.results) {
-    if (r.status === 'SYNCED') {
-      await updateQueueStatus(r.local_id, 'SYNCED');
-      const storeToClean = ENTITY_TEMP_STORE_MAP[transactions.find(t => t.local_id === r.local_id).entity_type];
-      if (storeToClean) await idbDelete(storeToClean, r.local_id); // baris resmi server akan masuk lewat sync_pull berikutnya
-      log('  ' + r.local_id + ': tersinkron' + (r.flag_review ? ' (perlu ditinjau: mirip data lain)' : ''));
+function handleKtpFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Ukuran foto maksimal 5MB'); return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const src = e.target.result;
+    ktpBase64 = src.split(',')[1];
+    ktpMime   = file.type;
+
+    // Tampilkan preview
+    document.getElementById('ktpPlaceholder').style.display = 'none';
+    document.getElementById('ktpPreview').style.display     = 'block';
+    document.getElementById('ktpImg').src                   = src;
+
+    // Mulai OCR
+    runOCR(src);
+  };
+  reader.readAsDataURL(file);
+}
+
+function retakeKtp(e) {
+  if (e) e.stopPropagation();
+  ktpBase64 = null; ktpMime = null;
+  document.getElementById('ktpPlaceholder').style.display = 'block';
+  document.getElementById('ktpPreview').style.display     = 'none';
+  document.getElementById('ktpImg').src                   = '';
+  document.getElementById('ocrStatus').style.display      = 'none';
+  document.getElementById('ocrResultNama').classList.remove('show');
+  document.getElementById('ktpFileInput').value           = '';
+  validateStep0();
+}
+
+async function runOCR(dataUrl) {
+  const statusEl = document.getElementById('ocrStatus');
+  statusEl.style.display = 'flex';
+
+  if (isOnline()) {
+    // Google Vision API simulation (production: ganti dengan real API call)
+    statusEl.className = 'ocr-status ocr-scanning';
+    statusEl.innerHTML = '<span class="ocr-spin">⟳</span> Membaca KTP dengan Vision API...';
+
+    // Simulasi delay OCR online (1.5 detik)
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Di production: kirim ke Apps Script → Vision API
+    // Untuk demo: simulasi hasil
+    const namaDemo = extractNamaDemo();
+    applyOcrResult(namaDemo, 'Vision API');
+
+  } else {
+    // Tesseract offline
+    statusEl.className = 'ocr-status ocr-offline';
+    statusEl.innerHTML = '<span class="ocr-spin">⟳</span> Membaca offline (Tesseract)...';
+
+    if (typeof Tesseract !== 'undefined') {
+      try {
+        const result = await Tesseract.recognize(dataUrl, 'ind', {
+          logger: () => {}
+        });
+        const nama = extractNamaFromText(result.data.text);
+        applyOcrResult(nama || '', 'Tesseract');
+      } catch(err) {
+        statusEl.className = 'ocr-status ocr-offline';
+        statusEl.innerHTML = '⚠️ OCR gagal — isi nama secara manual';
+      }
     } else {
-      await updateQueueStatus(r.local_id, 'FAILED');
-      log('  ' + r.local_id + ': GAGAL — ' + (r.error || 'tidak diketahui'));
+      await new Promise(r => setTimeout(r, 1200));
+      statusEl.className = 'ocr-status ocr-offline';
+      statusEl.innerHTML = '📴 Mode offline — isi nama secara manual';
     }
   }
-  await refreshQueueBadge();
 }
 
-// ============================================================
-// API CALL — text/plain supaya lolos CORS preflight Apps Script
-// ============================================================
-async function apiCall(payload) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  });
-  return res.json();
+function extractNamaDemo() {
+  // Demo — di production diganti hasil Vision API
+  const samples = ['Budi Santoso','Siti Rahayu','Ahmad Fauzi','Dian Kusuma','Rini Prasetyo'];
+  return samples[Math.floor(Math.random() * samples.length)];
 }
 
-// ============================================================
-// SESSION (token + user) — disimpan di IndexedDB, bukan localStorage,
-// supaya konsisten satu tempat dengan data lain (lihat blueprint §6)
-// ============================================================
-async function saveSession(token, user) {
-  await idbPut('session', { key: 'auth', token, user, saved_at: Date.now() });
-}
-async function getSession() {
-  return idbGet('session', 'auth');
-}
-async function clearSession() {
-  await idbPut('session', { key: 'auth', token: null, user: null, saved_at: 0 });
-}
-
-// ============================================================
-// SYNC ENGINE
-// ============================================================
-async function getAllLocalVersions() {
-  const rows = await idbGetAll('sync_meta');
-  const map = {};
-  rows.forEach(r => { map[r.master_name] = r.local_version; });
-  return map;
-}
-
-async function setLocalVersion(masterName, version) {
-  await idbPut('sync_meta', { master_name: masterName, local_version: version });
-}
-
-function logLine(text) {
-  const el = document.getElementById('syncLog');
-  el.style.display = 'block';
-  el.textContent += text + '\n';
-  el.scrollTop = el.scrollHeight;
-}
-
-async function runSync() {
-  const session = await getSession();
-  if (!session || !session.token) {
-    document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Belum login.</span>';
-    return;
+function extractNamaFromText(text) {
+  const lines  = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const namaRx = /^nama\s*[:.]?\s*(.+)/i;
+  for (const line of lines) {
+    const m = line.match(namaRx);
+    if (m) return m[1].replace(/[^A-Za-z\s]/g,'').trim();
   }
-  const btn = document.getElementById('btnSync');
+  return '';
+}
+
+function applyOcrResult(nama, engine) {
+  const statusEl = document.getElementById('ocrStatus');
+  const resultEl = document.getElementById('ocrResultNama');
+  const resultTx = document.getElementById('ocrResultText');
+  const namaEl   = document.getElementById('f_nama');
+
+  if (nama) {
+    namaEl.value = nama;
+    resultEl.classList.add('show');
+    resultTx.textContent = `Nama terdeteksi oleh ${engine}: "${nama}"`;
+    statusEl.className   = 'ocr-status ocr-done';
+    statusEl.innerHTML   = `✅ OCR selesai (${engine}) — nama terisi otomatis`;
+  } else {
+    statusEl.className = 'ocr-status ocr-offline';
+    statusEl.innerHTML = `⚠️ Nama tidak terdeteksi (${engine}) — isi secara manual`;
+  }
+  validateStep0();
+}
+
+// ── Validasi per step ────────────────────────────────
+function validateStep0() {
+  const ok = document.getElementById('f_nama').value.trim() &&
+             document.getElementById('f_hp').value.trim();
+  const btn = document.getElementById('btnStep0Next');
+  if (btn) btn.disabled = !ok;
+}
+
+function validateStep1() {
+  const ok = document.getElementById('f_kab').value &&
+             document.getElementById('f_desa').value;
+  const btn = document.getElementById('btnStep1Next');
+  if (btn) btn.disabled = !ok;
+}
+
+function validateStep2() {
+  const ok = selectedPaket && document.getElementById('f_jenis_pasang').value;
+  const btn = document.getElementById('btnStep2Next');
+  if (btn) btn.disabled = !ok;
+}
+
+// ── Wilayah cascade ──────────────────────────────────
+function onKabChange() {
+  const kab    = document.getElementById('f_kab').value;
+  const kecSel = document.getElementById('f_kec');
+  const dSel   = document.getElementById('f_desa');
+  kecSel.innerHTML = '<option value="">— Pilih kecamatan —</option>';
+  dSel.innerHTML   = '<option value="">— Pilih desa —</option>';
+  kecSel.disabled  = !kab;
+  dSel.disabled    = true;
+  if (!kab) return;
+  const kecs = WILAYAH_DATA[kab]?.kec || {};
+  Object.keys(kecs).forEach(k => {
+    kecSel.innerHTML += `<option value="${k}">${k}</option>`;
+  });
+}
+
+function onKecChange() {
+  const kab   = document.getElementById('f_kab').value;
+  const kec   = document.getElementById('f_kec').value;
+  const dSel  = document.getElementById('f_desa');
+  dSel.innerHTML = '<option value="">— Pilih desa —</option>';
+  dSel.disabled  = !kec;
+  if (!kec) return;
+  const desas = WILAYAH_DATA[kab]?.kec[kec] || [];
+  desas.forEach(d => { dSel.innerHTML += `<option value="${d}">${d}</option>`; });
+}
+
+// ── Paket grid ────────────────────────────────────────
+function renderPaketGrid() {
+  const grid = document.getElementById('paketGrid');
+  if (!grid) return;
+  grid.innerHTML = PAKET_LIST.map(p => `
+    <div class="paket-card ${selectedPaket===p.id?'selected':''}"
+      onclick="selectPaket('${p.id}')">
+      <div class="paket-speed">${p.speed}</div>
+      <div class="paket-price">${p.price}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">${p.devices}</div>
+      <div class="paket-check">${selectedPaket===p.id?'✓':''}</div>
+    </div>
+  `).join('');
+}
+
+function selectPaket(id) {
+  selectedPaket = id;
+  renderPaketGrid();
+  validateStep2();
+}
+
+// ── Summary ───────────────────────────────────────────
+function buildSummary() {
+  const paket = PAKET_LIST.find(p => p.id === selectedPaket);
+  const jenis = document.getElementById('f_jenis_pasang');
+  const jenisLabel = jenis.options[jenis.selectedIndex]?.text || '-';
+
+  document.getElementById('summaryBody').innerHTML = `
+    <div class="summary-row"><span class="summary-label">Nama KTP</span>
+      <span class="summary-val">${document.getElementById('f_nama').value}</span></div>
+    <div class="summary-row"><span class="summary-label">NIK</span>
+      <span class="summary-val">${document.getElementById('f_nik').value||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">No. HP</span>
+      <span class="summary-val">${document.getElementById('f_hp').value}</span></div>
+    <div class="summary-row"><span class="summary-label">Wilayah</span>
+      <span class="summary-val">
+        ${document.getElementById('f_desa').value},
+        ${document.getElementById('f_kec').value},
+        ${document.getElementById('f_kab').options[document.getElementById('f_kab').selectedIndex].text}
+      </span></div>
+    <div class="summary-row"><span class="summary-label">Dusun</span>
+      <span class="summary-val">${document.getElementById('f_dusun').value||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Alamat Detail</span>
+      <span class="summary-val">${document.getElementById('f_alamat').value||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Paket</span>
+      <span class="summary-val">${paket ? paket.speed+' — '+paket.price : '—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Jenis Pasang</span>
+      <span class="summary-val">${jenisLabel}</span></div>
+    <div class="summary-row"><span class="summary-label">Sumber</span>
+      <span class="summary-val">${document.getElementById('f_sumber').value||'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Foto KTP</span>
+      <span class="summary-val">${ktpBase64?'✅ Terlampir':'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Koneksi</span>
+      <span class="summary-val">${isOnline()?'🟢 Online — langsung sync':'🟡 Offline — simpan lokal'}</span></div>
+  `;
+
+  // KTP preview di summary
+  const ktpCard = document.getElementById('summaryKtpCard');
+  if (ktpBase64) {
+    document.getElementById('summaryKtpImg').src = `data:${ktpMime};base64,${ktpBase64}`;
+    ktpCard.style.display = 'block';
+  } else {
+    ktpCard.style.display = 'none';
+  }
+
+  // Offline warning
+  const warn = document.getElementById('offlineWarning');
+  warn.style.display = !isOnline() ? 'flex' : 'none';
+}
+
+// ── Submit ────────────────────────────────────────────
+async function submitCalon() {
+  const btn = document.getElementById('btnSubmit');
   btn.disabled = true;
-  document.getElementById('syncMsg').textContent = '';
-  document.getElementById('syncLog').textContent = '';
+  btn.innerHTML = '<span class="ocr-spin">⟳</span> Menyimpan...';
+
+  const payload = {
+    nama_ktp      : document.getElementById('f_nama').value.trim(),
+    nik           : document.getElementById('f_nik').value.trim(),
+    no_hp         : document.getElementById('f_hp').value.trim(),
+    catatan       : document.getElementById('f_catatan').value.trim(),
+    id_sumber     : document.getElementById('f_sumber').value,
+    id_desa       : document.getElementById('f_desa').value,
+    nama_desa     : document.getElementById('f_desa').value,
+    nama_kec      : document.getElementById('f_kec').value,
+    nama_kab      : document.getElementById('f_kab').value,
+    id_sub_wilayah: document.getElementById('f_dusun').value.trim(),
+    alamat_detail : document.getElementById('f_alamat').value.trim(),
+    id_paket      : selectedPaket,
+    id_jenis_pemasangan: document.getElementById('f_jenis_pasang').value,
+  };
+
+  const localId = 'local_' + Date.now();
+
+  if (!isOnline()) {
+    // Simpan ke lokal IndexedDB/localStorage
+    saveLocal('TRANSAKSI_CALON_PELANGGAN', { ...payload, local_id: localId,
+      id_status_proses: 'BARU', _created_at: new Date().toISOString() });
+    showSuccess(false);
+    return;
+  }
 
   try {
-    await pushPendingQueue(session.token, logLine);
+    const token = localStorage.getItem('pnsnet_token') || '';
 
-    const localVersions = await getAllLocalVersions();
-    logLine('Cek versi server...');
-    const checkResp = await apiCall({ action: 'sync_check', token: session.token, local_versions: localVersions });
-    if (!checkResp.success) throw new Error(checkResp.error || 'sync_check gagal');
-
-    const masters = Object.keys(checkResp.needs_update);
-    if (masters.length === 0) {
-      logLine('Semua data sudah versi terbaru.');
+    // 1. Upload foto KTP dulu jika ada
+    let urlFotoKtp = '';
+    if (ktpBase64) {
+      const upRes = await fetch(API_URL, {
+        method:'POST', body: JSON.stringify({
+          action:'foto_upload', token,
+          jenis:'KTP', nama_ktp: payload.nama_ktp,
+          nama_desa: payload.nama_desa, id_server:'',
+          tgl_daftar: new Date().toISOString().slice(0,10),
+          base64data: ktpBase64, mime_type: ktpMime
+        })
+      });
+      const upData = await upRes.json();
+      if (upData.ok) urlFotoKtp = upData.data.url;
     }
 
-    for (const masterName of masters) {
-      const cfg = MASTER_CONFIG[masterName];
-      if (!cfg) { logLine(masterName + ': dilewati (belum dikenal di HP)'); continue; }
-      const since = localVersions[masterName] || 0;
-      logLine(masterName + ': menarik data (since v' + since + ')...');
-      const pullResp = await apiCall({ action: 'sync_pull', token: session.token, master: masterName, since_version: since });
-      if (!pullResp.success) { logLine(masterName + ': GAGAL — ' + pullResp.error); continue; }
-      await idbBulkPut(cfg.store, pullResp.rows);
-      await setLocalVersion(masterName, pullResp.server_version);
-      logLine(masterName + ': ' + pullResp.rows.length + ' baris disimpan ke Local DB (v' + pullResp.server_version + ')');
-    }
-
-    document.getElementById('syncMsg').innerHTML = '<span class="msg-ok">Sync selesai.</span>';
-    await refreshVersionSummary();
-    await loadKabupatenDropdown();
-    await loadPaketDropdown();
-    await loadSumberDropdown();
-    if (currentDesaId) await refreshCPList();
-    await loadJenisPemasanganDropdown();
-    await loadTeknisiDropdown();
-    if (currentDesaId) {
-      await loadCalonPelangganDropdownForPemasangan();
-      await refreshPemasanganList();
-      await refreshOdpList();
-      await loadOdpDropdownForPemasangan();
-    }
-    await refreshQueueBadge();
-    await refreshCpQueueBadge();
-    await refreshPmQueueBadge();
-    await refreshOdpQueueBadge();
-    await refreshModemList();
-    await refreshModemQueueBadge();
-    if (currentDesaId) await refreshPelangganList();
-  } catch (err) {
-    document.getElementById('syncMsg').innerHTML = '<span class="msg-err">Sync gagal: ' + err.message + ' (kalau offline, ini wajar — data lama tetap dipakai)</span>';
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-async function refreshVersionSummary() {
-  const rows = await idbGetAll('sync_meta');
-  if (rows.length === 0) {
-    document.getElementById('versionSummary').textContent = 'Belum pernah sync sama sekali.';
-    return;
-  }
-  const text = rows.map(r => r.master_name.replace('MASTER_', '') + ':v' + r.local_version).join('  ·  ');
-  document.getElementById('versionSummary').textContent = text;
-}
-
-// ============================================================
-// DROPDOWN WILAYAH — 100% baca dari IndexedDB (offline-safe)
-// ============================================================
-async function loadKabupatenDropdown() {
-  const sel = document.getElementById('selKabupaten');
-  sel.innerHTML = '<option value="">-- pilih kabupaten --</option>';
-  const rows = await idbGetAll('master_kabupaten');
-  rows.filter(r => r.status === 'AKTIF').forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id_internal;
-    opt.textContent = r.nama_resmi;
-    sel.appendChild(opt);
-  });
-}
-
-async function loadKecamatanDropdown(idKabupaten) {
-  const sel = document.getElementById('selKecamatan');
-  sel.innerHTML = '<option value="">-- pilih kecamatan --</option>';
-  sel.disabled = !idKabupaten;
-  if (!idKabupaten) return;
-  const rows = await idbGetByParent('master_kecamatan', idKabupaten);
-  rows.filter(r => r.status === 'AKTIF').forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id_internal;
-    opt.textContent = r.nama_resmi;
-    sel.appendChild(opt);
-  });
-  sel.disabled = false;
-}
-
-async function loadDesaDropdown(idKecamatan) {
-  const sel = document.getElementById('selDesa');
-  sel.innerHTML = '<option value="">-- pilih desa/kelurahan --</option>';
-  sel.disabled = !idKecamatan;
-  if (!idKecamatan) return;
-  const rows = await idbGetByParent('master_desa', idKecamatan);
-  rows.filter(r => r.status === 'AKTIF').forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id_internal;
-    opt.textContent = r.nama_resmi + ' (' + r.jenis + ')';
-    sel.appendChild(opt);
-  });
-  sel.disabled = false;
-}
-
-// ============================================================
-// SUB-WILAYAH (DUSUN/LINGKUNGAN) — tambah dari HP, offline-first
-// ============================================================
-let currentDesaId = '';
-
-async function loadSubWilayahDropdown(idDesa) {
-  const sel = document.getElementById('selSubWilayah');
-  sel.innerHTML = '<option value="">-- pilih dusun/lingkungan --</option>';
-  const rows = await idbGetByParent('master_sub_wilayah', idDesa);
-  rows.filter(r => r.status === 'AKTIF').forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id_sub_wilayah;
-    opt.textContent = r.nama + ' (' + r.jenis_sub + ')' + (r._pending ? ' — menunggu sync' : '');
-    sel.appendChild(opt);
-  });
-}
-
-function renderSimilarWarning(matches) {
-  const box = document.getElementById('subWilayahWarn');
-  if (!matches || matches.length === 0) {
-    box.style.display = 'none';
-    box.innerHTML = '';
-    return;
-  }
-  box.style.display = 'block';
-  box.innerHTML = '<b>Data yang mirip sudah tersedia:</b><ul>' +
-    matches.map(m => '<li>' + m.nama + ' (kemiripan ' + Math.round(m.ratio * 100) + '%)</li>').join('') +
-    '</ul>Kalau memang sama, pilih dari dropdown di atas saja. Kalau memang berbeda, silakan lanjut tambahkan.';
-}
-
-document.getElementById('btnCheckSubWilayah').addEventListener('click', async () => {
-  const nama = document.getElementById('inputSubWilayahNama').value;
-  if (!nama.trim() || !currentDesaId) return;
-  const matches = await findSimilarSubWilayah(nama, currentDesaId);
-  renderSimilarWarning(matches);
-  document.getElementById('subWilayahMsg').textContent = matches.length === 0 ? 'Tidak ditemukan yang mirip — aman untuk ditambahkan.' : '';
-});
-
-document.getElementById('btnAddSubWilayah').addEventListener('click', async () => {
-  const namaInput = document.getElementById('inputSubWilayahNama');
-  const nama = namaInput.value.trim();
-  const jenisSub = document.getElementById('selJenisSub').value;
-  const msgEl = document.getElementById('subWilayahMsg');
-
-  if (!currentDesaId) { msgEl.innerHTML = '<span class="msg-err">Pilih Desa/Kelurahan dulu.</span>'; return; }
-  if (!nama) { msgEl.innerHTML = '<span class="msg-err">Nama tidak boleh kosong.</span>'; return; }
-
-  // cek duplikat sekali lagi sebelum simpan (client-side, dari cache)
-  const matches = await findSimilarSubWilayah(nama, currentDesaId);
-  renderSimilarWarning(matches);
-  if (matches.length > 0 && !namaInput.dataset.forceAdd) {
-    msgEl.innerHTML = '<span class="msg-err">Ada data mirip di atas. Ketuk "Tambahkan" sekali lagi kalau yakin ini memang data baru yang berbeda.</span>';
-    namaInput.dataset.forceAdd = '1';
-    return;
-  }
-  namaInput.dataset.forceAdd = '';
-
-  const session = await getSession();
-  const localId = makeLocalId();
-  const now = Date.now();
-
-  // simpan langsung ke Local DB supaya bisa dipakai instan walau offline
-  const localRecord = {
-    id_sub_wilayah: localId,
-    parent_id_desa: currentDesaId,
-    jenis_sub: jenisSub,
-    nama: nama,
-    nama_normalized: normalizeName(nama),
-    status: 'AKTIF',
-    version: 0,
-    created_by: session && session.user ? session.user.username : '',
-    updated_by: session && session.user ? session.user.username : '',
-    created_at: new Date(now).toISOString(),
-    updated_at: new Date(now).toISOString(),
-    _pending: true
-  };
-  await idbPut('master_sub_wilayah', localRecord);
-
-  await enqueueSyncItem('MASTER_SUB_WILAYAH_CREATE', {
-    local_id: localId,
-    parent_id_desa: currentDesaId,
-    jenis_sub: jenisSub,
-    nama: nama
-  });
-
-  namaInput.value = '';
-  renderSimilarWarning([]);
-  msgEl.innerHTML = '<span class="msg-ok">Tersimpan di Local DB. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
-  await loadSubWilayahDropdown(currentDesaId);
-  await refreshQueueBadge();
-});
-
-// ============================================================
-// FORM CALON PELANGGAN (Fase 9) — transaksi pertama, offline-first
-// ============================================================
-async function loadPaketDropdown() {
-  const sel = document.getElementById('cpPaket');
-  sel.innerHTML = '<option value="">-- pilih paket --</option>';
-  const rows = await idbGetAll('master_paket');
-  rows.filter(r => r.status === 'AKTIF').forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id_paket;
-    opt.textContent = r.nama_paket + ' — Rp' + Number(r.harga_bulanan).toLocaleString('id-ID') + '/bln';
-    sel.appendChild(opt);
-  });
-}
-
-async function loadSumberDropdown() {
-  const sel = document.getElementById('cpSumber');
-  sel.innerHTML = '<option value="">-- pilih sumber --</option>';
-  const rows = await idbGetAll('master_sumber_pelanggan');
-  rows.filter(r => r.status === 'AKTIF').forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id_sumber;
-    opt.textContent = r.nama;
-    sel.appendChild(opt);
-  });
-}
-
-async function refreshCpQueueBadge() {
-  const pending = await getPendingQueue();
-  const cpPending = pending.filter(q => q.entity_type === 'CALON_PELANGGAN_CREATE' || q.entity_type === 'CALON_PELANGGAN_UPDATE_STATUS');
-  const badge = document.getElementById('cpQueueBadge');
-  if (cpPending.length > 0) {
-    badge.textContent = cpPending.length + ' menunggu sync';
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
-  }
-}
-
-async function refreshCPList() {
-  const listEl = document.getElementById('cpList');
-  const rows = await idbGetAll('calon_pelanggan');
-  const filtered = currentDesaId ? rows.filter(r => r.id_desa === currentDesaId) : rows;
-  if (filtered.length === 0) {
-    listEl.textContent = 'Belum ada data untuk desa ini.';
-    return;
-  }
-  const pendingQueue = await getPendingQueue();
-  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
-  const statuses = await getStatusListByKelompok('CALON_PELANGGAN');
-
-  const htmlParts = [];
-  for (const r of filtered) {
-    const isPending = pendingLocalIds.has(r.id_calon_pelanggan) || r._pending;
-    const namaStatus = await getStatusNama(r.id_status_proses);
-    htmlParts.push(
-      '<div class="cp-item" data-id="' + r.id_calon_pelanggan + '">' +
-      '<span class="cp-name">' + r.nama + '</span> — ' + r.no_hp +
-      '<br><span class="status-label">' + namaStatus + '</span> ' +
-      '<span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' + (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span>' +
-      (isPending ? '' :
-        '<div class="status-row">' + statusSelectHtml('sel-status-cp', statuses, r.id_status_proses) +
-        '<button class="btn-ubah-status-cp">Ubah</button></div>') +
-      '</div>'
-    );
-  }
-  listEl.innerHTML = htmlParts.join('');
-}
-
-document.getElementById('btnSubmitCP').addEventListener('click', async () => {
-  const nama = document.getElementById('cpNama').value.trim();
-  const noHp = document.getElementById('cpNoHp').value.trim();
-  const alamat = document.getElementById('cpAlamat').value.trim();
-  const idPaket = document.getElementById('cpPaket').value;
-  const idSumber = document.getElementById('cpSumber').value;
-  const msgEl = document.getElementById('cpMsg');
-
-  if (!currentDesaId) { msgEl.innerHTML = '<span class="msg-err">Pilih Kabupaten/Kecamatan/Desa dulu di kartu atas.</span>'; return; }
-  if (!nama || !noHp || !idPaket || !idSumber) {
-    msgEl.innerHTML = '<span class="msg-err">Nama, No HP, Paket, dan Sumber wajib diisi.</span>';
-    return;
-  }
-
-  const session = await getSession();
-  const idSubWilayah = document.getElementById('selSubWilayah').value || null;
-  const localId = makeLocalId();
-  const now = new Date().toISOString();
-
-  const localRecord = {
-    id_calon_pelanggan: localId,
-    nama, no_hp: noHp, alamat,
-    id_paket: idPaket, id_desa: currentDesaId, id_sub_wilayah: idSubWilayah, id_sumber: idSumber,
-    id_status_proses: '', catatan: '', status: 'AKTIF', version: 0,
-    created_by: session && session.user ? session.user.username : '',
-    updated_by: session && session.user ? session.user.username : '',
-    created_at: now, updated_at: now,
-    _pending: true
-  };
-  await idbPut('calon_pelanggan', localRecord);
-
-  await enqueueSyncItem('CALON_PELANGGAN_CREATE', {
-    local_id: localId, nama, no_hp: noHp, alamat,
-    id_paket: idPaket, id_desa: currentDesaId, id_sub_wilayah: idSubWilayah, id_sumber: idSumber
-  });
-
-  document.getElementById('cpNama').value = '';
-  document.getElementById('cpNoHp').value = '';
-  document.getElementById('cpAlamat').value = '';
-  msgEl.innerHTML = '<span class="msg-ok">Tersimpan di Local DB. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
-  await refreshCPList();
-  await refreshCpQueueBadge();
-  await loadCalonPelangganDropdownForPemasangan();
-});
-
-// ============================================================
-// STATUS HELPERS (dipakai Calon Pelanggan & Pemasangan)
-// ============================================================
-async function getStatusListByKelompok(kelompok) {
-  const rows = await idbGetAll('master_status');
-  return rows
-    .filter(r => r.kelompok === kelompok && r.status === 'AKTIF')
-    .sort((a, b) => Number(a.urutan) - Number(b.urutan));
-}
-
-async function getStatusNama(idStatus) {
-  if (!idStatus) return '(belum ada status)';
-  const rows = await idbGetAll('master_status');
-  const found = rows.find(r => r.id_status === idStatus);
-  return found ? found.nama_status : '(status tidak dikenal)';
-}
-
-function statusSelectHtml(selectClass, statuses, currentId) {
-  return '<select class="' + selectClass + '">' +
-    statuses.map(s => '<option value="' + s.kode_status + '"' + (s.id_status === currentId ? ' selected' : '') + '>' + s.nama_status + '</option>').join('') +
-    '</select>';
-}
-
-// ============================================================
-// UBAH STATUS CALON PELANGGAN (klik dari Daftar Lokal)
-// ============================================================
-document.getElementById('cpList').addEventListener('click', async (e) => {
-  if (!e.target.classList.contains('btn-ubah-status-cp')) return;
-  const item = e.target.closest('.cp-item');
-  const idCalonPelanggan = item.dataset.id;
-  const select = item.querySelector('.sel-status-cp');
-  const kodeStatusBaru = select.value;
-
-  const localId = makeLocalId();
-  await enqueueSyncItem('CALON_PELANGGAN_UPDATE_STATUS', {
-    local_id: localId, id_calon_pelanggan: idCalonPelanggan, kode_status_baru: kodeStatusBaru, catatan: ''
-  });
-  e.target.textContent = 'Menunggu sync...';
-  e.target.disabled = true;
-  await refreshCpQueueBadge();
-});
-
-// ============================================================
-// FORM PEMASANGAN (Fase 10)
-// ============================================================
-async function loadJenisPemasanganDropdown() {
-  const sel = document.getElementById('pmJenis');
-  sel.innerHTML = '<option value="">-- pilih jenis --</option>';
-  const rows = await idbGetAll('master_jenis_pemasangan');
-  rows.filter(r => r.status === 'AKTIF').forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id_jenis;
-    opt.textContent = r.nama + ' — Rp' + Number(r.biaya).toLocaleString('id-ID');
-    sel.appendChild(opt);
-  });
-}
-
-async function loadTeknisiDropdown() {
-  const sel = document.getElementById('pmTeknisi');
-  sel.innerHTML = '<option value="">-- belum ditentukan --</option>';
-  const rows = await idbGetAll('master_teknisi');
-  rows.filter(r => r.status === 'AKTIF').forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id_teknisi;
-    opt.textContent = r.nama;
-    sel.appendChild(opt);
-  });
-}
-
-async function loadCalonPelangganDropdownForPemasangan() {
-  const sel = document.getElementById('pmCalonPelanggan');
-  sel.innerHTML = '<option value="">-- pilih calon pelanggan --</option>';
-  const rows = await idbGetAll('calon_pelanggan');
-  const pendingQueue = await getPendingQueue();
-  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
-  rows
-    .filter(r => r.id_desa === currentDesaId && !r._pending && !pendingLocalIds.has(r.id_calon_pelanggan))
-    .forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r.id_calon_pelanggan;
-      opt.textContent = r.nama + ' — ' + r.no_hp;
-      sel.appendChild(opt);
+    // 2. Simpan calon
+    const res = await fetch(API_URL, {
+      method:'POST', body: JSON.stringify({
+        action:'sync_push', token,
+        transactions:[{
+          entity_type:'CALON_CREATE',
+          local_id: localId,
+          payload: { ...payload, url_foto_ktp: urlFotoKtp }
+        }]
+      })
     });
-}
+    const data = await res.json();
 
-async function refreshPmQueueBadge() {
-  const pending = await getPendingQueue();
-  const pmPending = pending.filter(q => q.entity_type === 'PEMASANGAN_CREATE' || q.entity_type === 'PEMASANGAN_UPDATE_STATUS');
-  const badge = document.getElementById('pmQueueBadge');
-  if (pmPending.length > 0) {
-    badge.textContent = pmPending.length + ' menunggu sync';
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
-  }
-}
-
-async function refreshPemasanganList() {
-  const listEl = document.getElementById('pmList');
-  const rows = await idbGetAll('pemasangan');
-  if (rows.length === 0) { listEl.textContent = 'Belum ada data pemasangan.'; return; }
-
-  const pendingQueue = await getPendingQueue();
-  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
-  const statuses = await getStatusListByKelompok('PEMASANGAN');
-  const cpRows = await idbGetAll('calon_pelanggan');
-
-  const htmlParts = [];
-  for (const r of rows) {
-    const isPending = pendingLocalIds.has(r.id_pemasangan) || r._pending;
-    const cp = cpRows.find(c => c.id_calon_pelanggan === r.id_calon_pelanggan);
-    const namaCp = cp ? cp.nama : '(calon pelanggan tidak ditemukan)';
-    const namaStatus = await getStatusNama(r.id_status_proses);
-    htmlParts.push(
-      '<div class="cp-item" data-id="' + r.id_pemasangan + '">' +
-      '<span class="cp-name">' + namaCp + '</span> — ' + (r.tanggal_jadwal || 'belum dijadwalkan') +
-      '<br><span class="status-label">' + namaStatus + '</span> ' +
-      '<span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' + (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span>' +
-      (isPending ? '' :
-        '<div class="status-row">' + statusSelectHtml('sel-status-pm', statuses, r.id_status_proses) +
-        '<button class="btn-ubah-status-pm">Ubah</button></div>') +
-      '</div>'
-    );
-  }
-  listEl.innerHTML = htmlParts.join('');
-}
-
-document.getElementById('pmList').addEventListener('click', async (e) => {
-  if (!e.target.classList.contains('btn-ubah-status-pm')) return;
-  const item = e.target.closest('.cp-item');
-  const idPemasangan = item.dataset.id;
-  const select = item.querySelector('.sel-status-pm');
-  const kodeStatusBaru = select.value;
-
-  const localId = makeLocalId();
-  await enqueueSyncItem('PEMASANGAN_UPDATE_STATUS', {
-    local_id: localId, id_pemasangan: idPemasangan, kode_status_baru: kodeStatusBaru, catatan: ''
-  });
-  e.target.textContent = 'Menunggu sync...';
-  e.target.disabled = true;
-  await refreshPmQueueBadge();
-});
-
-async function refreshPelangganList() {
-  const listEl = document.getElementById('plList');
-  const rows = await idbGetAll('pelanggan');
-  const filtered = currentDesaId ? rows.filter(r => r.id_desa === currentDesaId) : rows;
-  if (filtered.length === 0) { listEl.textContent = 'Belum ada pelanggan aktif untuk desa ini.'; return; }
-
-  const allModems = await idbGetAll('master_modem');
-  const availableModems = allModems.filter(m => m.status === 'SIAP_PAKAI' && !m._pending);
-
-  listEl.innerHTML = filtered.map(r => {
-    const modemTerpasang = allModems.find(m => m.id_pelanggan === r.id_pelanggan);
-    const modemInfo = modemTerpasang
-      ? '<span class="status-label">Modem: ' + modemTerpasang.merk + ' (' + modemTerpasang.serial_number + ')</span>'
-      : (availableModems.length > 0
-          ? '<div class="status-row"><select class="sel-modem-assign">' +
-            availableModems.map(m => '<option value="' + m.id_modem + '">' + m.merk + ' — ' + m.serial_number + '</option>').join('') +
-            '</select><button class="btn-pasang-modem">Pasang Modem</button></div>'
-          : '<span style="font-size:11px; color:var(--text-dim);">(belum ada modem SIAP_PAKAI)</span>');
-    return '<div class="cp-item" data-id="' + r.id_pelanggan + '"><span class="cp-name">' + r.nama + '</span> — ' + r.no_hp +
-      '<br><span class="status-label">Aktif sejak ' + (r.tanggal_aktif || '').slice(0, 10) + '</span> ' + modemInfo + '</div>';
-  }).join('');
-}
-
-document.getElementById('plList').addEventListener('click', async (e) => {
-  if (!e.target.classList.contains('btn-pasang-modem')) return;
-  const item = e.target.closest('.cp-item');
-  const idPelanggan = item.dataset.id;
-  const select = item.querySelector('.sel-modem-assign');
-  const idModem = select.value;
-
-  const localId = makeLocalId();
-  await enqueueSyncItem('MODEM_ASSIGN', { local_id: localId, id_modem: idModem, id_pelanggan: idPelanggan, catatan: '' });
-  e.target.textContent = 'Menunggu sync...';
-  e.target.disabled = true;
-  await refreshModemQueueBadge();
-});
-
-// ============================================================
-// MODEM / INVENTORI (Fase 13)
-// ============================================================
-async function refreshModemList() {
-  const listEl = document.getElementById('modemList');
-  const rows = await idbGetAll('master_modem');
-  if (rows.length === 0) { listEl.textContent = 'Belum ada modem terdaftar.'; return; }
-
-  const pendingQueue = await getPendingQueue();
-  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
-  const plRows = await idbGetAll('pelanggan');
-
-  const statusLabel = { SIAP_PAKAI: 'Siap Pakai', TERPAKAI: 'Terpakai', RUSAK: 'Rusak', TIDAK_LAYAK_PAKAI: 'Tidak Layak Pakai' };
-
-  listEl.innerHTML = rows.map(m => {
-    const isPending = pendingLocalIds.has(m.id_modem) || m._pending;
-    const pelanggan = plRows.find(p => p.id_pelanggan === m.id_pelanggan);
-    const info = pelanggan ? ' → ' + pelanggan.nama : '';
-    const releaseControl = (m.status === 'TERPAKAI' && !isPending)
-      ? '<div class="status-row"><select class="sel-modem-release">' +
-        '<option value="SIAP_PAKAI">Lepas — kembali Siap Pakai</option>' +
-        '<option value="RUSAK">Lepas — Rusak</option>' +
-        '<option value="TIDAK_LAYAK_PAKAI">Lepas — Tidak Layak Pakai</option>' +
-        '</select><button class="btn-release-modem">Lepas</button></div>'
-      : '';
-    return '<div class="cp-item" data-id="' + m.id_modem + '">' +
-      '<span class="cp-name">' + m.merk + ' — ' + m.serial_number + '</span>' + info +
-      '<br><span class="status-label">' + (statusLabel[m.status] || m.status) + '</span> ' +
-      '<span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' + (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span>' +
-      releaseControl + '</div>';
-  }).join('');
-}
-
-async function refreshModemQueueBadge() {
-  const pending = await getPendingQueue();
-  const modemPending = pending.filter(q => ['MASTER_MODEM_CREATE', 'MODEM_ASSIGN', 'MODEM_RELEASE'].includes(q.entity_type));
-  const badge = document.getElementById('modemQueueBadge');
-  if (modemPending.length > 0) {
-    badge.textContent = modemPending.length + ' menunggu sync';
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
-  }
-}
-
-document.getElementById('modemList').addEventListener('click', async (e) => {
-  if (!e.target.classList.contains('btn-release-modem')) return;
-  const item = e.target.closest('.cp-item');
-  const idModem = item.dataset.id;
-  const select = item.querySelector('.sel-modem-release');
-  const statusBaru = select.value;
-
-  const localId = makeLocalId();
-  await enqueueSyncItem('MODEM_RELEASE', { local_id: localId, id_modem: idModem, status_baru: statusBaru, catatan: '' });
-  e.target.textContent = 'Menunggu sync...';
-  e.target.disabled = true;
-  await refreshModemQueueBadge();
-});
-
-document.getElementById('btnSubmitModem').addEventListener('click', async () => {
-  const merk = document.getElementById('modemMerk').value.trim();
-  const serial = document.getElementById('modemSerial').value.trim();
-  const keterangan = document.getElementById('modemKeterangan').value.trim();
-  const msgEl = document.getElementById('modemMsg');
-
-  if (!merk || !serial) {
-    msgEl.innerHTML = '<span class="msg-err">Merk dan Serial Number wajib diisi.</span>';
-    return;
-  }
-
-  const session = await getSession();
-  const localId = makeLocalId();
-  const now = new Date().toISOString();
-
-  await idbPut('master_modem', {
-    id_modem: localId, merk, serial_number: serial, id_pelanggan: '', status: 'SIAP_PAKAI', keterangan,
-    version: 0,
-    created_by: session && session.user ? session.user.username : '',
-    updated_by: session && session.user ? session.user.username : '',
-    created_at: now, updated_at: now, _pending: true
-  });
-
-  await enqueueSyncItem('MASTER_MODEM_CREATE', { local_id: localId, merk, serial_number: serial, keterangan });
-
-  document.getElementById('modemMerk').value = '';
-  document.getElementById('modemSerial').value = '';
-  document.getElementById('modemKeterangan').value = '';
-  msgEl.innerHTML = '<span class="msg-ok">Tersimpan. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
-  await refreshModemList();
-  await refreshModemQueueBadge();
-});
-
-// ============================================================
-// JALUR WILAYAH OTOMATIS (untuk isian Alamat/Lokasi ODP, dsb)
-// Dibentuk dari teks yang sedang dipilih di dropdown Kabupaten/Kecamatan/
-// Desa/Dusun — supaya konsisten, tidak diketik manual bebas.
-// ============================================================
-function getWilayahPathString() {
-  const parts = [];
-  ['selKabupaten', 'selKecamatan', 'selDesa'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel && sel.value && sel.selectedOptions[0]) parts.push(sel.selectedOptions[0].textContent.trim());
-  });
-  const subSel = document.getElementById('selSubWilayah');
-  if (subSel && subSel.value && subSel.selectedOptions[0]) parts.push(subSel.selectedOptions[0].textContent.trim());
-  return parts.length ? '/' + parts.join('/') : '';
-}
-
-function autoFillOdpAlamat() {
-  const el = document.getElementById('odpAlamat');
-  if (!el) return;
-  el.value = getWilayahPathString();
-}
-
-document.getElementById('selSubWilayah').addEventListener('change', autoFillOdpAlamat);
-
-// ============================================================
-// ODP & PORT (Fase 12)
-// ============================================================
-async function refreshOdpQueueBadge() {
-  const pending = await getPendingQueue();
-  const odpPending = pending.filter(q => q.entity_type === 'MASTER_ODP_CREATE');
-  const badge = document.getElementById('odpQueueBadge');
-  if (odpPending.length > 0) {
-    badge.textContent = odpPending.length + ' menunggu sync';
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
-  }
-}
-
-async function refreshOdpList() {
-  const listEl = document.getElementById('odpList');
-  const odps = await idbGetByParent('master_odp', currentDesaId);
-  if (odps.length === 0) { listEl.textContent = 'Belum ada ODP di desa ini.'; return; }
-  const allPorts = await idbGetAll('master_port_odp');
-  const pendingQueue = await getPendingQueue();
-  const pendingLocalIds = new Set(pendingQueue.map(q => q.local_id));
-
-  listEl.innerHTML = odps.map(o => {
-    const isPending = pendingLocalIds.has(o.id_odp) || o._pending;
-    const ports = allPorts.filter(pt => pt.id_odp === o.id_odp);
-    const tersedia = ports.filter(pt => pt.status === 'TERSEDIA').length;
-    return '<div class="cp-item"><span class="cp-name">' + o.nama_odp + '</span>' +
-      '<br><span class="status-label">' + tersedia + '/' + (ports.length || o.kapasitas_port) + ' port tersedia</span> ' +
-      '<span class="' + (isPending ? 'cp-sync-pending' : 'cp-sync-ok') + '">' + (isPending ? '⏳ menunggu sync' : '✓ tersinkron') + '</span></div>';
-  }).join('');
-}
-
-document.getElementById('btnSubmitOdp').addEventListener('click', async () => {
-  const nama = document.getElementById('odpNama').value.trim();
-  const pathWilayah = document.getElementById('odpAlamat').value.trim();
-  const catatanLokasi = document.getElementById('odpCatatanLokasi').value.trim();
-  const alamat = catatanLokasi ? (pathWilayah + ' (' + catatanLokasi + ')') : pathWilayah;
-  const kapasitas = document.getElementById('odpKapasitas').value;
-  const msgEl = document.getElementById('odpMsg');
-
-  if (!currentDesaId) { msgEl.innerHTML = '<span class="msg-err">Pilih Desa dulu.</span>'; return; }
-  if (!nama || !kapasitas || Number(kapasitas) < 1) {
-    msgEl.innerHTML = '<span class="msg-err">Nama ODP dan Kapasitas Port (angka > 0) wajib diisi.</span>';
-    return;
-  }
-
-  const session = await getSession();
-  const localId = makeLocalId();
-  const now = new Date().toISOString();
-
-  await idbPut('master_odp', {
-    id_odp: localId, nama_odp: nama, id_desa: currentDesaId, alamat, latitude: '', longitude: '',
-    kapasitas_port: Number(kapasitas), status: 'AKTIF', tanggal_instalasi: '', version: 0,
-    created_by: session && session.user ? session.user.username : '',
-    updated_by: session && session.user ? session.user.username : '',
-    created_at: now, updated_at: now, _pending: true
-  });
-
-  await enqueueSyncItem('MASTER_ODP_CREATE', {
-    local_id: localId, nama_odp: nama, id_desa: currentDesaId, alamat, kapasitas_port: kapasitas
-  });
-
-  document.getElementById('odpNama').value = '';
-  document.getElementById('odpCatatanLokasi').value = '';
-  document.getElementById('odpKapasitas').value = '';
-  autoFillOdpAlamat();
-  msgEl.innerHTML = '<span class="msg-ok">Tersimpan. Port akan otomatis dibuat oleh server begitu tersinkron.</span>';
-  await refreshOdpList();
-  await refreshOdpQueueBadge();
-});
-
-async function loadOdpDropdownForPemasangan() {
-  const sel = document.getElementById('pmOdp');
-  sel.innerHTML = '<option value="">-- belum pilih ODP --</option>';
-  const odps = await idbGetByParent('master_odp', currentDesaId);
-  odps.filter(o => o.status === 'AKTIF' && !o._pending).forEach(o => {
-    const opt = document.createElement('option');
-    opt.value = o.id_odp;
-    opt.textContent = o.nama_odp;
-    sel.appendChild(opt);
-  });
-}
-
-async function loadPortDropdown(idOdp) {
-  const sel = document.getElementById('pmPort');
-  sel.innerHTML = '<option value="">-- pilih port --</option>';
-  sel.disabled = !idOdp;
-  if (!idOdp) { sel.innerHTML = '<option value="">-- pilih ODP dulu --</option>'; return; }
-  const ports = await idbGetByParent('master_port_odp', idOdp);
-  const available = ports.filter(p => p.status === 'TERSEDIA');
-  if (available.length === 0) {
-    sel.innerHTML = '<option value="">-- tidak ada port tersedia --</option>';
-    return;
-  }
-  available.sort((a, b) => Number(a.nomor_port) - Number(b.nomor_port)).forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id_port;
-    opt.textContent = 'Port ' + p.nomor_port;
-    sel.appendChild(opt);
-  });
-}
-
-document.getElementById('pmOdp').addEventListener('change', (e) => loadPortDropdown(e.target.value));
-
-document.getElementById('btnSubmitPM').addEventListener('click', async () => {
-  const idCalonPelanggan = document.getElementById('pmCalonPelanggan').value;
-  const idJenis = document.getElementById('pmJenis').value;
-  const idPort = document.getElementById('pmPort').value || null;
-  const idTeknisi = document.getElementById('pmTeknisi').value || null;
-  const tanggal = document.getElementById('pmTanggal').value;
-  const catatan = document.getElementById('pmCatatan').value.trim();
-  const msgEl = document.getElementById('pmMsg');
-
-  if (!idCalonPelanggan || !idJenis) {
-    msgEl.innerHTML = '<span class="msg-err">Calon Pelanggan dan Jenis Pemasangan wajib dipilih.</span>';
-    return;
-  }
-
-  const session = await getSession();
-  const localId = makeLocalId();
-  const now = new Date().toISOString();
-
-  const localRecord = {
-    id_pemasangan: localId,
-    id_calon_pelanggan: idCalonPelanggan, id_teknisi: idTeknisi, id_jenis_pemasangan: idJenis, id_port: idPort,
-    tanggal_jadwal: tanggal, id_status_proses: '', catatan, status: 'AKTIF', version: 0,
-    created_by: session && session.user ? session.user.username : '',
-    updated_by: session && session.user ? session.user.username : '',
-    created_at: now, updated_at: now,
-    _pending: true
-  };
-  await idbPut('pemasangan', localRecord);
-
-  await enqueueSyncItem('PEMASANGAN_CREATE', {
-    local_id: localId, id_calon_pelanggan: idCalonPelanggan, id_teknisi: idTeknisi,
-    id_jenis_pemasangan: idJenis, id_port: idPort, tanggal_jadwal: tanggal, catatan
-  });
-
-  document.getElementById('pmTanggal').value = '';
-  document.getElementById('pmCatatan').value = '';
-  document.getElementById('pmOdp').value = '';
-  loadPortDropdown('');
-  msgEl.innerHTML = '<span class="msg-ok">Tersimpan di Local DB. Akan terkirim ke server saat Sync Sekarang (butuh online).</span>';
-  await refreshPemasanganList();
-  await refreshPmQueueBadge();
-  await refreshCPList(); // status Calon Pelanggan akan ikut berubah setelah sync
-});
-
-// ============================================================
-// UI WIRING
-// ============================================================
-document.getElementById('btnLogin').addEventListener('click', async () => {
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value;
-  const msgEl = document.getElementById('loginMsg');
-  if (!username || !password) {
-    msgEl.innerHTML = '<span class="msg-err">Isi username & password.</span>';
-    return;
-  }
-  msgEl.textContent = 'Memproses...';
-  try {
-    const resp = await apiCall({ action: 'login', username, password });
-    if (!resp.success) {
-      msgEl.innerHTML = '<span class="msg-err">' + resp.error + '</span>';
-      return;
+    if (data.ok && data.data.results[0].ok) {
+      showSuccess(true);
+    } else {
+      throw new Error(data.error || 'Gagal menyimpan');
     }
-    if (!resp.token || !resp.user) {
-      msgEl.innerHTML = '<span class="msg-err">Respons server tidak lengkap (kemungkinan permintaan dialihkan jadi GET). Coba lagi.</span>';
-      console.log('Login response tidak lengkap:', resp);
-      return;
-    }
-    await saveSession(resp.token, resp.user);
-    msgEl.textContent = '';
-    await showAppArea(resp.user);
-  } catch (err) {
-    msgEl.innerHTML = '<span class="msg-err">Gagal terhubung ke server. Detail: ' + (err && err.message ? err.message : String(err)) + '</span>';
-  }
-});
-
-document.getElementById('btnLogout').addEventListener('click', async (e) => {
-  e.preventDefault();
-  await clearSession();
-  document.getElementById('appArea').classList.add('hidden');
-  document.getElementById('loginCard').classList.remove('hidden');
-});
-
-document.getElementById('btnSync').addEventListener('click', runSync);
-
-document.getElementById('selKabupaten').addEventListener('change', (e) => {
-  loadKecamatanDropdown(e.target.value);
-  document.getElementById('selDesa').innerHTML = '<option value="">-- pilih desa/kelurahan --</option>';
-  document.getElementById('selDesa').disabled = true;
-});
-document.getElementById('selKecamatan').addEventListener('change', (e) => {
-  loadDesaDropdown(e.target.value);
-  currentDesaId = '';
-  document.getElementById('subWilayahCard').style.display = 'none';
-  document.getElementById('calonPelangganCard').style.display = 'none';
-  document.getElementById('pemasanganCard').style.display = 'none';
-  document.getElementById('pelangganCard').style.display = 'none';
-  document.getElementById('odpCard').style.display = 'none';
-});
-
-document.getElementById('selDesa').addEventListener('change', async (e) => {
-  currentDesaId = e.target.value;
-  const card = document.getElementById('subWilayahCard');
-  const cpCard = document.getElementById('calonPelangganCard');
-  const pmCard = document.getElementById('pemasanganCard');
-  const plCard = document.getElementById('pelangganCard');
-  const odpCard = document.getElementById('odpCard');
-  if (!currentDesaId) { card.style.display = 'none'; cpCard.style.display = 'none'; pmCard.style.display = 'none'; plCard.style.display = 'none'; odpCard.style.display = 'none'; return; }
-  card.style.display = 'block';
-  cpCard.style.display = 'block';
-  pmCard.style.display = 'block';
-  plCard.style.display = 'block';
-  odpCard.style.display = 'block';
-  document.getElementById('inputSubWilayahNama').value = '';
-  document.getElementById('subWilayahMsg').textContent = '';
-  renderSimilarWarning([]);
-  await loadSubWilayahDropdown(currentDesaId);
-  await refreshCPList();
-  await refreshCpQueueBadge();
-  await loadCalonPelangganDropdownForPemasangan();
-  await refreshPemasanganList();
-  await refreshPmQueueBadge();
-  await refreshPelangganList();
-  await refreshOdpList();
-  await refreshOdpQueueBadge();
-  await loadOdpDropdownForPemasangan();
-  autoFillOdpAlamat();
-});
-
-async function showAppArea(user) {
-  document.getElementById('loginCard').classList.add('hidden');
-  document.getElementById('appArea').classList.remove('hidden');
-  document.getElementById('userLabel').textContent = user.username;
-  document.getElementById('roleLabel').textContent = user.nama_role;
-  await refreshVersionSummary();
-  await loadKabupatenDropdown();
-  await loadPaketDropdown();
-  await loadSumberDropdown();
-  await loadJenisPemasanganDropdown();
-  await loadTeknisiDropdown();
-  document.getElementById('modemCard').style.display = 'block';
-  await refreshModemList();
-  await refreshModemQueueBadge();
-  await refreshQueueBadge();
-}
-
-function updateConnStatus() {
-  const el = document.getElementById('connStatus');
-  if (navigator.onLine) {
-    el.textContent = 'Online';
-    el.className = 'online';
-  } else {
-    el.textContent = 'Offline';
-    el.className = 'offline';
+  } catch(err) {
+    // Fallback ke lokal
+    saveLocal('TRANSAKSI_CALON_PELANGGAN', { ...payload, local_id: localId,
+      id_status_proses: 'BARU', _created_at: new Date().toISOString() });
+    showSuccess(false, err.message);
   }
 }
-window.addEventListener('online', updateConnStatus);
-window.addEventListener('offline', updateConnStatus);
 
-// ============================================================
-// INIT — kalau session sudah ada (login sebelumnya), langsung masuk app
-// tanpa perlu online (offline-first login persistence)
-// ============================================================
-(async function init() {
-  updateConnStatus();
-  const session = await getSession();
-  if (session && session.token && session.user) {
-    await showAppArea(session.user);
+function saveLocal(table, data) {
+  const key   = 'pnsnet_local_' + table;
+  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  existing.push(data);
+  localStorage.setItem(key, JSON.stringify(existing));
+}
+
+function showSuccess(online, errMsg) {
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById('step'+i);
+    if (el) el.style.display = 'none';
   }
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
-})();
+  document.getElementById('stepSuccess').style.display = 'block';
+
+  // Update stepper semua done
+  document.querySelectorAll('.step-node').forEach(n => {
+    n.classList.add('done'); n.classList.remove('active');
+    n.querySelector('.step-circle').textContent = '✓';
+  });
+
+  document.getElementById('successMsg').innerHTML = online
+    ? '✅ Data tersimpan di server dan notifikasi telah dikirim ke Telegram.'
+    : `📴 Data tersimpan lokal${errMsg?' ('+errMsg+')':''}. Akan disinkronkan saat online.`;
+}
+
+// ── SYNC ─────────────────────────────────────────────────
+function doSync(btn) {
+  btn.style.animation = 'spin .6s linear infinite';
+  btn.style.cssText  += ';animation:spin .6s linear infinite';
+  setTimeout(() => { btn.style.animation = ''; }, 1200);
+}
 </script>
-
+<style>
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
 </body>
 </html>
