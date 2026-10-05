@@ -59,6 +59,79 @@
   --shadow-md:    0 4px 24px rgba(0,0,0,.45);
 }
 
+/* ── LOGIN SCREEN ────────────────────────────────────── */
+#loginScreen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--base);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:24px;
+  transition:opacity .3s;
+}
+#loginScreen.hide{
+  opacity:0;pointer-events:none;
+}
+.login-card{
+  width:100%;max-width:380px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:28px 24px;
+  box-shadow:var(--shadow-md);
+}
+.login-logo{
+  display:flex;flex-direction:column;
+  align-items:center;gap:10px;
+  margin-bottom:24px;
+}
+.login-logo-name{
+  font-size:18px;font-weight:700;
+  color:var(--text);letter-spacing:.01em;
+}
+.login-logo-sub{
+  font-size:11px;color:var(--text3);
+  text-align:center;line-height:1.5;
+}
+.login-title{
+  font-size:15px;font-weight:700;
+  color:var(--text);margin-bottom:16px;
+}
+.login-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.login-field label{font-size:12px;font-weight:600;color:var(--text2)}
+.login-field input{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:11px 14px;
+  font-size:15px;color:var(--text);width:100%;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.login-field input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 15%,transparent);
+}
+.login-btn{
+  width:100%;padding:12px;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  color:#fff;font-size:14px;font-weight:700;
+  border:none;cursor:pointer;margin-top:4px;
+  transition:filter .15s,box-shadow .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.login-btn:hover{
+  filter:brightness(1.08);
+  box-shadow:0 4px 16px color-mix(in srgb,var(--accent) 40%,transparent);
+}
+.login-btn:disabled{opacity:.55;pointer-events:none}
+.login-error{
+  background:var(--danger-soft);color:var(--danger);
+  border:1px solid var(--danger);border-radius:var(--radius-sm);
+  padding:9px 12px;font-size:12px;font-weight:500;
+  margin-top:10px;display:none;
+}
+.login-version{
+  font-size:11px;color:var(--text3);
+  text-align:center;margin-top:16px;
+}
+
 /* ── RESET ────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px;-webkit-text-size-adjust:100%}
@@ -452,6 +525,59 @@ img{max-width:100%;display:block}
 /* ── ANIM ────────────────────────────────────────────── */
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .page{animation:fadeUp .28s ease both}
+
+/* ── HALAMAN MODEM / CIOT BRIDGE ────────────────────── */
+.modem-page{padding:20px;max-width:680px;width:100%}
+.bridge-status{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;border-radius:var(--radius);
+  border:1px solid var(--border);background:var(--surface);
+  margin-bottom:16px;
+}
+.bridge-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;
+  background:var(--text3);transition:background .3s}
+.bridge-dot.ok{background:var(--success)}
+.bridge-dot.err{background:var(--danger)}
+.bridge-label{font-size:13px;font-weight:600;color:var(--text);flex:1}
+.bridge-sub{font-size:11px;color:var(--text3)}
+.modem-log{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:10px 12px;
+  font-family:var(--font-mono,monospace);font-size:12px;
+  max-height:160px;overflow-y:auto;white-space:pre-wrap;
+  color:var(--text2);line-height:1.6;margin-top:8px;
+}
+.modem-log.ok{color:var(--success)}.modem-log.err{color:var(--danger)}
+.summary-modem{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;
+  padding:12px 0;
+}
+.sm-item .sm-label{font-size:10px;font-weight:600;color:var(--text3);
+  letter-spacing:.04em;margin-bottom:2px}
+.sm-item .sm-val{font-size:13px;font-weight:600;color:var(--text);
+  word-break:break-all}
+.sm-item.full{grid-column:1/-1}
+.opm-visual{margin-top:4px}
+.opm-track{height:8px;border-radius:4px;background:var(--border);
+  overflow:hidden;margin:4px 0}
+.opm-fill{height:100%;border-radius:4px;transition:width .5s;
+  background:linear-gradient(90deg,var(--success),var(--warning),var(--danger))}
+.opm-label{font-size:11px;font-weight:600}
+.opm-good{color:var(--success)}.opm-warn{color:var(--warning)}.opm-bad{color:var(--danger)}
+.bridge-warn{
+  background:var(--warning-soft);border:1px solid var(--warning);
+  border-radius:var(--radius-sm);padding:10px 14px;
+  font-size:12px;color:var(--warning);
+  display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;
+}
+.send-result{
+  padding:8px 12px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:500;margin-top:8px;
+}
+.send-ok{background:var(--success-soft);color:var(--success)}
+.send-err{background:var(--danger-soft);color:var(--danger)}
+.send-info{background:var(--info-soft);color:var(--info)}
+@media(max-width:480px){.summary-modem{grid-template-columns:1fr}}
 
 /* ── DAFTAR CALON ────────────────────────────────────── */
 .list-page{padding:20px;max-width:900px;width:100%}
@@ -918,8 +1044,61 @@ img{max-width:100%;display:block}
 </head>
 <body>
 
+<!-- ── LOGIN SCREEN ──────────────────────────────────────── -->
+<div id="loginScreen" style="position:fixed;inset:0;z-index:9999;
+  background:var(--base);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:24px">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg width="56" height="56" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="225" cy="788" rx="120" ry="121" fill="#E30613"/>
+        <rect x="362" y="598" width="127" height="308" rx="16.5" fill="#E30613"/>
+        <rect x="517" y="525" width="118" height="381" rx="15.34" fill="#E30613"/>
+        <rect x="661" y="454" width="124" height="452" rx="16.12" fill="#1A4FBF"/>
+        <rect x="809" y="377" width="128" height="529" rx="16.64" fill="#1A4FBF"/>
+        <rect x="963" y="280" width="130" height="626" rx="16.9" fill="#FF7A00"/>
+      </svg>
+      <div>
+        <div class="login-logo-name">PNS.NET</div>
+        <div class="login-logo-sub">PT. Pandawa Nusantara Solusindo<br>Aplikasi Operasional Internal</div>
+      </div>
+    </div>
+
+    <div class="login-title">Masuk ke Aplikasi</div>
+
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="Masukkan username"
+        autocomplete="username" autocapitalize="none" spellcheck="false"
+        onkeydown="if(event.key==='Enter') document.getElementById('loginPass').focus()">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <div style="position:relative">
+        <input type="password" id="loginPass" placeholder="Masukkan password"
+          autocomplete="current-password"
+          style="padding-right:44px"
+          onkeydown="if(event.key==='Enter') doLogin()">
+        <button onclick="toggleLoginPass()" tabindex="-1"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                 background:none;border:none;cursor:pointer;font-size:16px;
+                 color:var(--text3);padding:4px;line-height:1">👁</button>
+      </div>
+    </div>
+
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">
+      🔑 Masuk
+    </button>
+
+    <div class="login-error" id="loginError"></div>
+    <div class="login-version">v2.0 · PNS.NET Offline-first PWA</div>
+  </div>
+</div>
+
 <!-- Overlay sidebar mobile -->
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div id="appWrapper" class="app">
 
 <!-- ── SIDEBAR ──────────────────────────────────────── -->
 <aside class="sidebar" id="sidebar">
@@ -977,6 +1156,10 @@ img{max-width:100%;display:block}
       <span class="icon">🗺️</span> Wilayah
     </div>
 
+    <div class="nav-section">Lapangan</div>
+    <div class="nav-item" onclick="setPage('modem')">
+      <span class="icon">📡</span> Konfigurasi Modem
+    </div>
     <div class="nav-section">Sistem</div>
     <div class="nav-item" onclick="setPage('sdm')">
       <span class="icon">👥</span> Staf & Karyawan
@@ -1450,6 +1633,182 @@ img{max-width:100%;display:block}
 </div>
 </div>
 
+<!-- ── HALAMAN KONFIGURASI MODEM ────────────────────────── -->
+<div id="modemPage" style="display:none">
+<div class="modem-page">
+
+  <!-- Status Bridge -->
+  <div class="bridge-status" id="bridgeStatusBar">
+    <div class="bridge-dot" id="bridgeDot"></div>
+    <div style="flex:1">
+      <div class="bridge-label" id="bridgeLabel">Cek status CIOT Bridge...</div>
+      <div class="bridge-sub" id="bridgeSub">127.0.0.1:8088 — Termux harus aktif</div>
+    </div>
+    <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px"
+      onclick="cekBridge()">🔄 Cek</button>
+  </div>
+
+  <!-- Warning jika offline -->
+  <div class="bridge-warn" id="bridgeWarn" style="display:none">
+    <span>⚠️</span>
+    <span>Bridge tidak terdeteksi. Pastikan Termux berjalan dan <code>python3 bridge.py</code> sudah dijalankan di HP ini.</span>
+  </div>
+
+  <!-- Login modem -->
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-head">
+      <span style="font-size:18px">🔐</span>
+      <div class="panel-title">Login Modem</div>
+      <span id="modemLoginChip" class="phase-pill ph-BARU" style="font-size:10px">Belum login</span>
+    </div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div class="field-row">
+        <div class="field">
+          <label>Host / IP Modem</label>
+          <input type="text" id="m_host" value="192.168.1.1">
+        </div>
+        <div class="field">
+          <label>Merek</label>
+          <select id="m_merek">
+            <option value="ciot">CIOT GM220-S</option>
+            <option value="manual">Manual</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="m_user" value="admin">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="m_pass" placeholder="Password admin modem">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="bridgeAction('check')">
+          🔍 Cek Koneksi
+        </button>
+        <button class="btn btn-primary" style="flex:1" onclick="bridgeAction('login')">
+          🔑 Login
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ringkasan -->
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-head">
+      <span style="font-size:18px">📊</span>
+      <div class="panel-title">Ringkasan Modem</div>
+      <div class="panel-action" onclick="bridgeAction('summary')">Ambil</div>
+    </div>
+    <div id="modemSummaryBox" style="padding:14px 16px;display:none">
+      <div class="summary-modem" id="modemSummaryGrid"></div>
+      <div id="modemOpmVisual" class="opm-visual"></div>
+    </div>
+    <div id="modemSummaryEmpty"
+      style="padding:14px 16px;font-size:12px;color:var(--text3)">
+      Login modem dulu, lalu tap Ambil.
+    </div>
+  </div>
+
+  <!-- Setting WiFi -->
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-head">
+      <span style="font-size:18px">📶</span>
+      <div class="panel-title">Setting WiFi</div>
+    </div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div class="field">
+        <label>Nama WiFi (SSID)</label>
+        <input type="text" id="m_ssid" placeholder="Nama WiFi baru (kosongkan jika tidak ubah)">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Password WiFi</label>
+          <input type="password" id="m_wpass" placeholder="Password baru">
+        </div>
+        <div class="field">
+          <label>Max Client</label>
+          <input type="number" id="m_mc" value="32" min="1" max="64">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="bridgeAction('apply_wifi')">
+        📶 Apply Setting WiFi
+      </button>
+    </div>
+  </div>
+
+  <!-- Setting WAN -->
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-head">
+      <span style="font-size:18px">🌐</span>
+      <div class="panel-title">Setting WAN / PPPoE</div>
+    </div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div class="field">
+        <label>Username PPPoE</label>
+        <input type="text" id="m_wanuser" placeholder="username@server">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Password PPPoE</label>
+          <input type="password" id="m_wanpass" placeholder="Password PPPoE">
+        </div>
+        <div class="field">
+          <label>VLAN ID</label>
+          <input type="text" id="m_vlan" value="10">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="bridgeAction('apply_wan')">
+        🌐 Apply WAN
+      </button>
+    </div>
+  </div>
+
+  <!-- Kirim ke PNS.NET -->
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-head">
+      <span style="font-size:18px">🔗</span>
+      <div class="panel-title">Kirim ke Database PNS.NET</div>
+    </div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;color:var(--text3)">
+        Kirim ringkasan teknis modem (SN, MAC, SSID, OPM, WAN username) ke database —
+        menghubungkan data modem ke data pelanggan via WAN username.
+      </div>
+      <div class="field">
+        <label>Keterangan</label>
+        <input type="text" id="m_ket" placeholder="Pemasangan baru / pengecekan / troubleshooting...">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" style="flex:2" onclick="kirimModemPnsnet(false)">
+          🚀 Kirim & Update Database
+        </button>
+        <button class="btn btn-secondary" style="flex:1" onclick="kirimModemPnsnet(true)">
+          📝 Log Saja
+        </button>
+      </div>
+      <div id="modemSendResult" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="panel">
+    <div class="panel-head">
+      <span style="font-size:18px">📝</span>
+      <div class="panel-title">Log Aktivitas Bridge</div>
+      <div class="panel-action" onclick="document.getElementById('modemLog').textContent='Log dibersihkan.'">Bersihkan</div>
+    </div>
+    <div style="padding:10px 16px 14px">
+      <div class="modem-log" id="modemLog">Menunggu aksi...</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
 <!-- ── DAFTAR CALON PELANGGAN ─────────────────────────── -->
 <div id="listCalonPage" style="display:none">
 <div class="list-page">
@@ -1766,6 +2125,9 @@ img{max-width:100%;display:block}
     <div class="bn-item" onclick="setPage('topologi')">
       <span class="icon">🌐</span>Jaringan
     </div>
+    <div class="bn-item" onclick="setPage('modem')">
+      <span class="icon">📡</span>Modem
+    </div>
     <div class="bn-item" onclick="openSettings()">
       <span class="icon">⚙️</span>Pengaturan
     </div>
@@ -1875,6 +2237,51 @@ let accentIdx= parseInt(localStorage.getItem('pnsnet_accent') || '0');
 // ── INIT ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
+  checkAuthAndInit();
+});
+
+function checkAuthAndInit() {
+  const token    = localStorage.getItem('pnsnet_token');
+  const userInfo = JSON.parse(localStorage.getItem('pnsnet_user') || 'null');
+
+  if (token && userInfo) {
+    // Sudah login — langsung tampilkan app
+    showApp(userInfo);
+  } else {
+    // Belum login — tampilkan login screen
+    showLoginScreen();
+  }
+}
+
+function showLoginScreen() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  // Sembunyikan semua halaman app
+  document.getElementById('appWrapper').style.display = 'none';
+  setTimeout(() => document.getElementById('loginUser').focus(), 100);
+}
+
+function showApp(userInfo) {
+  // Sembunyikan login screen
+  const ls = document.getElementById('loginScreen');
+  ls.classList.add('hide');
+  setTimeout(() => ls.style.display = 'none', 300);
+
+  // Tampilkan app
+  document.getElementById('appWrapper').style.display = 'flex';
+
+  // Update info user di sidebar
+  if (userInfo) {
+    const nama   = userInfo.nama || userInfo.username || 'Pengguna';
+    const role   = userInfo.role_label || 'Staf';
+    const inisial= nama.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    document.getElementById('sidebarAvatar').textContent = inisial;
+    document.getElementById('sidebarName').textContent   = nama;
+    document.getElementById('sidebarRole').textContent   = role;
+    document.getElementById('greeting').textContent =
+      `Selamat ${getGreeting()}, ${nama.split(' ')[0]} 👋`;
+  }
+
+  // Init dashboard
   setDateGreeting();
   renderStats();
   renderActivities();
@@ -1882,13 +2289,97 @@ document.addEventListener('DOMContentLoaded', () => {
   renderOdp();
   renderSwatches();
   renderCardToggles();
-});
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'pagi' : h < 15 ? 'siang' : h < 18 ? 'sore' : 'malam';
+}
+
+// ── Proses login ─────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const btn      = document.getElementById('loginBtn');
+  const errEl    = document.getElementById('loginError');
+
+  if (!username || !password) {
+    showLoginError('Username dan password tidak boleh kosong');
+    return;
+  }
+
+  btn.disabled     = true;
+  btn.innerHTML    = '<span style="animation:spin .6s linear infinite;display:inline-block">⟳</span> Memverifikasi...';
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch(
+      'https://script.google.com/macros/s/AKfycbyQZHQH5WLDyAiGOxz7NEbbhGXMB4fP4ANkJTN9qJjNjv4Y2xQmZRqXR1tPwvEgTnP1/exec',
+      {
+        method : 'POST',
+        headers: {'Content-Type': 'text/plain'},
+        body   : JSON.stringify({ action: 'login', username, password }),
+        signal : AbortSignal.timeout(20000),
+      }
+    );
+    const data = await res.json();
+
+    if (data.ok && data.data?.token) {
+      const d = data.data;
+      // Simpan token dan info user
+      localStorage.setItem('pnsnet_token', d.token);
+      localStorage.setItem('pnsnet_user', JSON.stringify({
+        user_id    : d.user_id,
+        username,
+        role       : d.role,
+        role_label : getRoleLabel(d.permissions),
+        permissions: d.permissions,
+        login_at   : new Date().toISOString(),
+      }));
+      showApp(JSON.parse(localStorage.getItem('pnsnet_user')));
+    } else {
+      showLoginError(data.error || 'Username atau password salah');
+      btn.disabled  = false;
+      btn.innerHTML = '🔑 Masuk';
+    }
+  } catch(e) {
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+      showLoginError('Koneksi timeout — cek internet dan coba lagi');
+    } else {
+      showLoginError('Tidak bisa terhubung ke server — cek koneksi internet');
+    }
+    btn.disabled  = false;
+    btn.innerHTML = '🔑 Masuk';
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent   = '⚠️ ' + msg;
+  el.style.display = 'block';
+}
+
+function getRoleLabel(permissions) {
+  if (!permissions) return 'Staf';
+  if (permissions.includes('SDM_WRITE'))        return 'Direktur / Admin';
+  if (permissions.includes('KASIR_KONFIRMASI')) return 'Kasir';
+  if (permissions.includes('PEMASANGAN_SELESAI')) return 'Teknisi';
+  if (permissions.includes('CALON_CREATE'))     return 'Customer Service';
+  return 'Staf';
+}
+
+function toggleLoginPass() {
+  const inp = document.getElementById('loginPass');
+  inp.type  = inp.type === 'password' ? 'text' : 'password';
+}
 
 function setDateGreeting() {
   const now  = new Date();
   const h    = now.getHours();
-  const sapa = h < 12 ? 'pagi' : h < 15 ? 'siang' : h < 18 ? 'sore' : 'malam';
-  document.getElementById('greeting').textContent = `Selamat ${sapa}, Admin 👋`;
+  const sapa = getGreeting();
+  const user = JSON.parse(localStorage.getItem('pnsnet_user') || '{}');
+  const nama = (user.username || 'Admin').split(' ')[0];
+  document.getElementById('greeting').textContent = `Selamat ${sapa}, ${nama} 👋`;
   document.getElementById('dateStr').textContent  =
     now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
@@ -2043,11 +2534,12 @@ function closeSidebar() {
 function setPage(page) {
   closeSidebar();
   timerPause();
-  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage']
+  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage','modemPage']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
   document.getElementById('pageContent').style.display='block';
 
   if(page==='calon_form')   { openFormCalon();   return; }
+  if(page==='modem')        { openModemPage();  return; }
   if(page==='calon')        { openListCalon();   return; }
   if(page==='pemasangan_form'){ openFormPemasangan(window._calonForPemasangan); return; }
 
@@ -2065,10 +2557,24 @@ function setPage(page) {
 }
 
 function logout() {
-  if (confirm('Yakin ingin keluar?')) {
-    localStorage.removeItem('pnsnet_token');
-    alert('Berhasil keluar.');
-  }
+  if (!confirm('Yakin ingin keluar?')) return;
+  localStorage.removeItem('pnsnet_token');
+  localStorage.removeItem('pnsnet_user');
+  // Reset form login
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginBtn').disabled  = false;
+  document.getElementById('loginBtn').innerHTML = '🔑 Masuk';
+  // Tutup settings drawer jika terbuka
+  closeSettings();
+  closeSidebar();
+  // Tampilkan login screen
+  document.getElementById('appWrapper').style.display = 'none';
+  const ls = document.getElementById('loginScreen');
+  ls.style.display = 'flex';
+  ls.classList.remove('hide');
+  setTimeout(() => document.getElementById('loginUser').focus(), 100);
 }
 
 // ════════════════════════════════════════════════════════
@@ -2145,7 +2651,7 @@ let expandedId      = null;
 
 // ── Buka halaman daftar calon ─────────────────────────
 function openListCalon() {
-  ['pageContent','formCalonPage','formPemasanganPage'].forEach(id=>{
+  ['pageContent','formCalonPage','formPemasanganPage','modemPage'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
   });
   document.getElementById('listCalonPage').style.display='block';
@@ -2991,7 +3497,7 @@ function isOnline() { return navigator.onLine; }
 
 // ── Buka / tutup form ─────────────────────────────────
 function openFormCalon() {
-  ['pageContent','listCalonPage','formPemasanganPage'].forEach(id=>{
+  ['pageContent','listCalonPage','formPemasanganPage','modemPage'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
   });
   document.getElementById('formCalonPage').style.display='block';
@@ -3389,7 +3895,200 @@ function showSuccess(online, errMsg) {
     : `📴 Data tersimpan lokal${errMsg?' ('+errMsg+')':''}. Akan disinkronkan saat online.`;
 }
 
-// ── SYNC ─────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════
+// KONFIGURASI MODEM — CIOT Bridge
+// ════════════════════════════════════════════════════════
+
+const BRIDGE_URL = 'http://127.0.0.1:8088';
+let _bridgeOk    = false;
+let _modemToken  = '';   // token PNS.NET untuk kirim data
+
+// ── Cek bridge aktif ─────────────────────────────────────
+async function cekBridge() {
+  const dot   = document.getElementById('bridgeDot');
+  const label = document.getElementById('bridgeLabel');
+  const sub   = document.getElementById('bridgeSub');
+  const warn  = document.getElementById('bridgeWarn');
+  label.textContent = '⟳ Mengecek bridge...';
+  try {
+    const res  = await fetch(BRIDGE_URL + '/status', {
+      signal: AbortSignal.timeout(3000)
+    });
+    const data = await res.json();
+    if (data.ok) {
+      _bridgeOk = true;
+      dot.className   = 'bridge-dot ok';
+      label.textContent = 'CIOT Bridge Aktif';
+      sub.textContent   = `127.0.0.1:8088 · Driver: ${data.drivers?.join(', ')}`;
+      warn.style.display = 'none';
+    } else throw new Error('not ok');
+  } catch(e) {
+    _bridgeOk = false;
+    dot.className   = 'bridge-dot err';
+    label.textContent = 'Bridge Tidak Aktif';
+    sub.textContent   = 'Jalankan: python3 bridge.py di Termux';
+    warn.style.display = 'flex';
+  }
+}
+
+// ── Kirim action ke bridge ────────────────────────────────
+async function bridgeAction(action, extra = {}) {
+  const logEl = document.getElementById('modemLog');
+  logEl.className   = 'modem-log';
+  logEl.textContent = `⟳ ${action}...`;
+
+  const payload = {
+    action,
+    host    : document.getElementById('m_host').value.trim() || '192.168.1.1',
+    merek   : document.getElementById('m_merek').value,
+    username: document.getElementById('m_user').value.trim(),
+    password: document.getElementById('m_pass').value,
+    new_essid     : document.getElementById('m_ssid')?.value?.trim() || '',
+    new_wifi_pass : document.getElementById('m_wpass')?.value || '',
+    new_max_client: document.getElementById('m_mc')?.value || '32',
+    wan_username  : document.getElementById('m_wanuser')?.value?.trim() || '',
+    wan_password  : document.getElementById('m_wanpass')?.value || '',
+    wan_vlan_id   : document.getElementById('m_vlan')?.value || '10',
+    ...extra
+  };
+
+  try {
+    const res  = await fetch(BRIDGE_URL + '/api', {
+      method : 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body   : JSON.stringify(payload),
+      signal : AbortSignal.timeout(25000),
+    });
+    const data = await res.json();
+
+    // Update log
+    logEl.textContent = data.log || (data.ok ? '[OK]' : '[GAGAL]');
+    logEl.className   = 'modem-log' + (data.ok ? ' ok' : ' err');
+
+    // Update chip login
+    if (data.logged_in !== undefined) {
+      const chip = document.getElementById('modemLoginChip');
+      chip.textContent = data.logged_in ? '✅ Login' : 'Belum login';
+      chip.className   = 'phase-pill ' + (data.logged_in ? 'ph-PROSES_PASANG' : 'ph-BARU');
+    }
+
+    // Tampilkan ringkasan jika ada
+    if (data.summary) renderModemSummary(data.summary);
+
+    return data;
+  } catch(e) {
+    logEl.className   = 'modem-log err';
+    logEl.textContent = '[GAGAL] Bridge tidak bisa dihubungi: ' + e.message +
+      'Pastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
+    return { ok: false };
+  }
+}
+
+// ── Render ringkasan modem ────────────────────────────────
+function renderModemSummary(s) {
+  document.getElementById('modemSummaryEmpty').style.display = 'none';
+  document.getElementById('modemSummaryBox').style.display   = 'block';
+
+  const grid = document.getElementById('modemSummaryGrid');
+  const items = [
+    ['MEREK / MODEL',   (s.merek || '') + ' ' + (s.model || ''), false],
+    ['SERIAL NO.',      s.serial_number || '-', false],
+    ['MAC ADDRESS',     s.mac_address   || '-', false],
+    ['IP ADDRESS',      s.ip_address    || '-', false],
+    ['SSID WIFI',       s.ssid_wifi     || '-', false],
+    ['MAX CLIENT',      s.max_client    || '-', false],
+    ['WAN TYPE',        s.wan_type      || '-', false],
+    ['WAN USERNAME',    s.wan_username  || '-', false],
+    ['SINYAL OPM',      s.pon_rx_power  || '-', false],
+    ['CONN. NAME',      s.wan_connection_name || '-', true],
+  ];
+
+  grid.innerHTML = items.map(([l, v, full]) => `
+    <div class="sm-item${full?' full':''}">
+      <div class="sm-label">${l}</div>
+      <div class="sm-val">${v}</div>
+    </div>
+  `).join('');
+
+  // OPM meter visual
+  const opmEl  = document.getElementById('modemOpmVisual');
+  const opmVal = parseFloat(s.pon_rx_power);
+  if (!isNaN(opmVal)) {
+    const pct = Math.max(0, Math.min(100, ((opmVal + 40) / 40) * 100));
+    const cls = opmVal >= -15 ? 'opm-good' : opmVal >= -25 ? 'opm-warn' : 'opm-bad';
+    const msg = opmVal >= -15 ? '✅ Sinyal Baik'
+              : opmVal >= -25 ? '⚠️ Sinyal Lemah — perlu cek jalur'
+              : '🔴 Sinyal Buruk — ada gangguan serius';
+    opmEl.innerHTML = `
+      <div class="opm-track">
+        <div class="opm-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="opm-label ${cls}">${msg} (${opmVal} dBm)</div>
+    `;
+  } else {
+    opmEl.innerHTML = '';
+  }
+
+  // Auto-isi form WAN dari data ringkasan
+  if (s.wan_username && !document.getElementById('m_wanuser').value) {
+    document.getElementById('m_wanuser').value = s.wan_username;
+  }
+  if (s.ssid_wifi && !document.getElementById('m_ssid').value) {
+    document.getElementById('m_ssid').value = s.ssid_wifi;
+  }
+}
+
+// ── Kirim data modem ke PNS.NET ──────────────────────────
+async function kirimModemPnsnet(logOnly) {
+  const resEl  = document.getElementById('modemSendResult');
+  const token  = localStorage.getItem('pnsnet_token') || '';
+  const ket    = document.getElementById('m_ket').value.trim();
+
+  if (!token) {
+    resEl.style.display = 'block';
+    resEl.className     = 'send-result send-err';
+    resEl.textContent   = '❌ Token PNS.NET tidak ditemukan — login ke app PNS.NET dulu';
+    return;
+  }
+
+  resEl.style.display = 'block';
+  resEl.className     = 'send-result send-info';
+  resEl.textContent   = '⟳ Mengirim ke PNS.NET...';
+
+  const data = await bridgeAction('kirim_pnsnet', {
+    pnsnet_token: token,
+    keterangan  : ket,
+    log_only    : logOnly,
+  });
+
+  if (data.ok) {
+    const linked = data.linked;
+    const nama   = data.pelanggan || '';
+    resEl.className   = 'send-result send-ok';
+    resEl.textContent = logOnly
+      ? '✅ Log dicatat di PNS.NET'
+      : linked
+        ? `✅ Tersimpan — terhubung ke pelanggan: ${nama}`
+        : '✅ Tersimpan di PNS.NET (WAN username belum terdaftar sebagai pelanggan aktif)';
+  } else {
+    resEl.className   = 'send-result send-err';
+    resEl.textContent = '❌ Gagal kirim ke PNS.NET — lihat log di bawah';
+  }
+}
+
+// ── Buka halaman modem ────────────────────────────────────
+function openModemPage() {
+  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  document.getElementById('modemPage').style.display = 'block';
+  document.getElementById('pageTitle').textContent   = 'Konfigurasi Modem';
+  // Ambil token dari localStorage untuk dipakai kirim ke PNS.NET
+  _modemToken = localStorage.getItem('pnsnet_token') || '';
+  // Cek bridge otomatis saat buka halaman
+  cekBridge();
+}
+
+// ── SYNC ─────────────────────────────────────────────────────
 function doSync(btn) {
   btn.style.animation = 'spin .6s linear infinite';
   btn.style.cssText  += ';animation:spin .6s linear infinite';
@@ -3399,5 +4098,6 @@ function doSync(btn) {
 <style>
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
+  </div><!-- /.app -->
 </body>
 </html>
