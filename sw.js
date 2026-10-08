@@ -1,51 +1,48 @@
-// PNS.NET — Service Worker (Fase 5)
-// Tujuan: app shell (index.html, manifest, sw.js sendiri) tetap bisa dibuka
-// walau HP benar-benar tanpa internet. Data (via sync) tetap lewat IndexedDB,
-// bukan lewat cache ini.
+// sw.js — PNS.NET Service Worker v9
+// Update versi ini setiap ada perubahan index.html
 
-const CACHE_NAME = 'pnsnet-shell-v8'; // dinaikkan lagi (Fase 13: Modem & Inventori)
-const SHELL_FILES = [
+const CACHE_NAME = 'pnsnet-shell-v9';
+const ASSETS = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_FILES))
-  );
+// Install — cache assets baru
+self.addEventListener('install', event => {
   self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+// Activate — hapus cache lama
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
 
-  // JANGAN cache request ke Apps Script API — itu harus selalu live/fresh
-  // (fallback offline untuk data ditangani oleh IndexedDB di index.html, bukan di sini)
-  if (url.hostname.includes('script.google.com') || url.hostname.includes('script.googleusercontent.com')) {
-    return; // biarkan lewat langsung, tidak diintervensi service worker
+// Fetch — network first, fallback ke cache
+self.addEventListener('fetch', event => {
+  // Jangan cache request ke Google Apps Script
+  if (event.request.url.includes('script.google.com')) {
+    event.respondWith(fetch(event.request));
+    return;
   }
 
-  // App shell: cache-first, supaya tetap kebuka walau offline total
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
+    fetch(event.request)
+      .then(response => {
+        // Update cache dengan response terbaru
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
-      }).catch(() => cached);
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });

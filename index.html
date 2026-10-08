@@ -4087,9 +4087,7 @@ async function bridgeAction(action, extra = {}) {
     return data;
   } catch(e) {
     logEl.className   = 'modem-log err';
-    logEl.textContent = '[GAGAL] Bridge tidak bisa dihubungi: ' + e.message +
-      '
-Pastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
+    logEl.textContent = '[GAGAL] Bridge tidak bisa dihubungi: ' + e.message + '\nPastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
     return { ok: false };
   }
 }
