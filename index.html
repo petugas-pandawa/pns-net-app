@@ -1098,6 +1098,15 @@ img{max-width:100%;display:block}
 
     <div class="login-error" id="loginError"></div>
     <div class="login-version">v2.0 · PNS.NET Offline-first PWA</div>
+    <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
+      color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
+      text-align:left;max-height:120px;overflow-y:auto;display:none;
+      word-break:break-all"></div>
+    <button onclick="document.getElementById('debugPanel').style.display='block'"
+      style="margin-top:6px;font-size:10px;padding:4px 8px;border-radius:4px;
+      background:#333;color:#fff;border:none;cursor:pointer">
+      🐛 Debug Log
+    </button>
   </div>
 </div>
 
@@ -2246,7 +2255,24 @@ document.addEventListener('DOMContentLoaded', () => {
   checkAuthAndInit();
 });
 
+// ── Debug logger visual ──────────────────────────────────
+function dbg(msg, color) {
+  const p = document.getElementById('debugPanel');
+  if (!p) return;
+  const line = document.createElement('div');
+  line.style.color = color || '#0f0';
+  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  p.appendChild(line);
+  p.scrollTop = p.scrollHeight;
+  console.log(msg);
+}
+window.onerror = function(msg, src, line) {
+  dbg('ERROR: ' + msg + ' (line ' + line + ')', '#f55');
+  return false;
+};
+
 function checkAuthAndInit() {
+  dbg('checkAuthAndInit dipanggil');
   // Pasang event listener tombol login
   const btnLogin = document.getElementById('loginBtn');
   if (btnLogin) {
@@ -2333,13 +2359,17 @@ function getGreeting() {
 
 // ── Proses login ─────────────────────────────────────────────
 async function doLogin() {
+  dbg('doLogin dipanggil');
   const username = document.getElementById('loginUser').value.trim();
   const password = document.getElementById('loginPass').value;
   const btn      = document.getElementById('loginBtn');
   const errEl    = document.getElementById('loginError');
 
+  dbg('user=' + username + ' pass=' + (password?'ada':'kosong'));
+
   if (!username || !password) {
     showLoginError('Username dan password tidak boleh kosong');
+    dbg('STOP: username/password kosong', '#fa0');
     return;
   }
 
