@@ -83,7 +83,10 @@
   display:flex;flex-direction:column;
   align-items:center;gap:10px;
   margin-bottom:24px;
+  text-align:center;
 }
+.login-logo-name{text-align:center}
+.login-logo-sub{text-align:center}
 .login-logo-name{
   font-size:18px;font-weight:700;
   color:var(--text);letter-spacing:.01em;
@@ -851,7 +854,7 @@ img{max-width:100%;display:block}
 @media(max-width:480px){
   .foto-upload-grid{grid-template-columns:1fr}
 }
-.form-page{padding:20px;max-width:640px;width:100%}
+.form-page{padding:20px;max-width:640px;width:100%;margin:0 auto}
 .form-steps{display:flex;align-items:center;gap:0;margin-bottom:24px}
 .step-node{
   display:flex;flex-direction:column;align-items:center;gap:4px;
@@ -1058,7 +1061,7 @@ img{max-width:100%;display:block}
         <rect x="809" y="377" width="128" height="529" rx="16.64" fill="#1A4FBF"/>
         <rect x="963" y="280" width="130" height="626" rx="16.9" fill="#FF7A00"/>
       </svg>
-      <div>
+      <div style="text-align:center">
         <div class="login-logo-name">PNS.NET</div>
         <div class="login-logo-sub">PT. Pandawa Nusantara Solusindo<br>Aplikasi Operasional Internal</div>
       </div>
@@ -1251,7 +1254,7 @@ img{max-width:100%;display:block}
 </div>
 
 <!-- ── FORM PEMASANGAN ────────────────────────────────── -->
-<div id="formPemasanganPage" style="display:none">
+<div id="formPemasanganPage" style="display:none;flex-direction:column;align-items:center">
 <div class="form-page">
 
   <!-- Info calon di atas -->
@@ -1849,7 +1852,7 @@ img{max-width:100%;display:block}
 </div>
 
 <!-- ── FORM CALON PELANGGAN ───────────────────────────── -->
-<div id="formCalonPage" style="display:none">
+<div id="formCalonPage" style="display:none;flex-direction:column;align-items:center">
 <div class="form-page">
 
   <!-- Stepper -->
@@ -3017,7 +3020,7 @@ function openFormPemasangan(calonData) {
   ['pageContent','formCalonPage','listCalonPage'].forEach(id=>{
     document.getElementById(id).style.display='none';
   });
-  document.getElementById('formPemasanganPage').style.display='block';
+  document.getElementById('formPemasanganPage').style.display='flex';
   document.getElementById('pageTitle').textContent='Form Pemasangan';
 
   // Isi info calon
@@ -3477,12 +3480,56 @@ const WILAYAH_DATA = {
   tolitoli: {
     label: 'Kab. Toli-Toli',
     kec: {
-      'Baolan'    : ['Buntuna','Tambun','Baru','Lalos','Panasakan','Pangi','Tuweley'],
-      'Dako Pemean': ['Dako','Pemean','Tinabogan'],
-      'Dampal Selatan': ['Soni','Tambu','Tambu Selatan'],
-      'Bangkir'   : ['Bangkir','Puse','Lingadan'],
-      'Ogodeide'  : ['Ogoamas I','Ogoamas II','Tinompo'],
+      'Baolan': [
+        'Buntuna','Dadakitan','Lelean Nono','Pangi',
+        'Baru','Nalu','Panasakan','Sidoarjo','Tambun','Tuweley'
+      ],
+      'Basidondo': [
+        'Basi','Galandau','Labonu','Kayu Lompa','Kinapasan',
+        'Kongkomos','Marisa','Ogosipat','Sibaluton','Silondou'
+      ],
+      'Dako Pamean': [
+        'Dungingis','Galumpang','Kapas','Lingadan'
+      ],
+      'Dampal Selatan': [
+        'Abbajareng','Bangkir','Dongko','Kombo','Lemba Harapan',
+        'Lempe','Mimbala','Paddumpu','Pallakawe','Puse',
+        'Simuntu','Soni','Tampiala'
+      ],
+      'Dampal Utara': [
+        'Balaroa','Bambapula','Banagan','Kabinuang','Malambigu',
+        'Ogolali','Ogotua','Sese','Simatang Tanjung',
+        'Simatang Utara','Stadong','Tompoh'
+      ],
+      'Dondo': [
+        'Anggasan','Bambapun','Betengon','Lais','Lobuo',
+        'Luok Manipi','Malala','Malomba','Malulu','Pangkung',
+        'Ogogasang','Ogogili','Ogowele','Ogowele Buga',
+        'Salumbia','Tinabogan'
+      ],
+      'Galang': [
+        'Aung','Bajugan','Ginunggung','Kalangkangan','Lakatan',
+        'Lalos','Lantapan','Kinopasan','Malangga','Ogomoli',
+        'Sabang','Sandana','Tende','Tinigi'
+      ],
+      'Lampasio': [
+        'Janja','Lampasio','Maibua','Mulya Sari','Ogomatanang',
+        'Oyom','Salugan','Sibea','Tinading'
+      ],
+      'Ogodeide': [
+        'Bambalaga','Bauilo','Bilo','Buga','Kabetan','Kamalu',
+        'Labuan Lobo','Muara Besar','Pagaitan','Pulias','Sambujan'
+      ],
+      'Tolitoli Utara': [
+        'Binontoan','Diule','Gio','Lakuan Tolitoli','Laulalang',
+        'Pinjan','Salumpaga','Santigi','Teluk Jaya','Timbolo'
+      ],
     }
+  },
+  donggala: {
+    label: 'Kab. Donggala',
+    status: 'NONAKTIF',
+    kec: {}
   }
 };
 
@@ -3500,7 +3547,7 @@ function openFormCalon() {
   ['pageContent','listCalonPage','formPemasanganPage','modemPage'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
   });
-  document.getElementById('formCalonPage').style.display='block';
+  document.getElementById('formCalonPage').style.display='flex';
   document.getElementById('pageTitle').textContent='Calon Baru';
   updateOcrModeTag();
   renderPaketGrid();
@@ -3979,7 +4026,8 @@ async function bridgeAction(action, extra = {}) {
   } catch(e) {
     logEl.className   = 'modem-log err';
     logEl.textContent = '[GAGAL] Bridge tidak bisa dihubungi: ' + e.message +
-      'Pastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
+      '
+Pastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
     return { ok: false };
   }
 }
