@@ -63,7 +63,7 @@
 #loginScreen{
   position:fixed;inset:0;z-index:9999;
   background:var(--base);
-  display:flex;flex-direction:column;
+  flex-direction:column;
   align-items:center;justify-content:center;
   padding:24px;
   transition:opacity .3s;
@@ -1048,9 +1048,7 @@ img{max-width:100%;display:block}
 <body>
 
 <!-- ── LOGIN SCREEN ──────────────────────────────────────── -->
-<div id="loginScreen" style="position:fixed;inset:0;z-index:9999;
-  background:var(--base);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;padding:24px">
+<div id="loginScreen" style="display:flex">
   <div class="login-card">
     <div class="login-logo">
       <svg width="56" height="56" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
@@ -1101,7 +1099,7 @@ img{max-width:100%;display:block}
 <!-- Overlay sidebar mobile -->
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
-<div id="appWrapper" class="app">
+<div id="appWrapper" class="app" style="display:none">
 
 <!-- ── SIDEBAR ──────────────────────────────────────── -->
 <aside class="sidebar" id="sidebar">
