@@ -61,12 +61,13 @@
 
 /* ── LOGIN SCREEN ────────────────────────────────────── */
 #loginScreen{
-  position:fixed;inset:0;z-index:9999;
+  position:fixed;inset:0;z-index:10000;
   background:var(--base);
   flex-direction:column;
   align-items:center;justify-content:center;
   padding:24px;
   transition:opacity .3s;
+  pointer-events:auto;
 }
 #loginScreen.hide{
   opacity:0;pointer-events:none;
@@ -78,7 +79,11 @@
   border-radius:var(--radius);
   padding:28px 24px;
   box-shadow:var(--shadow-md);
+  position:relative;
+  z-index:10000;
+  pointer-events:auto;
 }
+.login-card *{pointer-events:auto}
 .login-logo{
   display:flex;flex-direction:column;
   align-items:center;gap:10px;
@@ -1080,14 +1085,14 @@ img{max-width:100%;display:block}
           autocomplete="current-password"
           style="padding-right:44px"
           onkeydown="if(event.key==='Enter') doLogin()">
-        <button onclick="toggleLoginPass()" tabindex="-1"
+        <button id="btnTogglePass" tabindex="-1"
           style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
                  background:none;border:none;cursor:pointer;font-size:16px;
-                 color:var(--text3);padding:4px;line-height:1">👁</button>
+                 color:var(--text3);padding:4px;line-height:1;z-index:2">👁</button>
       </div>
     </div>
 
-    <button class="login-btn" id="loginBtn" onclick="doLogin()">
+    <button class="login-btn" id="loginBtn" type="button">
       🔑 Masuk
     </button>
 
@@ -2242,6 +2247,35 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function checkAuthAndInit() {
+  // Pasang event listener tombol login
+  const btnLogin = document.getElementById('loginBtn');
+  if (btnLogin) {
+    btnLogin.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      doLogin();
+    });
+  }
+  const btnPass = document.getElementById('btnTogglePass');
+  if (btnPass) {
+    btnPass.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleLoginPass();
+    });
+  }
+  const passInput = document.getElementById('loginPass');
+  if (passInput) {
+    passInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doLogin();
+    });
+  }
+  const userInput = document.getElementById('loginUser');
+  if (userInput) {
+    userInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('loginPass').focus();
+    });
+  }
   const token    = localStorage.getItem('pnsnet_token');
   const userInfo = JSON.parse(localStorage.getItem('pnsnet_user') || 'null');
 
