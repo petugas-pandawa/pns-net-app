@@ -1,7 +1,7 @@
 // sw.js — PNS.NET Service Worker v9
 // Update versi ini setiap ada perubahan index.html
 
-const CACHE_NAME = 'pnsnet-shell-v9';
+const CACHE_NAME = 'pnsnet-shell-v10';
 const ASSETS = [
   './',
   './index.html',
