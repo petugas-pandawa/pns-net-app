@@ -2,6 +2,15 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<script>
+// Force unregister semua Service Worker dan hapus semua cache
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+}
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#FF8C42">
