@@ -59,6 +59,63 @@
   --shadow-md:    0 4px 24px rgba(0,0,0,.45);
 }
 
+/* ── SYNC BADGE & PANEL ──────────────────────────────── */
+.sync-dot{
+  width:8px;height:8px;border-radius:50%;
+  display:inline-block;flex-shrink:0;cursor:pointer;
+  transition:background .3s;
+}
+.sync-idle   {background:var(--text3)}
+.sync-syncing{background:var(--warning);animation:pulse .8s infinite}
+.sync-ok     {background:var(--success)}
+.sync-error  {background:var(--danger)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-topbar{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;color:var(--text3);cursor:pointer;
+  padding:4px 8px;border-radius:6px;
+  transition:background .15s;
+}
+.sync-topbar:hover{background:var(--surface2)}
+.sync-panel{
+  position:absolute;top:56px;right:8px;width:300px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow-md);
+  z-index:200;display:none;overflow:hidden;
+}
+.sync-panel-head{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.sync-panel-title{font-size:13px;font-weight:700;color:var(--text);flex:1}
+.sync-log-list{
+  padding:10px 14px;max-height:240px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:6px;
+}
+.sync-log-item{
+  font-size:11px;color:var(--text2);
+  display:flex;gap:8px;align-items:flex-start;
+}
+.sync-log-ts{color:var(--text3);white-space:nowrap;font-family:monospace}
+.sync-setting{
+  padding:10px 14px;border-top:1px solid var(--border);
+  display:flex;flex-direction:column;gap:8px;
+}
+.sync-setting label{font-size:11px;font-weight:600;color:var(--text3)}
+.sync-mode-row{display:flex;gap:6px}
+.sync-mode-btn{
+  flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text2);font-size:11px;
+  font-weight:600;cursor:pointer;text-align:center;transition:all .15s;
+}
+.sync-mode-btn.active{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+}
+.sync-slider-row{display:flex;align-items:center;gap:8px}
+.sync-slider-row input[type=range]{flex:1;accent-color:var(--accent)}
+.sync-slider-val{font-size:11px;color:var(--accent);font-weight:700;
+  min-width:42px;text-align:right}
+
 /* ── LOGIN SCREEN ────────────────────────────────────── */
 #loginScreen{
   position:fixed;inset:0;z-index:10000;
@@ -1202,9 +1259,44 @@ img{max-width:100%;display:block}
     <button class="topbar-btn burger" onclick="toggleSidebar()">☰</button>
     <div class="topbar-title" id="pageTitle">Dashboard</div>
     <button class="topbar-btn notif-dot" title="Notifikasi">🔔</button>
-    <button class="topbar-btn" title="Sinkronisasi" onclick="doSync(this)">🔄</button>
+    <div class="sync-topbar" onclick="toggleSyncPanel()" title="Status Sinkronisasi">
+      <span class="sync-dot sync-idle" id="syncStatusDot"></span>
+      <span id="syncLastTime"></span>
+    </div>
     <button class="topbar-btn" title="Pengaturan" onclick="openSettings()">⚙️</button>
   </header>
+
+  <!-- Panel sync dropdown -->
+  <div class="sync-panel" id="syncPanel">
+    <div class="sync-panel-head">
+      <span class="sync-dot sync-idle" id="syncStatusDot2"></span>
+      <div class="sync-panel-title">Sinkronisasi Data</div>
+      <button onclick="manualSync()" class="btn btn-secondary"
+        style="padding:4px 10px;font-size:11px">🔄 Sync</button>
+    </div>
+    <div class="sync-log-list" id="syncLogList">
+      <div style="color:var(--text3);font-size:12px">Belum ada aktivitas sync.</div>
+    </div>
+    <div class="sync-setting">
+      <label>MODE SINKRONISASI</label>
+      <div class="sync-mode-row">
+        <div class="sync-mode-btn active" id="syncModeManual"
+          onclick="setSyncMode('manual')">Manual</div>
+        <div class="sync-mode-btn" id="syncModeAuto"
+          onclick="setSyncMode('auto')">Otomatis</div>
+      </div>
+      <div id="syncIntervalWrap" style="display:none">
+        <label style="margin-top:8px;display:block">INTERVAL</label>
+        <div class="sync-slider-row">
+          <span style="font-size:11px;color:var(--text3)">15m</span>
+          <input type="range" min="15" max="60" step="5" value="15"
+            id="syncIntervalSlider" oninput="onSyncSlider(this.value)">
+          <span style="font-size:11px;color:var(--text3)">1j</span>
+          <span class="sync-slider-val" id="syncSliderVal">15 mnt</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Page content -->
   <div class="page" id="pageContent">
@@ -2175,63 +2267,30 @@ img{max-width:100%;display:block}
 
 <script>
 // ── DATA DEMO ──────────────────────────────────────────────
-const ALL_CARDS = [
-  { id:'pelanggan_aktif', icon:'👤', label:'Pelanggan Aktif',
-    value:142, delta:'+5', type:'up',
-    accent:'#2A6FD4', soft:'#D6E6FA' },
-  { id:'calon_pipeline', icon:'📋', label:'Calon Pipeline',
-    value:7, delta:'+2', type:'up',
-    accent:'#FF8C42', soft:'#FFE8D6' },
-  { id:'pemasangan_bulan', icon:'🔧', label:'Pasang Bulan Ini',
-    value:12, delta:'+3', type:'up',
-    accent:'#2D9E6B', soft:'#D6F0E4' },
-  { id:'port_tersedia', icon:'🔌', label:'Port Tersedia',
-    value:34, delta:'-4', type:'down',
-    accent:'#6B4ED4', soft:'#E8E0FA' },
-  { id:'tagihan_pending', icon:'💰', label:'Menunggu Konfirmasi',
-    value:3, delta:'', type:'neu',
-    accent:'#D4860A', soft:'#FEF3D6' },
-  { id:'stok_kritis', icon:'📦', label:'Stok Kritis',
-    value:2, delta:'', type:'neu',
-    accent:'#D63B3B', soft:'#FDDADA' },
-  { id:'gangguan_aktif', icon:'⚠️', label:'Gangguan Aktif',
-    value:1, delta:'', type:'neu',
-    accent:'#D4860A', soft:'#FEF3D6' },
-  { id:'pendapatan_bulan', icon:'📈', label:'Pendapatan Bulan Ini',
-    value:'Rp32,7jt', delta:'+12%', type:'up',
-    accent:'#2D9E6B', soft:'#D6F0E4' },
+// Definisi kartu — value diupdate dari API saat sync
+let ALL_CARDS = [
+  { id:'pelanggan_aktif',   icon:'👤', label:'Pelanggan Aktif',
+    value:'—', delta:'', type:'neu', accent:'#2A6FD4', soft:'#D6E6FA' },
+  { id:'calon_pipeline',    icon:'📋', label:'Calon Pipeline',
+    value:'—', delta:'', type:'neu', accent:'#FF8C42', soft:'#FFE8D6' },
+  { id:'pemasangan_bulan',  icon:'🔧', label:'Pasang Bulan Ini',
+    value:'—', delta:'', type:'neu', accent:'#2D9E6B', soft:'#D6F0E4' },
+  { id:'port_tersedia',     icon:'🔌', label:'Port Tersedia',
+    value:'—', delta:'', type:'neu', accent:'#6B4ED4', soft:'#E8E0FA' },
+  { id:'tagihan_pending',   icon:'💰', label:'Menunggu Konfirmasi',
+    value:'—', delta:'', type:'neu', accent:'#D4860A', soft:'#FEF3D6' },
+  { id:'stok_kritis',       icon:'📦', label:'Stok Kritis',
+    value:'—', delta:'', type:'neu', accent:'#D63B3B', soft:'#FDDADA' },
+  { id:'gangguan_aktif',    icon:'⚠️', label:'Gangguan Aktif',
+    value:'—', delta:'', type:'neu', accent:'#D4860A', soft:'#FEF3D6' },
+  { id:'pendapatan_bulan',  icon:'📈', label:'Pendapatan Bulan Ini',
+    value:'—', delta:'', type:'neu', accent:'#2D9E6B', soft:'#D6F0E4' },
 ];
 
-const ACTIVITIES = [
-  { dot:'#2D9E6B', text:'<b>Budi Santoso</b> resmi jadi pelanggan aktif',
-    meta:'10 menit lalu · Dipasang Andi', badge:'Aktif', bc:'#D6F0E4', bct:'#2D9E6B' },
-  { dot:'#FF8C42', text:'<b>Siti Rahayu</b> mendaftar sebagai calon pelanggan',
-    meta:'32 menit lalu · CS Rina', badge:'Calon Baru', bc:'#FFE8D6', bct:'#FF8C42' },
-  { dot:'#D4860A', text:'Setoran cash <b>Rp820.000</b> dari Rina menunggu konfirmasi kasir',
-    meta:'1 jam lalu · 3 pelanggan', badge:'Pending', bc:'#FEF3D6', bct:'#D4860A' },
-  { dot:'#D63B3B', text:'Gangguan dilaporkan oleh <b>Ahmad Fauzi</b> — internet mati',
-    meta:'2 jam lalu · ODP-TTL-001', badge:'Gangguan', bc:'#FDDADA', bct:'#D63B3B' },
-  { dot:'#2A6FD4', text:'Stok kabel drop menipis — sisa <b>2 rol</b>',
-    meta:'3 jam lalu · Gudang', badge:'Inventori', bc:'#D6E6FA', bct:'#2A6FD4' },
-  { dot:'#2D9E6B', text:'Pemasangan <b>Doni Kurniawan</b> selesai — 2j 15m',
-    meta:'5 jam lalu · Teknisi Andi', badge:'Selesai', bc:'#D6F0E4', bct:'#2D9E6B' },
-];
-
-const PIPELINE = [
-  { initials:'BS', nama:'Budi Santoso', sub:'Tambu · 10 Mbps', phase:'PROSES PASANG', pc:'phase-proses' },
-  { initials:'SR', nama:'Siti Rahayu', sub:'Bangkir · 10 Mbps', phase:'BARU', pc:'phase-baru' },
-  { initials:'AF', nama:'Ahmad Fauzi', sub:'Puse · 15 Mbps', phase:'SURVEY', pc:'phase-survey' },
-  { initials:'DK', nama:'Dian Kusuma', sub:'Tambu · 5 Mbps', phase:'MENUNGGU', pc:'phase-menunggu' },
-  { initials:'RP', nama:'Rini Prasetyo', sub:'Bangkir · 10 Mbps', phase:'DIHUBUNGI', pc:'phase-baru' },
-];
-
-const ODP_DATA = [
-  { nama:'ODP-TTL-001', terpakai:7, total:8 },
-  { nama:'ODP-TTL-002', terpakai:2, total:4 },
-  { nama:'ODP-DGL-001', terpakai:5, total:8 },
-  { nama:'ODP-DGL-002', terpakai:8, total:8 },
-  { nama:'ODP-DGL-003', terpakai:3, total:8 },
-];
+// Data dashboard — diisi dari API saat sync
+let ACTIVITIES = [];
+let PIPELINE   = [];
+let ODP_DATA   = [];
 
 const ACCENTS = [
   { name:'Orange Candy', light:'#FF8C42', dark:'#0D1B2A' },
@@ -2344,12 +2403,14 @@ function showApp(userInfo) {
 
   // Init dashboard
   setDateGreeting();
-  renderStats();
-  renderActivities();
-  renderPipeline();
-  renderOdp();
   renderSwatches();
   renderCardToggles();
+
+  // Load cache dulu (tampil cepat) lalu sync dari API
+  loadFromCache();
+  initSyncSettings();
+  setupAutoSync();
+  setTimeout(() => syncPull(false), 800);
 }
 
 function getGreeting() {
@@ -4087,7 +4148,9 @@ async function bridgeAction(action, extra = {}) {
     return data;
   } catch(e) {
     logEl.className   = 'modem-log err';
-    logEl.textContent = '[GAGAL] Bridge tidak bisa dihubungi: ' + e.message + '\nPastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
+    logEl.textContent = '[GAGAL] Bridge tidak bisa dihubungi: ' + e.message +
+      '
+Pastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
     return { ok: false };
   }
 }
@@ -4196,7 +4259,298 @@ function openModemPage() {
   cekBridge();
 }
 
-// ── SYNC ─────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════
+// KONEKSI DATA NYATA — Sync dari API
+// ════════════════════════════════════════════════════════
+
+// State sync
+let _syncStatus   = 'idle';  // idle | syncing | ok | error
+let _lastSyncAt   = null;
+let _syncInterval = null;
+let _syncBadge    = 0;       // jumlah update sejak dibuka
+
+// ── Ambil data dari API ───────────────────────────────────
+async function syncPull(silent = false) {
+  const token = localStorage.getItem('pnsnet_token');
+  if (!token) return;
+  if (_syncStatus === 'syncing') return;
+
+  _syncStatus = 'syncing';
+  if (!silent) setSyncBadge('syncing');
+
+  try {
+    const res  = await fetch(API_URL, {
+      method : 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body   : JSON.stringify({ action: 'dashboard_summary', token }),
+      signal : AbortSignal.timeout(20000),
+    });
+    const data = await res.json();
+
+    if (!data.ok) throw new Error(data.error || 'API error');
+
+    const d = data.data || {};
+
+    // ── Update kartu statistik ──────────────────────────
+    const cardMap = {
+      pelanggan_aktif  : { value: d.pelanggan_aktif  ?? '—', delta: d.pelanggan_aktif_delta  ?? '', type: 'up'  },
+      calon_pipeline   : { value: d.calon_pipeline   ?? '—', delta: d.calon_pipeline_delta   ?? '', type: 'up'  },
+      pemasangan_bulan : { value: d.pemasangan_bulan ?? '—', delta: d.pemasangan_bulan_delta ?? '', type: 'up'  },
+      port_tersedia    : { value: d.port_tersedia    ?? '—', delta: d.port_tersedia_delta    ?? '', type: 'down' },
+      tagihan_pending  : { value: d.tagihan_pending  ?? '—', delta: '', type: 'neu' },
+      stok_kritis      : { value: d.stok_kritis      ?? '—', delta: '', type: 'neu' },
+      gangguan_aktif   : { value: d.gangguan_aktif   ?? '—', delta: '', type: 'neu' },
+      pendapatan_bulan : { value: d.pendapatan_bulan ?? '—', delta: d.pendapatan_bulan_delta ?? '', type: 'up'  },
+    };
+    ALL_CARDS = ALL_CARDS.map(c => ({
+      ...c, ...(cardMap[c.id] || {})
+    }));
+
+    // ── Update aktivitas terbaru ────────────────────────
+    if (Array.isArray(d.aktivitas) && d.aktivitas.length > 0) {
+      ACTIVITIES = d.aktivitas.map(a => ({
+        dot : a.dot  || '#8a92a8',
+        text: a.text || '',
+        meta: a.meta || '',
+        badge: a.badge || '',
+        bc  : a.bc   || '#eee',
+        bct : a.bct  || '#333',
+      }));
+    }
+
+    // ── Update pipeline calon ───────────────────────────
+    if (Array.isArray(d.pipeline) && d.pipeline.length > 0) {
+      PIPELINE = d.pipeline.map(p => {
+        const inisial = (p.nama||'??').split(' ')
+          .slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+        return {
+          initials: inisial,
+          nama    : p.nama   || '—',
+          sub     : (p.desa  || '') + (p.paket ? ' · ' + p.paket : ''),
+          phase   : p.fase   || '—',
+          pc      : 'ph-' + (p.fase||'BARU').replace(/\s+/g,'_'),
+        };
+      });
+    }
+
+    // ── Update ODP ──────────────────────────────────────
+    if (Array.isArray(d.odp) && d.odp.length > 0) {
+      ODP_DATA = d.odp.map(o => ({
+        nama    : o.nama_odp || o.id_odp || '—',
+        terpakai: Number(o.port_terpakai) || 0,
+        total   : Number(o.total_port)    || 0,
+      }));
+    }
+
+    // ── Update daftar calon ─────────────────────────────
+    if (Array.isArray(d.calon) && d.calon.length > 0) {
+      calonData = d.calon;
+      renderCalonPage();
+    }
+
+    // ── Simpan ke IndexedDB / localStorage ─────────────
+    try {
+      localStorage.setItem('pnsnet_cache_dashboard', JSON.stringify({
+        ts: Date.now(), cards: cardMap,
+        aktivitas: ACTIVITIES, pipeline: PIPELINE,
+        odp: ODP_DATA, calon: d.calon || [],
+      }));
+    } catch(e) {}
+
+    _syncStatus = 'ok';
+    _lastSyncAt = new Date();
+    _syncBadge++;
+    addSyncLog('✅ Sync berhasil — ' + _lastSyncAt.toLocaleTimeString('id-ID'));
+    setSyncBadge('ok');
+
+    // Re-render semua
+    renderStats();
+    renderActivities();
+    renderPipeline();
+    renderOdp();
+
+  } catch(e) {
+    _syncStatus = 'error';
+    addSyncLog('❌ Sync gagal: ' + e.message);
+    setSyncBadge('error');
+
+    // Fallback ke cache
+    loadFromCache();
+  }
+}
+
+// ── Load dari cache lokal ─────────────────────────────────
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem('pnsnet_cache_dashboard');
+    if (!raw) return;
+    const cache = JSON.parse(raw);
+    const ageMin = (Date.now() - cache.ts) / 60000;
+
+    if (cache.cards) {
+      ALL_CARDS = ALL_CARDS.map(c => ({
+        ...c, ...(cache.cards[c.id] || {})
+      }));
+    }
+    if (cache.aktivitas?.length) ACTIVITIES = cache.aktivitas;
+    if (cache.pipeline?.length)  PIPELINE   = cache.pipeline;
+    if (cache.odp?.length)       ODP_DATA   = cache.odp;
+    if (cache.calon?.length)     calonData  = cache.calon;
+
+    addSyncLog(`⚡ Data dari cache (${Math.round(ageMin)} menit lalu)`);
+    renderStats(); renderActivities(); renderPipeline(); renderOdp();
+  } catch(e) {}
+}
+
+// ── Badge & log sync ──────────────────────────────────────
+const SYNC_LOGS = [];
+
+function addSyncLog(msg) {
+  const ts = new Date().toLocaleTimeString('id-ID');
+  SYNC_LOGS.unshift({ ts, msg });
+  if (SYNC_LOGS.length > 50) SYNC_LOGS.pop();
+  renderSyncLog();
+  updateSyncTopbar();
+}
+
+function renderSyncLog() {
+  const el = document.getElementById('syncLogList');
+  if (!el) return;
+  el.innerHTML = SYNC_LOGS.map(l =>
+    `<div class="sync-log-item">
+      <span class="sync-log-ts">${l.ts}</span>
+      <span>${l.msg}</span>
+    </div>`
+  ).join('') || '<div style="color:var(--text3);font-size:12px">Belum ada aktivitas sync.</div>';
+}
+
+function setSyncBadge(status) {
+  const el = document.getElementById('syncStatusDot');
+  if (!el) return;
+  el.className = 'sync-dot sync-' + status;
+  el.title = status === 'syncing' ? 'Menyinkronkan...'
+           : status === 'ok'      ? 'Tersinkron'
+           : status === 'error'   ? 'Gagal sync'
+           : 'Sync idle';
+}
+
+function updateSyncTopbar() {
+  const el = document.getElementById('syncLastTime');
+  if (!el || !_lastSyncAt) return;
+  const diffMin = Math.round((Date.now() - _lastSyncAt) / 60000);
+  el.textContent = diffMin < 1 ? 'baru saja'
+    : diffMin < 60 ? diffMin + ' mnt lalu'
+    : Math.round(diffMin/60) + ' jam lalu';
+}
+
+function toggleSyncPanel() {
+  const el = document.getElementById('syncPanel');
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el.style.display === 'block') renderSyncLog();
+}
+
+// ── Setup auto-sync ───────────────────────────────────────
+function setupAutoSync() {
+  // Ambil pengaturan dari localStorage
+  const cfg = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');
+  const mode    = cfg.mode    || 'auto';
+  const interval= cfg.interval|| 15;  // menit
+
+  // Clear interval lama
+  if (_syncInterval) clearInterval(_syncInterval);
+
+  if (mode === 'auto') {
+    _syncInterval = setInterval(() => {
+      if (navigator.onLine) syncPull(true);
+    }, interval * 60 * 1000);
+  }
+
+  // Sync saat kembali online
+  window.addEventListener('online', () => {
+    addSyncLog('🌐 Koneksi kembali — menyinkronkan...');
+    syncPull(false);
+  });
+
+  window.addEventListener('offline', () => {
+    addSyncLog('📵 Offline — menggunakan data cache');
+    setSyncBadge('error');
+  });
+}
+
+// ── Sync manual (tombol) ──────────────────────────────────
+async function manualSync() {
+  addSyncLog('🔄 Sync manual dimulai...');
+  await syncPull(false);
+}
+
+// ── Pengaturan mode sync ──────────────────────────────────
+function setSyncMode(mode) {
+  const cfg = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');
+  cfg.mode  = mode;
+  localStorage.setItem('pnsnet_sync_config', JSON.stringify(cfg));
+
+  document.getElementById('syncModeManual').classList.toggle('active', mode==='manual');
+  document.getElementById('syncModeAuto').classList.toggle('active', mode==='auto');
+  document.getElementById('syncIntervalWrap').style.display = mode==='auto' ? 'block' : 'none';
+
+  if (_syncInterval) clearInterval(_syncInterval);
+  if (mode === 'auto') {
+    const interval = cfg.interval || 15;
+    _syncInterval  = setInterval(() => {
+      if (navigator.onLine) syncPull(true);
+    }, interval * 60 * 1000);
+    addSyncLog(`⚙️ Auto-sync aktif — setiap ${interval} menit`);
+  } else {
+    addSyncLog('⚙️ Mode manual — sync hanya saat tombol ditekan');
+  }
+}
+
+function onSyncSlider(val) {
+  document.getElementById('syncSliderVal').textContent =
+    val < 60 ? val + ' mnt' : '1 jam';
+  const cfg      = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');
+  cfg.interval   = Number(val);
+  localStorage.setItem('pnsnet_sync_config', JSON.stringify(cfg));
+  // Restart interval dengan nilai baru
+  if (_syncInterval) clearInterval(_syncInterval);
+  if (cfg.mode === 'auto') {
+    _syncInterval = setInterval(() => {
+      if (navigator.onLine) syncPull(true);
+    }, Number(val) * 60 * 1000);
+  }
+}
+
+function initSyncSettings() {
+  const cfg = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');
+  const mode = cfg.mode || 'manual';
+  const interval = cfg.interval || 15;
+  setSyncMode(mode);
+  const slider = document.getElementById('syncIntervalSlider');
+  if (slider) slider.value = interval;
+  document.getElementById('syncSliderVal').textContent =
+    interval < 60 ? interval + ' mnt' : '1 jam';
+}
+
+// Tutup sync panel jika klik di luar
+document.addEventListener('click', e => {
+  const panel = document.getElementById('syncPanel');
+  if (!panel) return;
+  if (!panel.contains(e.target) &&
+      !e.target.closest('.sync-topbar')) {
+    panel.style.display = 'none';
+  }
+});
+
+// Update badge sync dot ke-2 (di dalam panel)
+const _origSetSyncBadge = setSyncBadge;
+function setSyncBadge(status) {
+  _origSetSyncBadge(status);
+  const el2 = document.getElementById('syncStatusDot2');
+  if (el2) el2.className = 'sync-dot sync-' + status;
+}
+
+// ── SYNC ─────────────────────────────────────────────────────────
 function doSync(btn) {
   btn.style.animation = 'spin .6s linear infinite';
   btn.style.cssText  += ';animation:spin .6s linear infinite';
