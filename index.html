@@ -90,10 +90,10 @@ if ('serviceWorker' in navigator) {
 }
 .sync-topbar:hover{background:var(--surface2)}
 .sync-panel{
-  position:absolute;top:56px;right:8px;width:300px;
+  position:fixed;top:56px;right:8px;width:300px;
   background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius);box-shadow:var(--shadow-md);
-  z-index:200;display:none;overflow:hidden;
+  border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,.18);
+  z-index:500;display:none;overflow:hidden;
 }
 .sync-panel-head{
   padding:10px 14px;border-bottom:1px solid var(--border);
@@ -1944,7 +1944,14 @@ img{max-width:100%;display:block}
 
   <!-- Filter chips fase -->
   <div class="filter-chips" id="filterChips" style="margin-bottom:14px">
-    <div class="chip active" data-fase="SEMUA" onclick="setFaseFilter('SEMUA',this)">Semua</div>\n    <div class="chip" data-fase="BARU" onclick="setFaseFilter('BARU',this)">🆕 Baru</div>\n    <div class="chip" data-fase="DIHUBUNGI" onclick="setFaseFilter('DIHUBUNGI',this)">📞 Dihubungi</div>\n    <div class="chip" data-fase="SURVEY" onclick="setFaseFilter('SURVEY',this)">🏠 Survey</div>\n    <div class="chip" data-fase="MENUNGGU" onclick="setFaseFilter('MENUNGGU',this)">⏳ Menunggu</div>\n    <div class="chip" data-fase="PROSES_PASANG" onclick="setFaseFilter('PROSES_PASANG',this)">🔧 Proses Pasang</div>\n    <div class="chip" data-fase="DITUNDA" onclick="setFaseFilter('DITUNDA',this)">⏸ Ditunda</div>\n    <div class="chip" data-fase="BATAL" onclick="setFaseFilter('BATAL',this)">✕ Batal</div>
+    <div class="chip active" data-fase="SEMUA" onclick="setFaseFilter('SEMUA',this)">Semua</div>
+    <div class="chip" data-fase="BARU" onclick="setFaseFilter('BARU',this)">🆕 Baru</div>
+    <div class="chip" data-fase="DIHUBUNGI" onclick="setFaseFilter('DIHUBUNGI',this)">📞 Dihubungi</div>
+    <div class="chip" data-fase="SURVEY" onclick="setFaseFilter('SURVEY',this)">🏠 Survey</div>
+    <div class="chip" data-fase="MENUNGGU" onclick="setFaseFilter('MENUNGGU',this)">⏳ Menunggu</div>
+    <div class="chip" data-fase="PROSES_PASANG" onclick="setFaseFilter('PROSES_PASANG',this)">🔧 Proses Pasang</div>
+    <div class="chip" data-fase="DITUNDA" onclick="setFaseFilter('DITUNDA',this)">⏸ Ditunda</div>
+    <div class="chip" data-fase="BATAL" onclick="setFaseFilter('BATAL',this)">✕ Batal</div>
   </div>
 
   <!-- Stats bar -->
