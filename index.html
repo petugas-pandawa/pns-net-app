@@ -2351,7 +2351,8 @@ function checkAuthAndInit() {
       if (e.key === 'Enter') document.getElementById('loginPass').focus();
     });
   }
-  const token    = localStorage.getItem('pnsnet_token');\n  const userInfo = JSON.parse(localStorage.getItem('pnsnet_user') || 'null');
+  const token    = localStorage.getItem('pnsnet_token');
+  const userInfo = JSON.parse(localStorage.getItem('pnsnet_user') || 'null');
 
   if (token && userInfo) {
     // Sudah login — langsung tampilkan app
@@ -2365,19 +2366,29 @@ function checkAuthAndInit() {
 function showLoginScreen() {
   document.getElementById('loginScreen').style.display = 'flex';
   // Sembunyikan semua halaman app
-  document.getElementById('appWrapper').style.display = 'none';\n  setTimeout(() => document.getElementById('loginUser').focus(), 100);
+  document.getElementById('appWrapper').style.display = 'none';
+  setTimeout(() => document.getElementById('loginUser').focus(), 100);
 }
 
 function showApp(userInfo) {
   // Sembunyikan login screen
-  const ls = document.getElementById('loginScreen');\n  ls.classList.add('hide');\n  setTimeout(() => ls.style.display = 'none', 300);
+  const ls = document.getElementById('loginScreen');
+  ls.classList.add('hide');
+  setTimeout(() => ls.style.display = 'none', 300);
 
   // Tampilkan app
   document.getElementById('appWrapper').style.display = 'flex';
 
   // Update info user di sidebar
   if (userInfo) {
-    const nama   = userInfo.nama || userInfo.username || 'Pengguna';\n    const role   = userInfo.role_label || 'Staf';\n    const inisial= nama.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();\n    document.getElementById('sidebarAvatar').textContent = inisial;\n    document.getElementById('sidebarName').textContent   = nama;\n    document.getElementById('sidebarRole').textContent   = role;\n    document.getElementById('greeting').textContent =\n      `Selamat ${getGreeting()}, ${nama.split(' ')[0]} 👋`;
+    const nama   = userInfo.nama || userInfo.username || 'Pengguna';
+    const role   = userInfo.role_label || 'Staf';
+    const inisial= nama.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    document.getElementById('sidebarAvatar').textContent = inisial;
+    document.getElementById('sidebarName').textContent   = nama;
+    document.getElementById('sidebarRole').textContent   = role;
+    document.getElementById('greeting').textContent =
+      `Selamat ${getGreeting()}, ${nama.split(' ')[0]} 👋`;
   }
 
   // Init dashboard
@@ -2399,23 +2410,31 @@ function getGreeting() {
 
 // ── Proses login ─────────────────────────────────────────────
 async function doLogin() {
-  dbg('doLogin dipanggil');\n  const username = document.getElementById('loginUser').value.trim();\n  const password = document.getElementById('loginPass').value;\n  const btn      = document.getElementById('loginBtn');\n  const errEl    = document.getElementById('loginError');
+  dbg('doLogin dipanggil');
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const btn      = document.getElementById('loginBtn');
+  const errEl    = document.getElementById('loginError');
 
   dbg('user=' + username + ' pass=' + (password?'ada':'kosong'));
 
   if (!username || !password) {
-    showLoginError('Username dan password tidak boleh kosong');\n    dbg('STOP: username/password kosong', '#fa0');
+    showLoginError('Username dan password tidak boleh kosong');
+    dbg('STOP: username/password kosong', '#fa0');
     return;
   }
 
   btn.disabled     = true;
-  btn.innerHTML    = '<span style="animation:spin .6s linear infinite;display:inline-block">⟳</span> Memverifikasi...';\n  errEl.style.display = 'none';
+  btn.innerHTML    = '<span style="animation:spin .6s linear infinite;display:inline-block">⟳</span> Memverifikasi...';
+  errEl.style.display = 'none';
 
   try {
     const res = await fetch(
       'https://script.google.com/macros/s/AKfycbyQZHQH5WLDyAiGOxz7NEbbhGXMB4fP4ANkJTN9qJjNjv4Y2xQmZRqXR1tPwvEgTnP1/exec',
       {
-        method : 'POST',\n        headers: {'Content-Type': 'text/plain'},\n        body   : JSON.stringify({ action: 'login', username, password }),
+        method : 'POST',
+        headers: {'Content-Type': 'text/plain'},
+        body   : JSON.stringify({ action: 'login', username, password }),
         signal : AbortSignal.timeout(20000),
       }
     );
@@ -2424,7 +2443,8 @@ async function doLogin() {
     if (data.ok && data.data?.token) {
       const d = data.data;
       // Simpan token dan info user
-      localStorage.setItem('pnsnet_token', d.token);\n      localStorage.setItem('pnsnet_user', JSON.stringify({
+      localStorage.setItem('pnsnet_token', d.token);
+      localStorage.setItem('pnsnet_user', JSON.stringify({
         user_id    : d.user_id,
         username,
         role       : d.role,
@@ -2439,7 +2459,8 @@ async function doLogin() {
       btn.innerHTML = '🔑 Masuk';
     }
   } catch(e) {
-    if (e.name === 'TimeoutError' || e.name === 'AbortError') {\n      showLoginError('Koneksi timeout — cek internet dan coba lagi');
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+      showLoginError('Koneksi timeout — cek internet dan coba lagi');
     } else {
       showLoginError('Tidak bisa terhubung ke server — cek koneksi internet');
     }
@@ -2449,22 +2470,34 @@ async function doLogin() {
 }
 
 function showLoginError(msg) {
-  const el = document.getElementById('loginError');\n  el.textContent   = '⚠️ ' + msg;\n  el.style.display = 'block';
+  const el = document.getElementById('loginError');
+  el.textContent   = '⚠️ ' + msg;
+  el.style.display = 'block';
 }
 
 function getRoleLabel(permissions) {
-  if (!permissions) return 'Staf';\n  if (permissions.includes('SDM_WRITE'))        return 'Direktur / Admin';\n  if (permissions.includes('KASIR_KONFIRMASI')) return 'Kasir';\n  if (permissions.includes('PEMASANGAN_SELESAI')) return 'Teknisi';\n  if (permissions.includes('CALON_CREATE'))     return 'Customer Service';\n  return 'Staf';
+  if (!permissions) return 'Staf';
+  if (permissions.includes('SDM_WRITE'))        return 'Direktur / Admin';
+  if (permissions.includes('KASIR_KONFIRMASI')) return 'Kasir';
+  if (permissions.includes('PEMASANGAN_SELESAI')) return 'Teknisi';
+  if (permissions.includes('CALON_CREATE'))     return 'Customer Service';
+  return 'Staf';
 }
 
 function toggleLoginPass() {
-  const inp = document.getElementById('loginPass');\n  inp.type  = inp.type === 'password' ? 'text' : 'password';
+  const inp = document.getElementById('loginPass');
+  inp.type  = inp.type === 'password' ? 'text' : 'password';
 }
 
 function setDateGreeting() {
   const now  = new Date();
   const h    = now.getHours();
   const sapa = getGreeting();
-  const user = JSON.parse(localStorage.getItem('pnsnet_user') || '{}');\n  const nama = (user.username || 'Admin').split(' ')[0];\n  document.getElementById('greeting').textContent = `Selamat ${sapa}, ${nama} 👋`;\n  document.getElementById('dateStr').textContent  =\n    now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const user = JSON.parse(localStorage.getItem('pnsnet_user') || '{}');
+  const nama = (user.username || 'Admin').split(' ')[0];
+  document.getElementById('greeting').textContent = `Selamat ${sapa}, ${nama} 👋`;
+  document.getElementById('dateStr').textContent  =
+    now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 
 // ── RENDER STATS ─────────────────────────────────────────
@@ -2532,9 +2565,14 @@ function renderOdp() {
 
 // ── THEME ────────────────────────────────────────────────
 function applyTheme() {
-  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');\n  const dt = document.getElementById('darkToggle');\n  if (dt) dt.classList.toggle('on', isDark);
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  const dt = document.getElementById('darkToggle');
+  if (dt) dt.classList.toggle('on', isDark);
   const a = ACCENTS[accentIdx];
-  document.documentElement.style.setProperty('--accent', isDark ? a.light : a.light);\n  document.documentElement.style.setProperty('--base',   isDark ? a.dark  : '#FFF8F3');\n  const mc = document.querySelector('meta[name="theme-color"]');\n  if (mc) mc.setAttribute('content', a.light);
+  document.documentElement.style.setProperty('--accent', isDark ? a.light : a.light);
+  document.documentElement.style.setProperty('--base',   isDark ? a.dark  : '#FFF8F3');
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if (mc) mc.setAttribute('content', a.light);
 }
 
 function toggleDark() {
@@ -2544,7 +2582,8 @@ function toggleDark() {
 }
 
 function renderSwatches() {
-  document.getElementById('swatches').innerHTML = ACCENTS.map((a,i) => `\n    <div class="swatch ${i===accentIdx?'active':''}"
+  document.getElementById('swatches').innerHTML = ACCENTS.map((a,i) => `
+    <div class="swatch ${i===accentIdx?'active':''}"
       style="background:${a.light}"
       title="${a.name}"
       onclick="setAccent(${i})">
@@ -2587,45 +2626,71 @@ function toggleCard(id) {
 
 // ── SETTINGS DRAWER ───────────────────────────────────────
 function openSettings() {
-  document.getElementById('settingsDrawer').classList.add('open');\n  document.getElementById('drawerOverlay').classList.add('show');
+  document.getElementById('settingsDrawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('show');
 }
 function closeSettings() {
-  document.getElementById('settingsDrawer').classList.remove('open');\n  document.getElementById('drawerOverlay').classList.remove('show');
+  document.getElementById('settingsDrawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('show');
 }
 
 // ── SIDEBAR (mobile) ─────────────────────────────────────
 function toggleSidebar() {
-  const s = document.getElementById('sidebar');\n  const o = document.getElementById('overlay');\n  const open = s.classList.toggle('open');\n  o.classList.toggle('show', open);
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('overlay');
+  const open = s.classList.toggle('open');
+  o.classList.toggle('show', open);
 }
 function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');\n  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
 }
 
 // ── NAV ──────────────────────────────────────────────────
 function setPage(page) {
   closeSidebar();
   timerPause();
-  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage','modemPage']\n    .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });\n  document.getElementById('pageContent').style.display='block';
+  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage','modemPage']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  document.getElementById('pageContent').style.display='block';
 
-  if(page==='calon_form')   { openFormCalon();   return; }\n  if(page==='modem')        { openModemPage();  return; }\n  if(page==='calon')        { openListCalon();   return; }\n  if(page==='pemasangan_form'){ openFormPemasangan(window._calonForPemasangan); return; }
+  if(page==='calon_form')   { openFormCalon();   return; }
+  if(page==='modem')        { openModemPage();  return; }
+  if(page==='calon')        { openListCalon();   return; }
+  if(page==='pemasangan_form'){ openFormPemasangan(window._calonForPemasangan); return; }
 
   const titles={
-    dashboard:'Dashboard',pelanggan:'Pelanggan',pemasangan:'Pemasangan',\n    topologi:'Topologi FO',gangguan:'Gangguan',keuangan:'Keuangan',\n    inventori:'Inventori',wilayah:'Wilayah',sdm:'Staf & Karyawan'
+    dashboard:'Dashboard',pelanggan:'Pelanggan',pemasangan:'Pemasangan',
+    topologi:'Topologi FO',gangguan:'Gangguan',keuangan:'Keuangan',
+    inventori:'Inventori',wilayah:'Wilayah',sdm:'Staf & Karyawan'
   };
-  document.getElementById('pageTitle').textContent=titles[page]||page;\n  document.querySelectorAll('.nav-item').forEach(el=>{\n    el.classList.toggle('active',el.textContent.trim().toLowerCase().includes(\n      page==='dashboard'?'dashboard':page));
+  document.getElementById('pageTitle').textContent=titles[page]||page;
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.classList.toggle('active',el.textContent.trim().toLowerCase().includes(
+      page==='dashboard'?'dashboard':page));
   });
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
 }
 
 function logout() {
-  if (!confirm('Yakin ingin keluar?')) return;\n  localStorage.removeItem('pnsnet_token');\n  localStorage.removeItem('pnsnet_user');
+  if (!confirm('Yakin ingin keluar?')) return;
+  localStorage.removeItem('pnsnet_token');
+  localStorage.removeItem('pnsnet_user');
   // Reset form login
-  document.getElementById('loginUser').value = '';\n  document.getElementById('loginPass').value = '';\n  document.getElementById('loginError').style.display = 'none';\n  document.getElementById('loginBtn').disabled  = false;\n  document.getElementById('loginBtn').innerHTML = '🔑 Masuk';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginBtn').disabled  = false;
+  document.getElementById('loginBtn').innerHTML = '🔑 Masuk';
   // Tutup settings drawer jika terbuka
   closeSettings();
   closeSidebar();
   // Tampilkan login screen
-  document.getElementById('appWrapper').style.display = 'none';\n  const ls = document.getElementById('loginScreen');\n  ls.style.display = 'flex';\n  ls.classList.remove('hide');\n  setTimeout(() => document.getElementById('loginUser').focus(), 100);
+  document.getElementById('appWrapper').style.display = 'none';
+  const ls = document.getElementById('loginScreen');
+  ls.style.display = 'flex';
+  ls.classList.remove('hide');
+  setTimeout(() => document.getElementById('loginUser').focus(), 100);
 }
 
 // ════════════════════════════════════════════════════════
@@ -2633,31 +2698,80 @@ function logout() {
 // ════════════════════════════════════════════════════════
 
 const DEMO_CALON = [
-  { id:'c001', nama_ktp:'Budi Santoso', no_hp:'0812-3456-7890',\n    id_status_proses:'PROSES_PASANG',\n    nama_desa:'Tambu', nama_kec:'Dampal Selatan', nama_kab:'Toli-Toli',\n    nama_sub_wilayah:'Dusun Pantai', alamat_detail:'Depan masjid Nurul Iman',\n    paket:'10 Mbps', harga:'Rp230.000/bln',\n    jenis_pasang:'Normal', sumber:'Referral Pelanggan',\n    created_at:'2026-09-28T09:14:00Z', foto_ktp:true,\n    catatan:'Rumah di ujung jalan masuk' },
-  { id:'c002', nama_ktp:'Siti Rahayu', no_hp:'0813-9876-5432',\n    id_status_proses:'BARU',\n    nama_desa:'Bangkir', nama_kec:'Bangkir', nama_kab:'Toli-Toli',\n    nama_sub_wilayah:'', alamat_detail:'',\n    paket:'10 Mbps', harga:'Rp230.000/bln',\n    jenis_pasang:'Promo Gratis', sumber:'Media Sosial',\n    created_at:'2026-09-28T10:30:00Z', foto_ktp:false, catatan:'' },
-  { id:'c003', nama_ktp:'Ahmad Fauzi', no_hp:'0821-1111-2222',\n    id_status_proses:'SURVEY',\n    nama_desa:'Puse', nama_kec:'Bangkir', nama_kab:'Toli-Toli',\n    nama_sub_wilayah:'RT 02', alamat_detail:'Samping kantor desa',\n    paket:'15 Mbps', harga:'Rp280.000/bln',\n    jenis_pasang:'Normal', sumber:'Word of Mouth',\n    created_at:'2026-09-27T14:00:00Z', foto_ktp:true, catatan:'Tanya soal paket 5G' },
-  { id:'c004', nama_ktp:'Dian Kusuma', no_hp:'0831-5555-6666',\n    id_status_proses:'MENUNGGU',\n    nama_desa:'Tambu', nama_kec:'Dampal Selatan', nama_kab:'Toli-Toli',\n    nama_sub_wilayah:'Dusun Dalam', alamat_detail:'',\n    paket:'5 Mbps', harga:'Rp175.000/bln',\n    jenis_pasang:'Normal', sumber:'Kunjungan Langsung',\n    created_at:'2026-09-26T08:00:00Z', foto_ktp:false, catatan:'' },
-  { id:'c005', nama_ktp:'Rini Prasetyo', no_hp:'0812-7777-8888',\n    id_status_proses:'DIHUBUNGI',\n    nama_desa:'Bangkir', nama_kec:'Bangkir', nama_kab:'Toli-Toli',\n    nama_sub_wilayah:'', alamat_detail:'',\n    paket:'10 Mbps', harga:'Rp230.000/bln',\n    jenis_pasang:'Promo Diskon 50%', sumber:'Brosur / Spanduk',\n    created_at:'2026-09-25T16:20:00Z', foto_ktp:false, catatan:'' },
-  { id:'c006', nama_ktp:'Hendra Wijaya', no_hp:'0853-3333-4444',\n    id_status_proses:'DITUNDA',\n    nama_desa:'Ogoamas I', nama_kec:'Ogodeide', nama_kab:'Toli-Toli',\n    nama_sub_wilayah:'', alamat_detail:'',\n    paket:'20 Mbps', harga:'Rp340.000/bln',\n    jenis_pasang:'Normal', sumber:'Telepon / WhatsApp',\n    created_at:'2026-09-24T11:00:00Z', foto_ktp:false,\n    catatan:'Rumah belum siap, minta ditunda 2 minggu' },
-  { id:'c007', nama_ktp:'Nurlaila Amir', no_hp:'0812-9999-0000',\n    id_status_proses:'BARU',\n    nama_desa:'Buntuna', nama_kec:'Baolan', nama_kab:'Toli-Toli',\n    nama_sub_wilayah:'', alamat_detail:'',\n    paket:'10 Mbps', harga:'Rp230.000/bln',\n    jenis_pasang:'Normal', sumber:'Referral Pelanggan',\n    created_at:'2026-09-28T13:45:00Z', foto_ktp:true, catatan:'' },
+  { id:'c001', nama_ktp:'Budi Santoso', no_hp:'0812-3456-7890',
+    id_status_proses:'PROSES_PASANG',
+    nama_desa:'Tambu', nama_kec:'Dampal Selatan', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'Dusun Pantai', alamat_detail:'Depan masjid Nurul Iman',
+    paket:'10 Mbps', harga:'Rp230.000/bln',
+    jenis_pasang:'Normal', sumber:'Referral Pelanggan',
+    created_at:'2026-09-28T09:14:00Z', foto_ktp:true,
+    catatan:'Rumah di ujung jalan masuk' },
+  { id:'c002', nama_ktp:'Siti Rahayu', no_hp:'0813-9876-5432',
+    id_status_proses:'BARU',
+    nama_desa:'Bangkir', nama_kec:'Bangkir', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'', alamat_detail:'',
+    paket:'10 Mbps', harga:'Rp230.000/bln',
+    jenis_pasang:'Promo Gratis', sumber:'Media Sosial',
+    created_at:'2026-09-28T10:30:00Z', foto_ktp:false, catatan:'' },
+  { id:'c003', nama_ktp:'Ahmad Fauzi', no_hp:'0821-1111-2222',
+    id_status_proses:'SURVEY',
+    nama_desa:'Puse', nama_kec:'Bangkir', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'RT 02', alamat_detail:'Samping kantor desa',
+    paket:'15 Mbps', harga:'Rp280.000/bln',
+    jenis_pasang:'Normal', sumber:'Word of Mouth',
+    created_at:'2026-09-27T14:00:00Z', foto_ktp:true, catatan:'Tanya soal paket 5G' },
+  { id:'c004', nama_ktp:'Dian Kusuma', no_hp:'0831-5555-6666',
+    id_status_proses:'MENUNGGU',
+    nama_desa:'Tambu', nama_kec:'Dampal Selatan', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'Dusun Dalam', alamat_detail:'',
+    paket:'5 Mbps', harga:'Rp175.000/bln',
+    jenis_pasang:'Normal', sumber:'Kunjungan Langsung',
+    created_at:'2026-09-26T08:00:00Z', foto_ktp:false, catatan:'' },
+  { id:'c005', nama_ktp:'Rini Prasetyo', no_hp:'0812-7777-8888',
+    id_status_proses:'DIHUBUNGI',
+    nama_desa:'Bangkir', nama_kec:'Bangkir', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'', alamat_detail:'',
+    paket:'10 Mbps', harga:'Rp230.000/bln',
+    jenis_pasang:'Promo Diskon 50%', sumber:'Brosur / Spanduk',
+    created_at:'2026-09-25T16:20:00Z', foto_ktp:false, catatan:'' },
+  { id:'c006', nama_ktp:'Hendra Wijaya', no_hp:'0853-3333-4444',
+    id_status_proses:'DITUNDA',
+    nama_desa:'Ogoamas I', nama_kec:'Ogodeide', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'', alamat_detail:'',
+    paket:'20 Mbps', harga:'Rp340.000/bln',
+    jenis_pasang:'Normal', sumber:'Telepon / WhatsApp',
+    created_at:'2026-09-24T11:00:00Z', foto_ktp:false,
+    catatan:'Rumah belum siap, minta ditunda 2 minggu' },
+  { id:'c007', nama_ktp:'Nurlaila Amir', no_hp:'0812-9999-0000',
+    id_status_proses:'BARU',
+    nama_desa:'Buntuna', nama_kec:'Baolan', nama_kab:'Toli-Toli',
+    nama_sub_wilayah:'', alamat_detail:'',
+    paket:'10 Mbps', harga:'Rp230.000/bln',
+    jenis_pasang:'Normal', sumber:'Referral Pelanggan',
+    created_at:'2026-09-28T13:45:00Z', foto_ktp:true, catatan:'' },
 ];
 
 const FASE_ORDER = ['BARU','DIHUBUNGI','SURVEY','MENUNGGU','PROSES_PASANG','DITUNDA','TIDAK_TERJANGKAU','BATAL'];
 const FASE_LABEL = {
-  BARU:'🆕 Baru', DIHUBUNGI:'📞 Dihubungi', SURVEY:'🏠 Survey',\n  MENUNGGU:'⏳ Menunggu', PROSES_PASANG:'🔧 Proses Pasang',\n  DITUNDA:'⏸ Ditunda', TIDAK_TERJANGKAU:'📡 Tidak Terjangkau', BATAL:'✕ Batal'
+  BARU:'🆕 Baru', DIHUBUNGI:'📞 Dihubungi', SURVEY:'🏠 Survey',
+  MENUNGGU:'⏳ Menunggu', PROSES_PASANG:'🔧 Proses Pasang',
+  DITUNDA:'⏸ Ditunda', TIDAK_TERJANGKAU:'📡 Tidak Terjangkau', BATAL:'✕ Batal'
 };
 
 let calonData       = [...DEMO_CALON];
-let calonFaseFilter = 'SEMUA';\nlet calonSearch     = '';
+let calonFaseFilter = 'SEMUA';
+let calonSearch     = '';
 let calonPage       = 1;
 const CALON_PER_PAGE= 5;
 let expandedId      = null;
 
 // ── Buka halaman daftar calon ─────────────────────────
 function openListCalon() {
-  ['pageContent','formCalonPage','formPemasanganPage','modemPage'].forEach(id=>{\n    const el=document.getElementById(id); if(el) el.style.display='none';
+  ['pageContent','formCalonPage','formPemasanganPage','modemPage'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
   });
-  document.getElementById('listCalonPage').style.display='block';\n  document.getElementById('pageTitle').textContent='Calon Pelanggan';
+  document.getElementById('listCalonPage').style.display='block';
+  document.getElementById('pageTitle').textContent='Calon Pelanggan';
   renderCalonPage();
 }
 
@@ -2686,7 +2800,8 @@ function renderCalonStats() {
 function setFaseFilter(fase, el) {
   calonFaseFilter = fase;
   calonPage = 1;
-  document.querySelectorAll('#filterChips .chip').forEach(c => c.classList.remove('active'));\n  el.classList.add('active');
+  document.querySelectorAll('#filterChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
   renderCalonList();
 }
 
@@ -2822,7 +2937,8 @@ function renderCalonCard(c) {
         <div class="fase-title">UBAH FASE</div>
         <div class="fase-buttons">
           ${FASE_ORDER.map(f => `
-            <button class="fase-btn ${f===fase?'current':''}"\n              onclick="ubahFase('${c.id}','${f}',event)">
+            <button class="fase-btn ${f===fase?'current':''}"
+              onclick="ubahFase('${c.id}','${f}',event)">
               ${FASE_LABEL[f]}
             </button>
           `).join('')}
@@ -2861,7 +2977,8 @@ function toggleCard(id) {
   renderCalonList();
   if (expandedId) {
     setTimeout(() => {
-      const el = document.getElementById('card_'+id);\n      if (el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+      const el = document.getElementById('card_'+id);
+      if (el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
     }, 100);
   }
 }
@@ -2890,7 +3007,8 @@ function ubahFase(id, faseBaru, e) {
       body: JSON.stringify({
         action:'sync_push', token,
         transactions:[{
-          entity_type:'CALON_UPDATE_STATUS',\n          local_id: 'upd_'+Date.now(),
+          entity_type:'CALON_UPDATE_STATUS',
+          local_id: 'upd_'+Date.now(),
           payload:{ id_calon: id, status_baru: faseBaru }
         }]
       })
@@ -2922,7 +3040,8 @@ function editCalon(id, e) {
 
 // ── Pagination ────────────────────────────────────────
 function renderPagination(total, totalPage) {
-  const el = document.getElementById('calonPagination');\n  if (totalPage <= 1) { el.innerHTML = ''; return; }
+  const el = document.getElementById('calonPagination');
+  if (totalPage <= 1) { el.innerHTML = ''; return; }
 
   let html = `<button class="pg-btn" onclick="goPageCalon(${calonPage-1})"
     ${calonPage<=1?'disabled':''}>‹</button>`;
@@ -2949,14 +3068,18 @@ function formatTgl(iso) {
   const d   = new Date(iso);
   const now = new Date();
   const diff= Math.floor((now - d) / 60000);
-  if (diff < 60)   return diff + ' mnt lalu';\n  if (diff < 1440) return Math.floor(diff/60) + ' jam lalu';\n  if (diff < 2880) return 'Kemarin';\n  return d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+  if (diff < 60)   return diff + ' mnt lalu';
+  if (diff < 1440) return Math.floor(diff/60) + ' jam lalu';
+  if (diff < 2880) return 'Kemarin';
+  return d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
 }
 
 // ── Toast ─────────────────────────────────────────────
 function showToast(msg) {
   let t = document.getElementById('pnsToast');
   if (!t) {
-    t = document.createElement('div');\n    t.id = 'pnsToast';
+    t = document.createElement('div');
+    t.id = 'pnsToast';
     t.style.cssText = `
       position:fixed;bottom:calc(80px + env(safe-area-inset-bottom,0px));
       left:50%;transform:translateX(-50%) translateY(20px);
@@ -2968,10 +3091,12 @@ function showToast(msg) {
     document.body.appendChild(t);
   }
   t.textContent = msg;
-  t.style.opacity = '1';\n  t.style.transform = 'translateX(-50%) translateY(0)';
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
   clearTimeout(t._timer);
   t._timer = setTimeout(() => {
-    t.style.opacity = '0';\n    t.style.transform = 'translateX(-50%) translateY(20px)';
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(20px)';
   }, 2800);
 }
 
@@ -2986,7 +3111,10 @@ const DEMO_TEKNISI = [
 ];
 
 const ODP_PORTS = {
-  odp1:[{id:'p1',no:7,label:'Port 7'},{id:'p2',no:8,label:'Port 8'}],\n  odp2:[{id:'p3',no:3,label:'Port 3'},{id:'p4',no:4,label:'Port 4'}],\n  odp3:[{id:'p5',no:6,label:'Port 6'},{id:'p6',no:7,label:'Port 7'},{id:'p7',no:8,label:'Port 8'}],\n  odp4:[{id:'p8',no:4,label:'Port 4'},{id:'p9',no:5,label:'Port 5'},{id:'p10',no:6,label:'Port 6'},
+  odp1:[{id:'p1',no:7,label:'Port 7'},{id:'p2',no:8,label:'Port 8'}],
+  odp2:[{id:'p3',no:3,label:'Port 3'},{id:'p4',no:4,label:'Port 4'}],
+  odp3:[{id:'p5',no:6,label:'Port 6'},{id:'p6',no:7,label:'Port 7'},{id:'p7',no:8,label:'Port 8'}],
+  odp4:[{id:'p8',no:4,label:'Port 4'},{id:'p9',no:5,label:'Port 5'},{id:'p10',no:6,label:'Port 6'},
         {id:'p11',no:7,label:'Port 7'},{id:'p12',no:8,label:'Port 8'}],
 };
 
@@ -3002,14 +3130,17 @@ let wifi5On          = false;
 
 function openFormPemasangan(calonData) {
   // Sembunyikan semua halaman
-  ['pageContent','formCalonPage','listCalonPage'].forEach(id=>{\n    document.getElementById(id).style.display='none';
+  ['pageContent','formCalonPage','listCalonPage'].forEach(id=>{
+    document.getElementById(id).style.display='none';
   });
-  document.getElementById('formPemasanganPage').style.display='flex';\n  document.getElementById('pageTitle').textContent='Form Pemasangan';
+  document.getElementById('formPemasanganPage').style.display='flex';
+  document.getElementById('pageTitle').textContent='Form Pemasangan';
 
   // Isi info calon
   if (calonData) {
     window._pemCalon = calonData;
-    document.getElementById('pem_namaCabon').textContent = calonData.nama_ktp;\n    document.getElementById('pem_infoCabon').textContent =
+    document.getElementById('pem_namaCabon').textContent = calonData.nama_ktp;
+    document.getElementById('pem_infoCabon').textContent =
       `${calonData.no_hp} · ${calonData.nama_desa} · ${calonData.paket}`;
   }
 
@@ -3018,11 +3149,19 @@ function openFormPemasangan(calonData) {
   ontBase64 = null; opmBase64 = null;
   timerReset();
   wifi5On = false;
-  document.getElementById('wifi5Toggle').classList.remove('on');\n  document.getElementById('wifi5Section').style.display='none';\n  document.getElementById('wifi5Label').textContent='Nonaktif';\n  ['pem_tgl','pem_jam','pem_sn','pem_mac','pem_passDefault',\n   'pem_ssid','pem_wifipass','pem_ssid5','pem_catatanTeknisi'].forEach(id=>{\n    const el=document.getElementById(id); if(el) el.value='';
+  document.getElementById('wifi5Toggle').classList.remove('on');
+  document.getElementById('wifi5Section').style.display='none';
+  document.getElementById('wifi5Label').textContent='Nonaktif';
+  ['pem_tgl','pem_jam','pem_sn','pem_mac','pem_passDefault',
+   'pem_ssid','pem_wifipass','pem_ssid5','pem_catatanTeknisi'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
   });
-  ['pem_server','pem_odp','pem_port','pem_statusBayar'].forEach(id=>{\n    const el=document.getElementById(id); if(el) el.value='';
+  ['pem_server','pem_odp','pem_port','pem_statusBayar'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
   });
-  document.getElementById('pem_port').disabled=true;\n  document.getElementById('pemStepSuccess').style.display='none';\n  document.getElementById('pem_usernamePreview').textContent='— isi data di atas untuk generate username —';
+  document.getElementById('pem_port').disabled=true;
+  document.getElementById('pemStepSuccess').style.display='none';
+  document.getElementById('pem_usernamePreview').textContent='— isi data di atas untuk generate username —';
 
   // Set tanggal hari ini
   const today = new Date().toISOString().slice(0,10);
@@ -3035,10 +3174,13 @@ function openFormPemasangan(calonData) {
 // ── Stepper pemasangan ───────────────────────────────
 function renderPemStep(step) {
   for(let i=0;i<5;i++){
-    const c=document.getElementById('pstep'+i);\n    if(c) c.style.display = i===step?'block':'none';
+    const c=document.getElementById('pstep'+i);
+    if(c) c.style.display = i===step?'block':'none';
     const n=document.querySelector(`.step-node[data-pstep="${i}"]`);
     if(n){
-      n.classList.toggle('active',i===step);\n      n.classList.toggle('done',i<step);\n      n.querySelector('.step-circle').textContent = i<step?'✓':i+1;
+      n.classList.toggle('active',i===step);
+      n.classList.toggle('done',i<step);
+      n.querySelector('.step-circle').textContent = i<step?'✓':i+1;
     }
   }
   document.getElementById('pemStepSuccess').style.display='none';
@@ -3053,14 +3195,18 @@ function goPemStep(n){
 
 // ── Teknisi selector ─────────────────────────────────
 function renderTeknisiList(){
-  document.getElementById('pem_teknisiList').innerHTML = DEMO_TEKNISI.map(t=>`\n    <div class="teknisi-item ${pemTeknisiSel.includes(t.id)?'selected':''}"\n      onclick="toggleTeknisi('${t.id}')">\n      <div class="teknisi-avatar">${t.nama.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+  document.getElementById('pem_teknisiList').innerHTML = DEMO_TEKNISI.map(t=>`
+    <div class="teknisi-item ${pemTeknisiSel.includes(t.id)?'selected':''}"
+      onclick="toggleTeknisi('${t.id}')">
+      <div class="teknisi-avatar">${t.nama.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
       <div style="flex:1">
         <div class="teknisi-nama">${t.nama}</div>
         <div class="teknisi-jabatan">${t.jabatan}</div>
       </div>
       <div class="teknisi-check">${pemTeknisiSel.includes(t.id)?'✓':''}</div>
     </div>
-  `).join('');\n  document.getElementById('pem_teknisiCount').textContent = pemTeknisiSel.length+' dipilih';
+  `).join('');
+  document.getElementById('pem_teknisiCount').textContent = pemTeknisiSel.length+' dipilih';
   validatePem0();
 }
 
@@ -3076,7 +3222,10 @@ function timerStart(){
   timerRunning=true;
   timerInterval=setInterval(()=>{
     timerSeconds++;
-    const h=String(Math.floor(timerSeconds/3600)).padStart(2,'0');\n    const m=String(Math.floor((timerSeconds%3600)/60)).padStart(2,'0');\n    const s=String(timerSeconds%60).padStart(2,'0');\n    document.getElementById('pem_timer').textContent=`${h}:${m}:${s}`;
+    const h=String(Math.floor(timerSeconds/3600)).padStart(2,'0');
+    const m=String(Math.floor((timerSeconds%3600)/60)).padStart(2,'0');
+    const s=String(timerSeconds%60).padStart(2,'0');
+    document.getElementById('pem_timer').textContent=`${h}:${m}:${s}`;
   },1000);
 }
 function timerPause(){
@@ -3086,12 +3235,15 @@ function timerPause(){
 function timerReset(){
   timerPause();
   timerSeconds=0;
-  const el=document.getElementById('pem_timer');\n  if(el) el.textContent='00:00:00';
+  const el=document.getElementById('pem_timer');
+  if(el) el.textContent='00:00:00';
 }
 
 // ── ODP cascade ───────────────────────────────────────
 function onOdpChange(){
-  const odp   = document.getElementById('pem_odp').value;\n  const portSel = document.getElementById('pem_port');\n  portSel.innerHTML='<option value="">— Pilih port —</option>';
+  const odp   = document.getElementById('pem_odp').value;
+  const portSel = document.getElementById('pem_port');
+  portSel.innerHTML='<option value="">— Pilih port —</option>';
   portSel.disabled = !odp;
   if(!odp) return;
   (ODP_PORTS[odp]||[]).forEach(p=>{
@@ -3104,7 +3256,11 @@ function updateUsernamePreview(){
   const svrEl = document.getElementById('pem_server');
   const calon = window._pemCalon;
   if(!calon||!svrEl.value) return;
-  const nama  = calon.nama_ktp.toLowerCase().replace(/[^a-z]/g,'');\n  const desa  = calon.nama_desa.toLowerCase().replace(/[^a-z]/g,'');\n  const suf   = svrEl.value==='sv-002'?'@bangkir':'@ogoamas';\n  const urut  = '0'+String(Math.floor(Math.random()*99)+43).padStart(3,'0');\n  document.getElementById('pem_usernamePreview').textContent=`${urut}${nama}.${desa}${suf}`;
+  const nama  = calon.nama_ktp.toLowerCase().replace(/[^a-z]/g,'');
+  const desa  = calon.nama_desa.toLowerCase().replace(/[^a-z]/g,'');
+  const suf   = svrEl.value==='sv-002'?'@bangkir':'@ogoamas';
+  const urut  = '0'+String(Math.floor(Math.random()*99)+43).padStart(3,'0');
+  document.getElementById('pem_usernamePreview').textContent=`${urut}${nama}.${desa}${suf}`;
 }
 
 // ── Foto ONT ──────────────────────────────────────────
@@ -3113,7 +3269,10 @@ function handleOntFoto(input){
   const reader=new FileReader();
   reader.onload=e=>{
     const src=e.target.result;
-    ontBase64=src.split(',')[1]; ontMime=file.type;\n    document.getElementById('ontPlaceholder').style.display='none';\n    document.getElementById('ontPreviewImg').src=src;\n    document.getElementById('ontPreviewImg').style.display='block';
+    ontBase64=src.split(',')[1]; ontMime=file.type;
+    document.getElementById('ontPlaceholder').style.display='none';
+    document.getElementById('ontPreviewImg').src=src;
+    document.getElementById('ontPreviewImg').style.display='block';
     runOntOcr(src);
     validatePem2();
   };
@@ -3123,18 +3282,32 @@ function handleOntFoto(input){
 function retakeOnt(e){
   e.stopPropagation();
   ontBase64=null; ontMime=null;
-  document.getElementById('ontPlaceholder').style.display='flex';\n  document.getElementById('ontPreviewImg').style.display='none';\n  document.getElementById('ontPreviewImg').src='';\n  document.getElementById('ontOcrStatus').style.display='none';\n  ['pem_sn','pem_mac','pem_passDefault'].forEach(id=>document.getElementById(id).value='');\n  ['snOcrBadge','passOcrBadge'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('ontPlaceholder').style.display='flex';
+  document.getElementById('ontPreviewImg').style.display='none';
+  document.getElementById('ontPreviewImg').src='';
+  document.getElementById('ontOcrStatus').style.display='none';
+  ['pem_sn','pem_mac','pem_passDefault'].forEach(id=>document.getElementById(id).value='');
+  ['snOcrBadge','passOcrBadge'].forEach(id=>document.getElementById(id).style.display='none');
   validatePem2();
 }
 
 async function runOntOcr(src){
-  const st=document.getElementById('ontOcrStatus');\n  st.style.display='flex';\n  st.className='ocr-status ocr-scanning';\n  st.innerHTML='<span class="ocr-spin">⟳</span> Membaca label ONT...';
+  const st=document.getElementById('ontOcrStatus');
+  st.style.display='flex';
+  st.className='ocr-status ocr-scanning';
+  st.innerHTML='<span class="ocr-spin">⟳</span> Membaca label ONT...';
   await new Promise(r=>setTimeout(r,1400));
   // Simulasi OCR hasil label belakang ONT
-  const sn   = 'CIOT'+Math.random().toString(36).slice(2,10).toUpperCase();\n  const mac  = ['A4','B2','39',...Array(3).fill(0).map(()=>\n    Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase())].join(':');
+  const sn   = 'CIOT'+Math.random().toString(36).slice(2,10).toUpperCase();
+  const mac  = ['A4','B2','39',...Array(3).fill(0).map(()=>
+    Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase())].join(':');
   const pass = Math.random().toString(36).slice(2,10).toUpperCase();
 
-  document.getElementById('pem_sn').value        = sn;\n  document.getElementById('pem_mac').value       = mac;\n  document.getElementById('pem_passDefault').value = pass;\n  ['snOcrBadge','passOcrBadge'].forEach(id=>{\n    document.getElementById(id).style.display='inline-flex';
+  document.getElementById('pem_sn').value        = sn;
+  document.getElementById('pem_mac').value       = mac;
+  document.getElementById('pem_passDefault').value = pass;
+  ['snOcrBadge','passOcrBadge'].forEach(id=>{
+    document.getElementById(id).style.display='inline-flex';
   });
   st.className='ocr-status ocr-done';
   st.innerHTML=`✅ OCR selesai — SN, MAC & password default terdeteksi`;
@@ -3148,7 +3321,10 @@ function handleOpmFoto(input){
   const reader=new FileReader();
   reader.onload=e=>{
     const src=e.target.result;
-    opmBase64=src.split(',')[1]; opmMime=file.type;\n    document.getElementById('opmPlaceholder').style.display='none';\n    document.getElementById('opmPreviewImg').src=src;\n    document.getElementById('opmPreviewImg').style.display='block';
+    opmBase64=src.split(',')[1]; opmMime=file.type;
+    document.getElementById('opmPlaceholder').style.display='none';
+    document.getElementById('opmPreviewImg').src=src;
+    document.getElementById('opmPreviewImg').style.display='block';
     validatePem2();
   };
   reader.readAsDataURL(file);
@@ -3157,35 +3333,56 @@ function handleOpmFoto(input){
 function retakeOpm(e){
   e.stopPropagation();
   opmBase64=null; opmMime=null;
-  document.getElementById('opmPlaceholder').style.display='flex';\n  document.getElementById('opmPreviewImg').style.display='none';\n  document.getElementById('opmPreviewImg').src='';
+  document.getElementById('opmPlaceholder').style.display='flex';
+  document.getElementById('opmPreviewImg').style.display='none';
+  document.getElementById('opmPreviewImg').src='';
   validatePem2();
 }
 
 // ── OPM Meter visual ──────────────────────────────────
 function updateOpmMeter(){
-  const val=parseFloat(document.getElementById('pem_opm').value);\n  const meter=document.getElementById('opmMeter');\n  const fill=document.getElementById('opmBarFill');\n  const result=document.getElementById('opmResult');\n  if(isNaN(val)){meter.style.display='none';return;}\n  meter.style.display='block';
+  const val=parseFloat(document.getElementById('pem_opm').value);
+  const meter=document.getElementById('opmMeter');
+  const fill=document.getElementById('opmBarFill');
+  const result=document.getElementById('opmResult');
+  if(isNaN(val)){meter.style.display='none';return;}
+  meter.style.display='block';
   // -40 dBm (worst) → -0 dBm (best)
   const pct = Math.max(0,Math.min(100,((val+40)/40)*100));
   fill.style.width=pct+'%';
   let cls,msg;
-  if(val>=-15){cls='opm-good';msg='✅ Sinyal Baik ('+val+' dBm)';}\n  else if(val>=-25){cls='opm-warn';msg='⚠️ Sinyal Lemah ('+val+' dBm) — perlu cek jalur';}\n  else{cls='opm-bad';msg='🔴 Sinyal Buruk ('+val+' dBm) — ada gangguan serius';}\n  result.className='opm-result '+cls;
+  if(val>=-15){cls='opm-good';msg='✅ Sinyal Baik ('+val+' dBm)';}
+  else if(val>=-25){cls='opm-warn';msg='⚠️ Sinyal Lemah ('+val+' dBm) — perlu cek jalur';}
+  else{cls='opm-bad';msg='🔴 Sinyal Buruk ('+val+' dBm) — ada gangguan serius';}
+  result.className='opm-result '+cls;
   result.textContent=msg;
 }
 
 // ── WiFi ──────────────────────────────────────────────
 function toggle5Ghz(el){
   wifi5On=!wifi5On;
-  el.classList.toggle('on',wifi5On);\n  document.getElementById('wifi5Section').style.display=wifi5On?'block':'none';\n  document.getElementById('wifi5Label').textContent=wifi5On?'Aktif':'Nonaktif';\n  document.getElementById('prev5Ghz').style.display=wifi5On?'block':'none';
+  el.classList.toggle('on',wifi5On);
+  document.getElementById('wifi5Section').style.display=wifi5On?'block':'none';
+  document.getElementById('wifi5Label').textContent=wifi5On?'Aktif':'Nonaktif';
+  document.getElementById('prev5Ghz').style.display=wifi5On?'block':'none';
   updateWifiPreview();
 }
 
 function updateWifiPreview(){
-  const ssid=document.getElementById('pem_ssid').value||'—';\n  const pass=document.getElementById('pem_wifipass').value;\n  const ssid5=document.getElementById('pem_ssid5').value||'—';\n  document.getElementById('prev_ssid').textContent=ssid;\n  document.getElementById('prev_pass').textContent=\n    'Password: '+(passPreviewHide&&pass?'•'.repeat(Math.min(pass.length,8)):pass||'—');\n  document.getElementById('prev_ssid5').textContent=ssid5;
+  const ssid=document.getElementById('pem_ssid').value||'—';
+  const pass=document.getElementById('pem_wifipass').value;
+  const ssid5=document.getElementById('pem_ssid5').value||'—';
+  document.getElementById('prev_ssid').textContent=ssid;
+  document.getElementById('prev_pass').textContent=
+    'Password: '+(passPreviewHide&&pass?'•'.repeat(Math.min(pass.length,8)):pass||'—');
+  document.getElementById('prev_ssid5').textContent=ssid5;
 }
 
 function togglePassVis(inputId,btn){
   const el=document.getElementById(inputId);
-  const isPass=el.type==='password';\n  el.type=isPass?'text':'password';\n  btn.textContent=isPass?'🙈':'👁';
+  const isPass=el.type==='password';
+  el.type=isPass?'text':'password';
+  btn.textContent=isPass?'🙈':'👁';
 }
 
 function togglePassPreview(){
@@ -3195,29 +3392,40 @@ function togglePassPreview(){
 
 // ── Validasi per step ─────────────────────────────────
 function validatePem0(){
-  const ok=document.getElementById('pem_tgl').value &&\n            document.getElementById('pem_jam').value &&
+  const ok=document.getElementById('pem_tgl').value &&
+            document.getElementById('pem_jam').value &&
             pemTeknisiSel.length>0;
   const btn=document.getElementById('btnPem0Next');
   if(btn) btn.disabled=!ok;
 }
 function validatePem1(){
-  const ok=document.getElementById('pem_server').value &&\n            document.getElementById('pem_odp').value &&\n            document.getElementById('pem_port').value;\n  const btn=document.getElementById('btnPem1Next');
+  const ok=document.getElementById('pem_server').value &&
+            document.getElementById('pem_odp').value &&
+            document.getElementById('pem_port').value;
+  const btn=document.getElementById('btnPem1Next');
   if(btn) btn.disabled=!ok;
   if(document.getElementById('pem_server').value) updateUsernamePreview();
 }
 function validatePem2(){
-  const ok=document.getElementById('pem_sn').value.trim() &&\n            document.getElementById('pem_opm').value;\n  const btn=document.getElementById('btnPem2Next');
+  const ok=document.getElementById('pem_sn').value.trim() &&
+            document.getElementById('pem_opm').value;
+  const btn=document.getElementById('btnPem2Next');
   if(btn) btn.disabled=!ok;
 }
 function validatePem3(){
-  const ok=document.getElementById('pem_ssid').value.trim() &&\n            document.getElementById('pem_wifipass').value.length>=8 &&\n            document.getElementById('pem_statusBayar').value;\n  const btn=document.getElementById('btnPem3Next');
+  const ok=document.getElementById('pem_ssid').value.trim() &&
+            document.getElementById('pem_wifipass').value.length>=8 &&
+            document.getElementById('pem_statusBayar').value;
+  const btn=document.getElementById('btnPem3Next');
   if(btn) btn.disabled=!ok;
 }
 
 // ── Ringkasan ─────────────────────────────────────────
 function buildPemSummary(){
   const calon = window._pemCalon||{};
-  const teknisiNames = DEMO_TEKNISI.filter(t=>pemTeknisiSel.includes(t.id)).map(t=>t.nama).join(', ');\n  const svrEl=document.getElementById('pem_server');\n  const bayarEl=document.getElementById('pem_statusBayar');
+  const teknisiNames = DEMO_TEKNISI.filter(t=>pemTeknisiSel.includes(t.id)).map(t=>t.nama).join(', ');
+  const svrEl=document.getElementById('pem_server');
+  const bayarEl=document.getElementById('pem_statusBayar');
   const h=Math.floor(timerSeconds/3600),m=Math.floor((timerSeconds%3600)/60),s=timerSeconds%60;
   const durasi=timerSeconds>0?`${h}j ${m}m ${s}d`:'—';
 
@@ -3258,10 +3466,12 @@ function buildPemSummary(){
 
   // Foto preview
   if(ontBase64){
-    document.getElementById('pemSumOnt').src=`data:${ontMime};base64,${ontBase64}`;\n    document.getElementById('pemSumOnt').style.background='none';
+    document.getElementById('pemSumOnt').src=`data:${ontMime};base64,${ontBase64}`;
+    document.getElementById('pemSumOnt').style.background='none';
   }
   if(opmBase64){
-    document.getElementById('pemSumOpm').src=`data:${opmMime};base64,${opmBase64}`;\n    document.getElementById('pemSumOpm').style.background='none';
+    document.getElementById('pemSumOpm').src=`data:${opmMime};base64,${opmBase64}`;
+    document.getElementById('pemSumOpm').style.background='none';
   }
 
   document.getElementById('pemOfflineWarn').style.display=!isOnline()?'flex':'none';
@@ -3281,9 +3491,27 @@ async function submitPemasangan(){
   const payload={
     id_calon          : calon.id||'',
     id_teknisi_list   : JSON.stringify(pemTeknisiSel),
-    id_server         : document.getElementById('pem_server').value,\n    id_port           : document.getElementById('pem_port').value,\n    tanggal_jadwal    : document.getElementById('pem_tgl').value+'T'+document.getElementById('pem_jam').value,
+    id_server         : document.getElementById('pem_server').value,
+    id_port           : document.getElementById('pem_port').value,
+    tanggal_jadwal    : document.getElementById('pem_tgl').value+'T'+document.getElementById('pem_jam').value,
     durasi_menit      : timerSeconds>0?Math.ceil(timerSeconds/60):0,
-    waktu_mulai       : document.getElementById('pem_jam').value,\n    waktu_selesai     : new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}),\n    sn_modem          : document.getElementById('pem_sn').value,\n    mac_modem         : document.getElementById('pem_mac').value,\n    password_wifi_default: document.getElementById('pem_passDefault').value,\n    ssid_wifi         : document.getElementById('pem_ssid').value,\n    password_wifi     : document.getElementById('pem_wifipass').value,\n    ssid_wifi_5g      : wifi5On?document.getElementById('pem_ssid5').value:'',\n    nilai_opm_dbm     : document.getElementById('pem_opm').value,\n    status_bayar      : document.getElementById('pem_statusBayar').value,\n    catatan_teknisi   : document.getElementById('pem_catatanTeknisi').value,\n    nama_ktp          : calon.nama_ktp||'',\n    no_hp             : calon.no_hp||'',\n    id_paket          : calon.id_paket||'',\n    nama_desa         : calon.nama_desa||'',\n    nama_odp          : document.getElementById('pem_odp').options[document.getElementById('pem_odp').selectedIndex]?.text||'',\n    username_pppoe    : document.getElementById('pem_usernamePreview').textContent,
+    waktu_mulai       : document.getElementById('pem_jam').value,
+    waktu_selesai     : new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}),
+    sn_modem          : document.getElementById('pem_sn').value,
+    mac_modem         : document.getElementById('pem_mac').value,
+    password_wifi_default: document.getElementById('pem_passDefault').value,
+    ssid_wifi         : document.getElementById('pem_ssid').value,
+    password_wifi     : document.getElementById('pem_wifipass').value,
+    ssid_wifi_5g      : wifi5On?document.getElementById('pem_ssid5').value:'',
+    nilai_opm_dbm     : document.getElementById('pem_opm').value,
+    status_bayar      : document.getElementById('pem_statusBayar').value,
+    catatan_teknisi   : document.getElementById('pem_catatanTeknisi').value,
+    nama_ktp          : calon.nama_ktp||'',
+    no_hp             : calon.no_hp||'',
+    id_paket          : calon.id_paket||'',
+    nama_desa         : calon.nama_desa||'',
+    nama_odp          : document.getElementById('pem_odp').options[document.getElementById('pem_odp').selectedIndex]?.text||'',
+    username_pppoe    : document.getElementById('pem_usernamePreview').textContent,
   };
 
   // Simpan lokal dulu
@@ -3294,7 +3522,8 @@ async function submitPemasangan(){
       const token=localStorage.getItem('pnsnet_token')||'';
       // Upload foto ONT
       if(ontBase64){
-        await fetch(API_URL,{method:'POST',body:JSON.stringify({\n          action:'foto_upload',token,jenis:'ONT',
+        await fetch(API_URL,{method:'POST',body:JSON.stringify({
+          action:'foto_upload',token,jenis:'ONT',
           nama_ktp:calon.nama_ktp,nama_desa:calon.nama_desa,
           id_server:payload.id_server,
           tgl_daftar:new Date().toISOString().slice(0,10),
@@ -3303,7 +3532,8 @@ async function submitPemasangan(){
       }
       // Upload foto OPM
       if(opmBase64){
-        await fetch(API_URL,{method:'POST',body:JSON.stringify({\n          action:'foto_upload',token,jenis:'OPM',
+        await fetch(API_URL,{method:'POST',body:JSON.stringify({
+          action:'foto_upload',token,jenis:'OPM',
           nama_ktp:calon.nama_ktp,nama_desa:calon.nama_desa,
           id_server:payload.id_server,
           tgl_daftar:new Date().toISOString().slice(0,10),
@@ -3311,9 +3541,11 @@ async function submitPemasangan(){
         })}).then(r=>r.json()).then(d=>{if(d.ok)payload.url_foto_opm=d.data.url;});
       }
       // Kirim laporan selesai
-      await fetch(API_URL,{method:'POST',body:JSON.stringify({\n        action:'sync_push',token,
+      await fetch(API_URL,{method:'POST',body:JSON.stringify({
+        action:'sync_push',token,
         transactions:[{
-          entity_type:'PEMASANGAN_SELESAI',\n          local_id:'pem_'+Date.now(),
+          entity_type:'PEMASANGAN_SELESAI',
+          local_id:'pem_'+Date.now(),
           payload
         }]
       })});
@@ -3325,11 +3557,17 @@ async function submitPemasangan(){
 
 function showPemSuccess(){
   for(let i=0;i<5;i++){
-    const el=document.getElementById('pstep'+i);\n    if(el) el.style.display='none';
+    const el=document.getElementById('pstep'+i);
+    if(el) el.style.display='none';
   }
-  document.querySelectorAll('.step-node[data-pstep]').forEach(n=>{\n    n.classList.add('done');n.classList.remove('active');\n    n.querySelector('.step-circle').textContent='✓';
+  document.querySelectorAll('.step-node[data-pstep]').forEach(n=>{
+    n.classList.add('done');n.classList.remove('active');
+    n.querySelector('.step-circle').textContent='✓';
   });
-  document.getElementById('pemStepSuccess').style.display='block';\n  document.getElementById('pemSuccessMsg').innerHTML=isOnline()\n    ?'✅ Laporan terkirim ke server. Notifikasi dikirim ke Telegram <b>Teknis & Pemasangan</b>.'\n    :'📴 Data tersimpan lokal. Akan disinkronkan dan notifikasi dikirim saat ada koneksi.';
+  document.getElementById('pemStepSuccess').style.display='block';
+  document.getElementById('pemSuccessMsg').innerHTML=isOnline()
+    ?'✅ Laporan terkirim ke server. Notifikasi dikirim ke Telegram <b>Teknis & Pemasangan</b>.'
+    :'📴 Data tersimpan lokal. Akan disinkronkan dan notifikasi dikirim saat ada koneksi.';
 }
 
 function cancelPemasangan(){
@@ -3355,30 +3593,55 @@ const WILAYAH_DATA = {
   tolitoli: {
     label: 'Kab. Toli-Toli',
     kec: {
-      'Baolan': [\n        'Buntuna','Dadakitan','Lelean Nono','Pangi',\n        'Baru','Nalu','Panasakan','Sidoarjo','Tambun','Tuweley'
+      'Baolan': [
+        'Buntuna','Dadakitan','Lelean Nono','Pangi',
+        'Baru','Nalu','Panasakan','Sidoarjo','Tambun','Tuweley'
       ],
-      'Basidondo': [\n        'Basi','Galandau','Labonu','Kayu Lompa','Kinapasan',\n        'Kongkomos','Marisa','Ogosipat','Sibaluton','Silondou'
+      'Basidondo': [
+        'Basi','Galandau','Labonu','Kayu Lompa','Kinapasan',
+        'Kongkomos','Marisa','Ogosipat','Sibaluton','Silondou'
       ],
-      'Dako Pamean': [\n        'Dungingis','Galumpang','Kapas','Lingadan'
+      'Dako Pamean': [
+        'Dungingis','Galumpang','Kapas','Lingadan'
       ],
-      'Dampal Selatan': [\n        'Abbajareng','Bangkir','Dongko','Kombo','Lemba Harapan',\n        'Lempe','Mimbala','Paddumpu','Pallakawe','Puse',\n        'Simuntu','Soni','Tampiala'
+      'Dampal Selatan': [
+        'Abbajareng','Bangkir','Dongko','Kombo','Lemba Harapan',
+        'Lempe','Mimbala','Paddumpu','Pallakawe','Puse',
+        'Simuntu','Soni','Tampiala'
       ],
-      'Dampal Utara': [\n        'Balaroa','Bambapula','Banagan','Kabinuang','Malambigu',\n        'Ogolali','Ogotua','Sese','Simatang Tanjung',\n        'Simatang Utara','Stadong','Tompoh'
+      'Dampal Utara': [
+        'Balaroa','Bambapula','Banagan','Kabinuang','Malambigu',
+        'Ogolali','Ogotua','Sese','Simatang Tanjung',
+        'Simatang Utara','Stadong','Tompoh'
       ],
-      'Dondo': [\n        'Anggasan','Bambapun','Betengon','Lais','Lobuo',\n        'Luok Manipi','Malala','Malomba','Malulu','Pangkung',\n        'Ogogasang','Ogogili','Ogowele','Ogowele Buga',\n        'Salumbia','Tinabogan'
+      'Dondo': [
+        'Anggasan','Bambapun','Betengon','Lais','Lobuo',
+        'Luok Manipi','Malala','Malomba','Malulu','Pangkung',
+        'Ogogasang','Ogogili','Ogowele','Ogowele Buga',
+        'Salumbia','Tinabogan'
       ],
-      'Galang': [\n        'Aung','Bajugan','Ginunggung','Kalangkangan','Lakatan',\n        'Lalos','Lantapan','Kinopasan','Malangga','Ogomoli',\n        'Sabang','Sandana','Tende','Tinigi'
+      'Galang': [
+        'Aung','Bajugan','Ginunggung','Kalangkangan','Lakatan',
+        'Lalos','Lantapan','Kinopasan','Malangga','Ogomoli',
+        'Sabang','Sandana','Tende','Tinigi'
       ],
-      'Lampasio': [\n        'Janja','Lampasio','Maibua','Mulya Sari','Ogomatanang',\n        'Oyom','Salugan','Sibea','Tinading'
+      'Lampasio': [
+        'Janja','Lampasio','Maibua','Mulya Sari','Ogomatanang',
+        'Oyom','Salugan','Sibea','Tinading'
       ],
-      'Ogodeide': [\n        'Bambalaga','Bauilo','Bilo','Buga','Kabetan','Kamalu',\n        'Labuan Lobo','Muara Besar','Pagaitan','Pulias','Sambujan'
+      'Ogodeide': [
+        'Bambalaga','Bauilo','Bilo','Buga','Kabetan','Kamalu',
+        'Labuan Lobo','Muara Besar','Pagaitan','Pulias','Sambujan'
       ],
-      'Tolitoli Utara': [\n        'Binontoan','Diule','Gio','Lakuan Tolitoli','Laulalang',\n        'Pinjan','Salumpaga','Santigi','Teluk Jaya','Timbolo'
+      'Tolitoli Utara': [
+        'Binontoan','Diule','Gio','Lakuan Tolitoli','Laulalang',
+        'Pinjan','Salumpaga','Santigi','Teluk Jaya','Timbolo'
       ],
     }
   },
   donggala: {
-    label: 'Kab. Donggala',\n    status: 'NONAKTIF',
+    label: 'Kab. Donggala',
+    status: 'NONAKTIF',
     kec: {}
   }
 };
@@ -3394,9 +3657,11 @@ function isOnline() { return navigator.onLine; }
 
 // ── Buka / tutup form ─────────────────────────────────
 function openFormCalon() {
-  ['pageContent','listCalonPage','formPemasanganPage','modemPage'].forEach(id=>{\n    const el=document.getElementById(id); if(el) el.style.display='none';
+  ['pageContent','listCalonPage','formPemasanganPage','modemPage'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
   });
-  document.getElementById('formCalonPage').style.display='flex';\n  document.getElementById('pageTitle').textContent='Calon Baru';
+  document.getElementById('formCalonPage').style.display='flex';
+  document.getElementById('pageTitle').textContent='Calon Baru';
   updateOcrModeTag();
   renderPaketGrid();
   currentStep=0;
@@ -3404,14 +3669,21 @@ function openFormCalon() {
 }
 
 function cancelForm() {
-  if (!confirm('Batalkan pendaftaran? Data yang diisi akan hilang.')) return;\n  setPage('calon');
+  if (!confirm('Batalkan pendaftaran? Data yang diisi akan hilang.')) return;
+  setPage('calon');
 }
 
 function resetForm() {
-  ['f_nama','f_nik','f_hp','f_catatan','f_dusun','f_alamat']\n    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });\n  ['f_sumber','f_kab','f_kec','f_desa','f_jenis_pasang']\n    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ['f_nama','f_nik','f_hp','f_catatan','f_dusun','f_alamat']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ['f_sumber','f_kab','f_kec','f_desa','f_jenis_pasang']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   ktpBase64 = null; ktpMime = null; selectedPaket = null;
   retakeKtp(null);
-  document.getElementById('ocrStatus').style.display = 'none';\n  document.getElementById('ocrResultNama').classList.remove('show');\n  document.querySelectorAll('.paket-card').forEach(c=>c.classList.remove('selected'));\n  document.getElementById('stepSuccess').style.display = 'none';
+  document.getElementById('ocrStatus').style.display = 'none';
+  document.getElementById('ocrResultNama').classList.remove('show');
+  document.querySelectorAll('.paket-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('stepSuccess').style.display = 'none';
   currentStep = 0;
   renderStep(0);
   openFormCalon();
@@ -3420,10 +3692,13 @@ function resetForm() {
 // ── Stepper ───────────────────────────────────────────
 function renderStep(step) {
   for (let i = 0; i < 4; i++) {
-    const content = document.getElementById('step'+i);\n    if (content) content.style.display = i === step ? 'block' : 'none';
+    const content = document.getElementById('step'+i);
+    if (content) content.style.display = i === step ? 'block' : 'none';
     const node = document.querySelector(`.step-node[data-step="${i}"]`);
     if (node) {
-      node.classList.toggle('active', i === step);\n      node.classList.toggle('done',   i < step);\n      node.querySelector('.step-circle').textContent = i < step ? '✓' : i+1;
+      node.classList.toggle('active', i === step);
+      node.classList.toggle('done',   i < step);
+      node.querySelector('.step-circle').textContent = i < step ? '✓' : i+1;
     }
   }
   document.getElementById('stepSuccess').style.display = 'none';
@@ -3441,9 +3716,11 @@ function updateOcrModeTag() {
   const tag = document.getElementById('ocrModeTag');
   if (!tag) return;
   if (isOnline()) {
-    tag.className = 'tag tag-online';\n    tag.textContent = '● Online · Vision API';
+    tag.className = 'tag tag-online';
+    tag.textContent = '● Online · Vision API';
   } else {
-    tag.className = 'tag tag-offline';\n    tag.textContent = '● Offline · Tesseract';
+    tag.className = 'tag tag-offline';
+    tag.textContent = '● Offline · Tesseract';
   }
 }
 
@@ -3460,7 +3737,9 @@ function handleKtpFile(input) {
     ktpMime   = file.type;
 
     // Tampilkan preview
-    document.getElementById('ktpPlaceholder').style.display = 'none';\n    document.getElementById('ktpPreview').style.display     = 'block';\n    document.getElementById('ktpImg').src                   = src;
+    document.getElementById('ktpPlaceholder').style.display = 'none';
+    document.getElementById('ktpPreview').style.display     = 'block';
+    document.getElementById('ktpImg').src                   = src;
 
     // Mulai OCR
     runOCR(src);
@@ -3471,16 +3750,23 @@ function handleKtpFile(input) {
 function retakeKtp(e) {
   if (e) e.stopPropagation();
   ktpBase64 = null; ktpMime = null;
-  document.getElementById('ktpPlaceholder').style.display = 'block';\n  document.getElementById('ktpPreview').style.display     = 'none';\n  document.getElementById('ktpImg').src                   = '';\n  document.getElementById('ocrStatus').style.display      = 'none';\n  document.getElementById('ocrResultNama').classList.remove('show');\n  document.getElementById('ktpFileInput').value           = '';
+  document.getElementById('ktpPlaceholder').style.display = 'block';
+  document.getElementById('ktpPreview').style.display     = 'none';
+  document.getElementById('ktpImg').src                   = '';
+  document.getElementById('ocrStatus').style.display      = 'none';
+  document.getElementById('ocrResultNama').classList.remove('show');
+  document.getElementById('ktpFileInput').value           = '';
   validateStep0();
 }
 
 async function runOCR(dataUrl) {
-  const statusEl = document.getElementById('ocrStatus');\n  statusEl.style.display = 'flex';
+  const statusEl = document.getElementById('ocrStatus');
+  statusEl.style.display = 'flex';
 
   if (isOnline()) {
     // Google Vision API simulation (production: ganti dengan real API call)
-    statusEl.className = 'ocr-status ocr-scanning';\n    statusEl.innerHTML = '<span class="ocr-spin">⟳</span> Membaca KTP dengan Vision API...';
+    statusEl.className = 'ocr-status ocr-scanning';
+    statusEl.innerHTML = '<span class="ocr-spin">⟳</span> Membaca KTP dengan Vision API...';
 
     // Simulasi delay OCR online (1.5 detik)
     await new Promise(r => setTimeout(r, 1500));
@@ -3492,7 +3778,8 @@ async function runOCR(dataUrl) {
 
   } else {
     // Tesseract offline
-    statusEl.className = 'ocr-status ocr-offline';\n    statusEl.innerHTML = '<span class="ocr-spin">⟳</span> Membaca offline (Tesseract)...';
+    statusEl.className = 'ocr-status ocr-offline';
+    statusEl.innerHTML = '<span class="ocr-spin">⟳</span> Membaca offline (Tesseract)...';
 
     if (typeof Tesseract !== 'undefined') {
       try {
@@ -3502,11 +3789,13 @@ async function runOCR(dataUrl) {
         const nama = extractNamaFromText(result.data.text);
         applyOcrResult(nama || '', 'Tesseract');
       } catch(err) {
-        statusEl.className = 'ocr-status ocr-offline';\n        statusEl.innerHTML = '⚠️ OCR gagal — isi nama secara manual';
+        statusEl.className = 'ocr-status ocr-offline';
+        statusEl.innerHTML = '⚠️ OCR gagal — isi nama secara manual';
       }
     } else {
       await new Promise(r => setTimeout(r, 1200));
-      statusEl.className = 'ocr-status ocr-offline';\n      statusEl.innerHTML = '📴 Mode offline — isi nama secara manual';
+      statusEl.className = 'ocr-status ocr-offline';
+      statusEl.innerHTML = '📴 Mode offline — isi nama secara manual';
     }
   }
 }
@@ -3528,7 +3817,10 @@ function extractNamaFromText(text) {
 }
 
 function applyOcrResult(nama, engine) {
-  const statusEl = document.getElementById('ocrStatus');\n  const resultEl = document.getElementById('ocrResultNama');\n  const resultTx = document.getElementById('ocrResultText');\n  const namaEl   = document.getElementById('f_nama');
+  const statusEl = document.getElementById('ocrStatus');
+  const resultEl = document.getElementById('ocrResultNama');
+  const resultTx = document.getElementById('ocrResultText');
+  const namaEl   = document.getElementById('f_nama');
 
   if (nama) {
     namaEl.value = nama;
@@ -3545,23 +3837,32 @@ function applyOcrResult(nama, engine) {
 
 // ── Validasi per step ────────────────────────────────
 function validateStep0() {
-  const ok = document.getElementById('f_nama').value.trim() &&\n             document.getElementById('f_hp').value.trim();\n  const btn = document.getElementById('btnStep0Next');
+  const ok = document.getElementById('f_nama').value.trim() &&
+             document.getElementById('f_hp').value.trim();
+  const btn = document.getElementById('btnStep0Next');
   if (btn) btn.disabled = !ok;
 }
 
 function validateStep1() {
-  const ok = document.getElementById('f_kab').value &&\n             document.getElementById('f_desa').value;\n  const btn = document.getElementById('btnStep1Next');
+  const ok = document.getElementById('f_kab').value &&
+             document.getElementById('f_desa').value;
+  const btn = document.getElementById('btnStep1Next');
   if (btn) btn.disabled = !ok;
 }
 
 function validateStep2() {
-  const ok = selectedPaket && document.getElementById('f_jenis_pasang').value;\n  const btn = document.getElementById('btnStep2Next');
+  const ok = selectedPaket && document.getElementById('f_jenis_pasang').value;
+  const btn = document.getElementById('btnStep2Next');
   if (btn) btn.disabled = !ok;
 }
 
 // ── Wilayah cascade ──────────────────────────────────
 function onKabChange() {
-  const kab    = document.getElementById('f_kab').value;\n  const kecSel = document.getElementById('f_kec');\n  const dSel   = document.getElementById('f_desa');\n  kecSel.innerHTML = '<option value="">— Pilih kecamatan —</option>';\n  dSel.innerHTML   = '<option value="">— Pilih desa —</option>';
+  const kab    = document.getElementById('f_kab').value;
+  const kecSel = document.getElementById('f_kec');
+  const dSel   = document.getElementById('f_desa');
+  kecSel.innerHTML = '<option value="">— Pilih kecamatan —</option>';
+  dSel.innerHTML   = '<option value="">— Pilih desa —</option>';
   kecSel.disabled  = !kab;
   dSel.disabled    = true;
   if (!kab) return;
@@ -3572,7 +3873,10 @@ function onKabChange() {
 }
 
 function onKecChange() {
-  const kab   = document.getElementById('f_kab').value;\n  const kec   = document.getElementById('f_kec').value;\n  const dSel  = document.getElementById('f_desa');\n  dSel.innerHTML = '<option value="">— Pilih desa —</option>';
+  const kab   = document.getElementById('f_kab').value;
+  const kec   = document.getElementById('f_kec').value;
+  const dSel  = document.getElementById('f_desa');
+  dSel.innerHTML = '<option value="">— Pilih desa —</option>';
   dSel.disabled  = !kec;
   if (!kec) return;
   const desas = WILAYAH_DATA[kab]?.kec[kec] || [];
@@ -3584,7 +3888,8 @@ function renderPaketGrid() {
   const grid = document.getElementById('paketGrid');
   if (!grid) return;
   grid.innerHTML = PAKET_LIST.map(p => `
-    <div class="paket-card ${selectedPaket===p.id?'selected':''}"\n      onclick="selectPaket('${p.id}')">
+    <div class="paket-card ${selectedPaket===p.id?'selected':''}"
+      onclick="selectPaket('${p.id}')">
       <div class="paket-speed">${p.speed}</div>
       <div class="paket-price">${p.price}</div>
       <div style="font-size:10px;color:var(--text3);margin-top:2px">${p.devices}</div>
@@ -3602,7 +3907,8 @@ function selectPaket(id) {
 // ── Summary ───────────────────────────────────────────
 function buildSummary() {
   const paket = PAKET_LIST.find(p => p.id === selectedPaket);
-  const jenis = document.getElementById('f_jenis_pasang');\n  const jenisLabel = jenis.options[jenis.selectedIndex]?.text || '-';
+  const jenis = document.getElementById('f_jenis_pasang');
+  const jenisLabel = jenis.options[jenis.selectedIndex]?.text || '-';
 
   document.getElementById('summaryBody').innerHTML = `
     <div class="summary-row"><span class="summary-label">Nama KTP</span>
@@ -3613,7 +3919,9 @@ function buildSummary() {
       <span class="summary-val">${document.getElementById('f_hp').value}</span></div>
     <div class="summary-row"><span class="summary-label">Wilayah</span>
       <span class="summary-val">
-        ${document.getElementById('f_desa').value},\n        ${document.getElementById('f_kec').value},\n        ${document.getElementById('f_kab').options[document.getElementById('f_kab').selectedIndex].text}
+        ${document.getElementById('f_desa').value},
+        ${document.getElementById('f_kec').value},
+        ${document.getElementById('f_kab').options[document.getElementById('f_kab').selectedIndex].text}
       </span></div>
     <div class="summary-row"><span class="summary-label">Dusun</span>
       <span class="summary-val">${document.getElementById('f_dusun').value||'—'}</span></div>
@@ -3634,13 +3942,15 @@ function buildSummary() {
   // KTP preview di summary
   const ktpCard = document.getElementById('summaryKtpCard');
   if (ktpBase64) {
-    document.getElementById('summaryKtpImg').src = `data:${ktpMime};base64,${ktpBase64}`;\n    ktpCard.style.display = 'block';
+    document.getElementById('summaryKtpImg').src = `data:${ktpMime};base64,${ktpBase64}`;
+    ktpCard.style.display = 'block';
   } else {
     ktpCard.style.display = 'none';
   }
 
   // Offline warning
-  const warn = document.getElementById('offlineWarning');\n  warn.style.display = !isOnline() ? 'flex' : 'none';
+  const warn = document.getElementById('offlineWarning');
+  warn.style.display = !isOnline() ? 'flex' : 'none';
 }
 
 // ── Submit ────────────────────────────────────────────
@@ -3650,7 +3960,17 @@ async function submitCalon() {
   btn.innerHTML = '<span class="ocr-spin">⟳</span> Menyimpan...';
 
   const payload = {
-    nama_ktp      : document.getElementById('f_nama').value.trim(),\n    nik           : document.getElementById('f_nik').value.trim(),\n    no_hp         : document.getElementById('f_hp').value.trim(),\n    catatan       : document.getElementById('f_catatan').value.trim(),\n    id_sumber     : document.getElementById('f_sumber').value,\n    id_desa       : document.getElementById('f_desa').value,\n    nama_desa     : document.getElementById('f_desa').value,\n    nama_kec      : document.getElementById('f_kec').value,\n    nama_kab      : document.getElementById('f_kab').value,\n    id_sub_wilayah: document.getElementById('f_dusun').value.trim(),\n    alamat_detail : document.getElementById('f_alamat').value.trim(),
+    nama_ktp      : document.getElementById('f_nama').value.trim(),
+    nik           : document.getElementById('f_nik').value.trim(),
+    no_hp         : document.getElementById('f_hp').value.trim(),
+    catatan       : document.getElementById('f_catatan').value.trim(),
+    id_sumber     : document.getElementById('f_sumber').value,
+    id_desa       : document.getElementById('f_desa').value,
+    nama_desa     : document.getElementById('f_desa').value,
+    nama_kec      : document.getElementById('f_kec').value,
+    nama_kab      : document.getElementById('f_kab').value,
+    id_sub_wilayah: document.getElementById('f_dusun').value.trim(),
+    alamat_detail : document.getElementById('f_alamat').value.trim(),
     id_paket      : selectedPaket,
     id_jenis_pemasangan: document.getElementById('f_jenis_pasang').value,
   };
@@ -3659,7 +3979,8 @@ async function submitCalon() {
 
   if (!isOnline()) {
     // Simpan ke lokal IndexedDB/localStorage
-    saveLocal('TRANSAKSI_CALON_PELANGGAN', { ...payload, local_id: localId,\n      id_status_proses: 'BARU', _created_at: new Date().toISOString() });
+    saveLocal('TRANSAKSI_CALON_PELANGGAN', { ...payload, local_id: localId,
+      id_status_proses: 'BARU', _created_at: new Date().toISOString() });
     showSuccess(false);
     return;
   }
@@ -3671,7 +3992,10 @@ async function submitCalon() {
     let urlFotoKtp = '';
     if (ktpBase64) {
       const upRes = await fetch(API_URL, {
-        method:'POST', body: JSON.stringify({\n          action:'foto_upload', token,\n          jenis:'KTP', nama_ktp: payload.nama_ktp,\n          nama_desa: payload.nama_desa, id_server:'',
+        method:'POST', body: JSON.stringify({
+          action:'foto_upload', token,
+          jenis:'KTP', nama_ktp: payload.nama_ktp,
+          nama_desa: payload.nama_desa, id_server:'',
           tgl_daftar: new Date().toISOString().slice(0,10),
           base64data: ktpBase64, mime_type: ktpMime
         })
@@ -3682,7 +4006,8 @@ async function submitCalon() {
 
     // 2. Simpan calon
     const res = await fetch(API_URL, {
-      method:'POST', body: JSON.stringify({\n        action:'sync_push', token,
+      method:'POST', body: JSON.stringify({
+        action:'sync_push', token,
         transactions:[{
           entity_type:'CALON_CREATE',
           local_id: localId,
@@ -3699,28 +4024,35 @@ async function submitCalon() {
     }
   } catch(err) {
     // Fallback ke lokal
-    saveLocal('TRANSAKSI_CALON_PELANGGAN', { ...payload, local_id: localId,\n      id_status_proses: 'BARU', _created_at: new Date().toISOString() });
+    saveLocal('TRANSAKSI_CALON_PELANGGAN', { ...payload, local_id: localId,
+      id_status_proses: 'BARU', _created_at: new Date().toISOString() });
     showSuccess(false, err.message);
   }
 }
 
 function saveLocal(table, data) {
-  const key   = 'pnsnet_local_' + table;\n  const existing = JSON.parse(localStorage.getItem(key) || '[]');
+  const key   = 'pnsnet_local_' + table;
+  const existing = JSON.parse(localStorage.getItem(key) || '[]');
   existing.push(data);
   localStorage.setItem(key, JSON.stringify(existing));
 }
 
 function showSuccess(online, errMsg) {
   for (let i = 0; i < 4; i++) {
-    const el = document.getElementById('step'+i);\n    if (el) el.style.display = 'none';
+    const el = document.getElementById('step'+i);
+    if (el) el.style.display = 'none';
   }
   document.getElementById('stepSuccess').style.display = 'block';
 
   // Update stepper semua done
-  document.querySelectorAll('.step-node').forEach(n => {\n    n.classList.add('done'); n.classList.remove('active');\n    n.querySelector('.step-circle').textContent = '✓';
+  document.querySelectorAll('.step-node').forEach(n => {
+    n.classList.add('done'); n.classList.remove('active');
+    n.querySelector('.step-circle').textContent = '✓';
   });
 
-  document.getElementById('successMsg').innerHTML = online\n    ? '✅ Data tersimpan di server dan notifikasi telah dikirim ke Telegram.'\n    : `📴 Data tersimpan lokal${errMsg?' ('+errMsg+')':''}. Akan disinkronkan saat online.`;
+  document.getElementById('successMsg').innerHTML = online
+    ? '✅ Data tersimpan di server dan notifikasi telah dikirim ke Telegram.'
+    : `📴 Data tersimpan lokal${errMsg?' ('+errMsg+')':''}. Akan disinkronkan saat online.`;
 }
 
 // ════════════════════════════════════════════════════════
@@ -3733,7 +4065,11 @@ let _modemToken  = '';   // token PNS.NET untuk kirim data
 
 // ── Cek bridge aktif ─────────────────────────────────────
 async function cekBridge() {
-  const dot   = document.getElementById('bridgeDot');\n  const label = document.getElementById('bridgeLabel');\n  const sub   = document.getElementById('bridgeSub');\n  const warn  = document.getElementById('bridgeWarn');\n  label.textContent = '⟳ Mengecek bridge...';
+  const dot   = document.getElementById('bridgeDot');
+  const label = document.getElementById('bridgeLabel');
+  const sub   = document.getElementById('bridgeSub');
+  const warn  = document.getElementById('bridgeWarn');
+  label.textContent = '⟳ Mengecek bridge...';
   try {
     const res  = await fetch(BRIDGE_URL + '/status', {
       signal: AbortSignal.timeout(3000)
@@ -3741,37 +4077,59 @@ async function cekBridge() {
     const data = await res.json();
     if (data.ok) {
       _bridgeOk = true;
-      dot.className   = 'bridge-dot ok';\n      label.textContent = 'CIOT Bridge Aktif';\n      sub.textContent   = `127.0.0.1:8088 · Driver: ${data.drivers?.join(', ')}`;\n      warn.style.display = 'none';\n    } else throw new Error('not ok');
+      dot.className   = 'bridge-dot ok';
+      label.textContent = 'CIOT Bridge Aktif';
+      sub.textContent   = `127.0.0.1:8088 · Driver: ${data.drivers?.join(', ')}`;
+      warn.style.display = 'none';
+    } else throw new Error('not ok');
   } catch(e) {
     _bridgeOk = false;
-    dot.className   = 'bridge-dot err';\n    label.textContent = 'Bridge Tidak Aktif';\n    sub.textContent   = 'Jalankan: python3 bridge.py di Termux';\n    warn.style.display = 'flex';
+    dot.className   = 'bridge-dot err';
+    label.textContent = 'Bridge Tidak Aktif';
+    sub.textContent   = 'Jalankan: python3 bridge.py di Termux';
+    warn.style.display = 'flex';
   }
 }
 
 // ── Kirim action ke bridge ────────────────────────────────
 async function bridgeAction(action, extra = {}) {
-  const logEl = document.getElementById('modemLog');\n  logEl.className   = 'modem-log';
+  const logEl = document.getElementById('modemLog');
+  logEl.className   = 'modem-log';
   logEl.textContent = `⟳ ${action}...`;
 
   const payload = {
     action,
-    host    : document.getElementById('m_host').value.trim() || '192.168.1.1',\n    merek   : document.getElementById('m_merek').value,\n    username: document.getElementById('m_user').value.trim(),\n    password: document.getElementById('m_pass').value,\n    new_essid     : document.getElementById('m_ssid')?.value?.trim() || '',\n    new_wifi_pass : document.getElementById('m_wpass')?.value || '',\n    new_max_client: document.getElementById('m_mc')?.value || '32',\n    wan_username  : document.getElementById('m_wanuser')?.value?.trim() || '',\n    wan_password  : document.getElementById('m_wanpass')?.value || '',\n    wan_vlan_id   : document.getElementById('m_vlan')?.value || '10',
+    host    : document.getElementById('m_host').value.trim() || '192.168.1.1',
+    merek   : document.getElementById('m_merek').value,
+    username: document.getElementById('m_user').value.trim(),
+    password: document.getElementById('m_pass').value,
+    new_essid     : document.getElementById('m_ssid')?.value?.trim() || '',
+    new_wifi_pass : document.getElementById('m_wpass')?.value || '',
+    new_max_client: document.getElementById('m_mc')?.value || '32',
+    wan_username  : document.getElementById('m_wanuser')?.value?.trim() || '',
+    wan_password  : document.getElementById('m_wanpass')?.value || '',
+    wan_vlan_id   : document.getElementById('m_vlan')?.value || '10',
     ...extra
   };
 
   try {
-    const res  = await fetch(BRIDGE_URL + '/api', {\n      method : 'POST',\n      headers: {'Content-Type': 'application/json'},
+    const res  = await fetch(BRIDGE_URL + '/api', {
+      method : 'POST',
+      headers: {'Content-Type': 'application/json'},
       body   : JSON.stringify(payload),
       signal : AbortSignal.timeout(25000),
     });
     const data = await res.json();
 
     // Update log
-    logEl.textContent = data.log || (data.ok ? '[OK]' : '[GAGAL]');\n    logEl.className   = 'modem-log' + (data.ok ? ' ok' : ' err');
+    logEl.textContent = data.log || (data.ok ? '[OK]' : '[GAGAL]');
+    logEl.className   = 'modem-log' + (data.ok ? ' ok' : ' err');
 
     // Update chip login
     if (data.logged_in !== undefined) {
-      const chip = document.getElementById('modemLoginChip');\n      chip.textContent = data.logged_in ? '✅ Login' : 'Belum login';\n      chip.className   = 'phase-pill ' + (data.logged_in ? 'ph-PROSES_PASANG' : 'ph-BARU');
+      const chip = document.getElementById('modemLoginChip');
+      chip.textContent = data.logged_in ? '✅ Login' : 'Belum login';
+      chip.className   = 'phase-pill ' + (data.logged_in ? 'ph-PROSES_PASANG' : 'ph-BARU');
     }
 
     // Tampilkan ringkasan jika ada
@@ -3779,18 +4137,30 @@ async function bridgeAction(action, extra = {}) {
 
     return data;
   } catch(e) {
-    logEl.className   = 'modem-log err';\n    logEl.textContent = '[GAGAL] Bridge tidak bisa dihubungi: ' + e.message +\n      '\nPastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
+    logEl.className   = 'modem-log err';
+    logEl.textContent = '[GAGAL] Bridge tidak bisa dihubungi: ' + e.message +
+      '\nPastikan Termux aktif dan python3 bridge.py sudah dijalankan.';
     return { ok: false };
   }
 }
 
 // ── Render ringkasan modem ────────────────────────────────
 function renderModemSummary(s) {
-  document.getElementById('modemSummaryEmpty').style.display = 'none';\n  document.getElementById('modemSummaryBox').style.display   = 'block';
+  document.getElementById('modemSummaryEmpty').style.display = 'none';
+  document.getElementById('modemSummaryBox').style.display   = 'block';
 
   const grid = document.getElementById('modemSummaryGrid');
   const items = [
-    ['MEREK / MODEL',   (s.merek || '') + ' ' + (s.model || ''), false],\n    ['SERIAL NO.',      s.serial_number || '-', false],\n    ['MAC ADDRESS',     s.mac_address   || '-', false],\n    ['IP ADDRESS',      s.ip_address    || '-', false],\n    ['SSID WIFI',       s.ssid_wifi     || '-', false],\n    ['MAX CLIENT',      s.max_client    || '-', false],\n    ['WAN TYPE',        s.wan_type      || '-', false],\n    ['WAN USERNAME',    s.wan_username  || '-', false],\n    ['SINYAL OPM',      s.pon_rx_power  || '-', false],\n    ['CONN. NAME',      s.wan_connection_name || '-', true],
+    ['MEREK / MODEL',   (s.merek || '') + ' ' + (s.model || ''), false],
+    ['SERIAL NO.',      s.serial_number || '-', false],
+    ['MAC ADDRESS',     s.mac_address   || '-', false],
+    ['IP ADDRESS',      s.ip_address    || '-', false],
+    ['SSID WIFI',       s.ssid_wifi     || '-', false],
+    ['MAX CLIENT',      s.max_client    || '-', false],
+    ['WAN TYPE',        s.wan_type      || '-', false],
+    ['WAN USERNAME',    s.wan_username  || '-', false],
+    ['SINYAL OPM',      s.pon_rx_power  || '-', false],
+    ['CONN. NAME',      s.wan_connection_name || '-', true],
   ];
 
   grid.innerHTML = items.map(([l, v, full]) => `
@@ -3805,7 +4175,10 @@ function renderModemSummary(s) {
   const opmVal = parseFloat(s.pon_rx_power);
   if (!isNaN(opmVal)) {
     const pct = Math.max(0, Math.min(100, ((opmVal + 40) / 40) * 100));
-    const cls = opmVal >= -15 ? 'opm-good' : opmVal >= -25 ? 'opm-warn' : 'opm-bad';\n    const msg = opmVal >= -15 ? '✅ Sinyal Baik'\n              : opmVal >= -25 ? '⚠️ Sinyal Lemah — perlu cek jalur'\n              : '🔴 Sinyal Buruk — ada gangguan serius';
+    const cls = opmVal >= -15 ? 'opm-good' : opmVal >= -25 ? 'opm-warn' : 'opm-bad';
+    const msg = opmVal >= -15 ? '✅ Sinyal Baik'
+              : opmVal >= -25 ? '⚠️ Sinyal Lemah — perlu cek jalur'
+              : '🔴 Sinyal Buruk — ada gangguan serius';
     opmEl.innerHTML = `
       <div class="opm-track">
         <div class="opm-fill" style="width:${pct}%"></div>
@@ -3817,22 +4190,30 @@ function renderModemSummary(s) {
   }
 
   // Auto-isi form WAN dari data ringkasan
-  if (s.wan_username && !document.getElementById('m_wanuser').value) {\n    document.getElementById('m_wanuser').value = s.wan_username;
+  if (s.wan_username && !document.getElementById('m_wanuser').value) {
+    document.getElementById('m_wanuser').value = s.wan_username;
   }
-  if (s.ssid_wifi && !document.getElementById('m_ssid').value) {\n    document.getElementById('m_ssid').value = s.ssid_wifi;
+  if (s.ssid_wifi && !document.getElementById('m_ssid').value) {
+    document.getElementById('m_ssid').value = s.ssid_wifi;
   }
 }
 
 // ── Kirim data modem ke PNS.NET ──────────────────────────
 async function kirimModemPnsnet(logOnly) {
-  const resEl  = document.getElementById('modemSendResult');\n  const token  = localStorage.getItem('pnsnet_token') || '';\n  const ket    = document.getElementById('m_ket').value.trim();
+  const resEl  = document.getElementById('modemSendResult');
+  const token  = localStorage.getItem('pnsnet_token') || '';
+  const ket    = document.getElementById('m_ket').value.trim();
 
   if (!token) {
-    resEl.style.display = 'block';\n    resEl.className     = 'send-result send-err';\n    resEl.textContent   = '❌ Token PNS.NET tidak ditemukan — login ke app PNS.NET dulu';
+    resEl.style.display = 'block';
+    resEl.className     = 'send-result send-err';
+    resEl.textContent   = '❌ Token PNS.NET tidak ditemukan — login ke app PNS.NET dulu';
     return;
   }
 
-  resEl.style.display = 'block';\n  resEl.className     = 'send-result send-info';\n  resEl.textContent   = '⟳ Mengirim ke PNS.NET...';
+  resEl.style.display = 'block';
+  resEl.className     = 'send-result send-info';
+  resEl.textContent   = '⟳ Mengirim ke PNS.NET...';
 
   const data = await bridgeAction('kirim_pnsnet', {
     pnsnet_token: token,
@@ -3842,20 +4223,25 @@ async function kirimModemPnsnet(logOnly) {
 
   if (data.ok) {
     const linked = data.linked;
-    const nama   = data.pelanggan || '';\n    resEl.className   = 'send-result send-ok';
+    const nama   = data.pelanggan || '';
+    resEl.className   = 'send-result send-ok';
     resEl.textContent = logOnly
       ? '✅ Log dicatat di PNS.NET'
       : linked
         ? `✅ Tersimpan — terhubung ke pelanggan: ${nama}`
         : '✅ Tersimpan di PNS.NET (WAN username belum terdaftar sebagai pelanggan aktif)';
   } else {
-    resEl.className   = 'send-result send-err';\n    resEl.textContent = '❌ Gagal kirim ke PNS.NET — lihat log di bawah';
+    resEl.className   = 'send-result send-err';
+    resEl.textContent = '❌ Gagal kirim ke PNS.NET — lihat log di bawah';
   }
 }
 
 // ── Buka halaman modem ────────────────────────────────────
 function openModemPage() {
-  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage']\n    .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });\n  document.getElementById('modemPage').style.display = 'block';\n  document.getElementById('pageTitle').textContent   = 'Konfigurasi Modem';
+  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  document.getElementById('modemPage').style.display = 'block';
+  document.getElementById('pageTitle').textContent   = 'Konfigurasi Modem';
   // Ambil token dari localStorage untuk dipakai kirim ke PNS.NET
   _modemToken = localStorage.getItem('pnsnet_token') || '';
   // Cek bridge otomatis saat buka halaman
@@ -3878,11 +4264,14 @@ async function syncPull(silent = false) {
   if (!token) return;
   if (_syncStatus === 'syncing') return;
 
-  _syncStatus = 'syncing';\n  if (!silent) setSyncBadge('syncing');
+  _syncStatus = 'syncing';
+  if (!silent) setSyncBadge('syncing');
 
   try {
     const res  = await fetch(API_URL, {
-      method : 'POST',\n      headers: {'Content-Type': 'text/plain'},\n      body   : JSON.stringify({ action: 'dashboard_summary', token }),
+      method : 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body   : JSON.stringify({ action: 'dashboard_summary', token }),
       signal : AbortSignal.timeout(20000),
     });
     const data = await res.json();
@@ -3893,7 +4282,14 @@ async function syncPull(silent = false) {
 
     // ── Update kartu statistik ──────────────────────────
     const cardMap = {
-      pelanggan_aktif  : { value: d.pelanggan_aktif  ?? '—', delta: d.pelanggan_aktif_delta  ?? '', type: 'up'  },\n      calon_pipeline   : { value: d.calon_pipeline   ?? '—', delta: d.calon_pipeline_delta   ?? '', type: 'up'  },\n      pemasangan_bulan : { value: d.pemasangan_bulan ?? '—', delta: d.pemasangan_bulan_delta ?? '', type: 'up'  },\n      port_tersedia    : { value: d.port_tersedia    ?? '—', delta: d.port_tersedia_delta    ?? '', type: 'down' },\n      tagihan_pending  : { value: d.tagihan_pending  ?? '—', delta: '', type: 'neu' },\n      stok_kritis      : { value: d.stok_kritis      ?? '—', delta: '', type: 'neu' },\n      gangguan_aktif   : { value: d.gangguan_aktif   ?? '—', delta: '', type: 'neu' },\n      pendapatan_bulan : { value: d.pendapatan_bulan ?? '—', delta: d.pendapatan_bulan_delta ?? '', type: 'up'  },
+      pelanggan_aktif  : { value: d.pelanggan_aktif  ?? '—', delta: d.pelanggan_aktif_delta  ?? '', type: 'up'  },
+      calon_pipeline   : { value: d.calon_pipeline   ?? '—', delta: d.calon_pipeline_delta   ?? '', type: 'up'  },
+      pemasangan_bulan : { value: d.pemasangan_bulan ?? '—', delta: d.pemasangan_bulan_delta ?? '', type: 'up'  },
+      port_tersedia    : { value: d.port_tersedia    ?? '—', delta: d.port_tersedia_delta    ?? '', type: 'down' },
+      tagihan_pending  : { value: d.tagihan_pending  ?? '—', delta: '', type: 'neu' },
+      stok_kritis      : { value: d.stok_kritis      ?? '—', delta: '', type: 'neu' },
+      gangguan_aktif   : { value: d.gangguan_aktif   ?? '—', delta: '', type: 'neu' },
+      pendapatan_bulan : { value: d.pendapatan_bulan ?? '—', delta: d.pendapatan_bulan_delta ?? '', type: 'up'  },
     };
     ALL_CARDS = ALL_CARDS.map(c => ({
       ...c, ...(cardMap[c.id] || {})
@@ -3902,17 +4298,26 @@ async function syncPull(silent = false) {
     // ── Update aktivitas terbaru ────────────────────────
     if (Array.isArray(d.aktivitas) && d.aktivitas.length > 0) {
       ACTIVITIES = d.aktivitas.map(a => ({
-        dot : a.dot  || '#8a92a8',\n        text: a.text || '',\n        meta: a.meta || '',\n        badge: a.badge || '',\n        bc  : a.bc   || '#eee',\n        bct : a.bct  || '#333',
+        dot : a.dot  || '#8a92a8',
+        text: a.text || '',
+        meta: a.meta || '',
+        badge: a.badge || '',
+        bc  : a.bc   || '#eee',
+        bct : a.bct  || '#333',
       }));
     }
 
     // ── Update pipeline calon ───────────────────────────
     if (Array.isArray(d.pipeline) && d.pipeline.length > 0) {
       PIPELINE = d.pipeline.map(p => {
-        const inisial = (p.nama||'??').split(' ')\n          .slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+        const inisial = (p.nama||'??').split(' ')
+          .slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
         return {
           initials: inisial,
-          nama    : p.nama   || '—',\n          sub     : (p.desa  || '') + (p.paket ? ' · ' + p.paket : ''),\n          phase   : p.fase   || '—',\n          pc      : 'ph-' + (p.fase||'BARU').replace(/\s+/g,'_'),
+          nama    : p.nama   || '—',
+          sub     : (p.desa  || '') + (p.paket ? ' · ' + p.paket : ''),
+          phase   : p.fase   || '—',
+          pc      : 'ph-' + (p.fase||'BARU').replace(/\s+/g,'_'),
         };
       });
     }
@@ -3944,7 +4349,8 @@ async function syncPull(silent = false) {
     _syncStatus = 'ok';
     _lastSyncAt = new Date();
     _syncBadge++;
-    addSyncLog('✅ Sync berhasil — ' + _lastSyncAt.toLocaleTimeString('id-ID'));\n    setSyncBadge('ok');
+    addSyncLog('✅ Sync berhasil — ' + _lastSyncAt.toLocaleTimeString('id-ID'));
+    setSyncBadge('ok');
 
     // Re-render semua
     renderStats();
@@ -3953,7 +4359,9 @@ async function syncPull(silent = false) {
     renderOdp();
 
   } catch(e) {
-    _syncStatus = 'error';\n    addSyncLog('❌ Sync gagal: ' + e.message);\n    setSyncBadge('error');
+    _syncStatus = 'error';
+    addSyncLog('❌ Sync gagal: ' + e.message);
+    setSyncBadge('error');
 
     // Fallback ke cache
     loadFromCache();
@@ -4008,26 +4416,34 @@ function renderSyncLog() {
 function setSyncBadge(status) {
   const el = document.getElementById('syncStatusDot');
   if (!el) return;
-  el.className = 'sync-dot sync-' + status;\n  el.title = status === 'syncing' ? 'Menyinkronkan...'\n           : status === 'ok'      ? 'Tersinkron'\n           : status === 'error'   ? 'Gagal sync'\n           : 'Sync idle';
+  el.className = 'sync-dot sync-' + status;
+  el.title = status === 'syncing' ? 'Menyinkronkan...'
+           : status === 'ok'      ? 'Tersinkron'
+           : status === 'error'   ? 'Gagal sync'
+           : 'Sync idle';
 }
 
 function updateSyncTopbar() {
   const el = document.getElementById('syncLastTime');
   if (!el || !_lastSyncAt) return;
   const diffMin = Math.round((Date.now() - _lastSyncAt) / 60000);
-  el.textContent = diffMin < 1 ? 'baru saja'\n    : diffMin < 60 ? diffMin + ' mnt lalu'\n    : Math.round(diffMin/60) + ' jam lalu';
+  el.textContent = diffMin < 1 ? 'baru saja'
+    : diffMin < 60 ? diffMin + ' mnt lalu'
+    : Math.round(diffMin/60) + ' jam lalu';
 }
 
 function toggleSyncPanel() {
   const el = document.getElementById('syncPanel');
   if (!el) return;
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';\n  if (el.style.display === 'block') renderSyncLog();
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el.style.display === 'block') renderSyncLog();
 }
 
 // ── Setup auto-sync ───────────────────────────────────────
 function setupAutoSync() {
   // Ambil pengaturan dari localStorage
-  const cfg = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');\n  const mode    = cfg.mode    || 'auto';
+  const cfg = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');
+  const mode    = cfg.mode    || 'auto';
   const interval= cfg.interval|| 15;  // menit
 
   // Clear interval lama
@@ -4040,11 +4456,14 @@ function setupAutoSync() {
   }
 
   // Sync saat kembali online
-  window.addEventListener('online', () => {\n    addSyncLog('🌐 Koneksi kembali — menyinkronkan...');
+  window.addEventListener('online', () => {
+    addSyncLog('🌐 Koneksi kembali — menyinkronkan...');
     syncPull(false);
   });
 
-  window.addEventListener('offline', () => {\n    addSyncLog('📵 Offline — menggunakan data cache');\n    setSyncBadge('error');
+  window.addEventListener('offline', () => {
+    addSyncLog('📵 Offline — menggunakan data cache');
+    setSyncBadge('error');
   });
 }
 
@@ -4060,7 +4479,9 @@ function setSyncMode(mode) {
   cfg.mode  = mode;
   localStorage.setItem('pnsnet_sync_config', JSON.stringify(cfg));
 
-  document.getElementById('syncModeManual').classList.toggle('active', mode==='manual');\n  document.getElementById('syncModeAuto').classList.toggle('active', mode==='auto');\n  document.getElementById('syncIntervalWrap').style.display = mode==='auto' ? 'block' : 'none';
+  document.getElementById('syncModeManual').classList.toggle('active', mode==='manual');
+  document.getElementById('syncModeAuto').classList.toggle('active', mode==='auto');
+  document.getElementById('syncIntervalWrap').style.display = mode==='auto' ? 'block' : 'none';
 
   if (_syncInterval) clearInterval(_syncInterval);
   if (mode === 'auto') {
@@ -4075,7 +4496,9 @@ function setSyncMode(mode) {
 }
 
 function onSyncSlider(val) {
-  document.getElementById('syncSliderVal').textContent =\n    val < 60 ? val + ' mnt' : '1 jam';\n  const cfg      = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');
+  document.getElementById('syncSliderVal').textContent =
+    val < 60 ? val + ' mnt' : '1 jam';
+  const cfg      = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');
   cfg.interval   = Number(val);
   localStorage.setItem('pnsnet_sync_config', JSON.stringify(cfg));
   // Restart interval dengan nilai baru
@@ -4088,19 +4511,23 @@ function onSyncSlider(val) {
 }
 
 function initSyncSettings() {
-  const cfg = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');\n  const mode = cfg.mode || 'manual';
+  const cfg = JSON.parse(localStorage.getItem('pnsnet_sync_config') || '{}');
+  const mode = cfg.mode || 'manual';
   const interval = cfg.interval || 15;
   setSyncMode(mode);
   const slider = document.getElementById('syncIntervalSlider');
   if (slider) slider.value = interval;
-  document.getElementById('syncSliderVal').textContent =\n    interval < 60 ? interval + ' mnt' : '1 jam';
+  document.getElementById('syncSliderVal').textContent =
+    interval < 60 ? interval + ' mnt' : '1 jam';
 }
 
 // Tutup sync panel jika klik di luar
-document.addEventListener('click', e => {\n  const panel = document.getElementById('syncPanel');
+document.addEventListener('click', e => {
+  const panel = document.getElementById('syncPanel');
   if (!panel) return;
   if (!panel.contains(e.target) &&
-      !e.target.closest('.sync-topbar')) {\n    panel.style.display = 'none';
+      !e.target.closest('.sync-topbar')) {
+    panel.style.display = 'none';
   }
 });
 
@@ -4108,12 +4535,15 @@ document.addEventListener('click', e => {\n  const panel = document.getElementBy
 const _origSetSyncBadge = setSyncBadge;
 function setSyncBadge(status) {
   _origSetSyncBadge(status);
-  const el2 = document.getElementById('syncStatusDot2');\n  if (el2) el2.className = 'sync-dot sync-' + status;
+  const el2 = document.getElementById('syncStatusDot2');
+  if (el2) el2.className = 'sync-dot sync-' + status;
 }
 
 // ── SYNC ─────────────────────────────────────────────────────────
 function doSync(btn) {
-  btn.style.animation = 'spin .6s linear infinite';\n  btn.style.cssText  += ';animation:spin .6s linear infinite';\n  setTimeout(() => { btn.style.animation = ''; }, 1200);
+  btn.style.animation = 'spin .6s linear infinite';
+  btn.style.cssText  += ';animation:spin .6s linear infinite';
+  setTimeout(() => { btn.style.animation = ''; }, 1200);
 }
 </script>
 <style>
