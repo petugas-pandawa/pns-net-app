@@ -2376,8 +2376,12 @@ let _devSeq = 0;
 function devLog(msg, level) {
   // level: 'info'|'ok'|'warn'|'err'|'user'|'net'|'data'
   _devSeq++;
-  const ts    = new Date().toLocaleTimeString('id-ID', {hour12:false});
-  const tsMs  = new Date().toLocaleTimeString('id-ID', {hour12:false,fractionalSecondDigits:1});
+  const _now  = new Date();
+  const _hh   = String(_now.getHours()).padStart(2,'0');
+  const _mm   = String(_now.getMinutes()).padStart(2,'0');
+  const _ss   = String(_now.getSeconds()).padStart(2,'0');
+  const _ms   = String(_now.getMilliseconds()).padStart(3,'0');
+  const tsMs  = _hh+':'+_mm+':'+_ss+'.'+_ms;
   const entry = { seq:_devSeq, ts:tsMs, msg:String(msg), level:level||'info' };
   _devLogs.push(entry);
   if (_devLogs.length > 500) _devLogs.shift();
@@ -2477,7 +2481,10 @@ function copyDevLog() {
   const lines = _devLogs.map(e =>
     `#${String(e.seq).padStart(3,'0')} [${e.ts}] [${e.level.toUpperCase().padEnd(4)}] ${e.msg}`
   ).join('\n');
-  const header = `=== PNS.NET Dev Log — ${new Date().toLocaleString('id-ID')} ===\n`;
+  const _d = new Date();
+  const _dateStr = _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0')
+    +' '+String(_d.getHours()).padStart(2,'0')+':'+String(_d.getMinutes()).padStart(2,'0')+':'+String(_d.getSeconds()).padStart(2,'0');
+  const header = `=== PNS.NET Dev Log — ${_dateStr} ===\n`;
   navigator.clipboard.writeText(header + lines)
     .then(() => { LOG.ok('Log disalin ke clipboard (' + _devLogs.length + ' baris)'); })
     .catch(() => { LOG.warn('Clipboard gagal — screenshot panel ini'); });
@@ -4474,8 +4481,17 @@ let _syncBadge    = 0;       // jumlah update sejak dibuka
 // ── Ambil data dari API ───────────────────────────────────
 async function syncPull(silent = false) {
   const token = localStorage.getItem('pnsnet_token');
-  if (!token) return;
-  if (_syncStatus === 'syncing') return;
+  LOG.sys('syncPull dipanggil — silent:' + silent);
+  LOG.data('token ada: ' + !!token + (token ? ' (len:'+token.length+')' : ' — KOSONG!'));
+  LOG.data('syncStatus saat ini: ' + _syncStatus);
+  if (!token) {
+    LOG.err('syncPull BATAL — token kosong, belum login?');
+    return;
+  }
+  if (_syncStatus === 'syncing') {
+    LOG.warn('syncPull BATAL — sedang sync lain');
+    return;
+  }
 
   _syncStatus = 'syncing';
   if (!silent) setSyncBadge('syncing');
