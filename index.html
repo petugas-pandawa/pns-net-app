@@ -4500,12 +4500,13 @@ async function syncPull(silent = false) {
     const encodedToken = encodeURIComponent(token);
     const tokenPreview = token.substring(0,20) + '...';
     const url = API_URL + '?action=dashboard_summary&token=' + encodedToken;
-    
-    LOG.sys('syncPull dimulai');
-  LOG.data('token: ' + tokenPreview);
-  addSyncLog('⟳ Token: ' + tokenPreview);
-    addSyncLog('⟳ URL length: ' + url.length + ' chars');
-    addSyncLog('⟳ Menghubungi server...');
+
+    LOG.sys('syncPull: encodeURIComponent selesai');
+    LOG.sys('syncPull: URL dibuat, panjang=' + url.length);
+    LOG.sys('syncPull dimulai — akan fetch ke API');
+    LOG.data('token preview: ' + tokenPreview);
+    LOG.net('URL: ' + url.substring(0,100) + '...');
+    addSyncLog('⟳ [1/4] Menyiapkan request...');
     
     let res;
     try {
@@ -4513,7 +4514,8 @@ async function syncPull(silent = false) {
         method : 'GET',
         signal : AbortSignal.timeout(30000),
       });
-      addSyncLog('⟳ HTTP status: ' + res.status + ' ' + res.statusText);
+      LOG.sys('syncPull: response diterima HTTP ' + res.status);
+      addSyncLog('⟳ [2/4] Response HTTP ' + res.status + ' diterima...');
     } catch(fetchErr) {
       addSyncLog('❌ Fetch error: ' + fetchErr.name + ' — ' + fetchErr.message);
       throw fetchErr;
@@ -4523,7 +4525,8 @@ async function syncPull(silent = false) {
     let data;
     try {
       data = await res.json();
-      addSyncLog('⟳ Response ok: ' + data.ok + (data.error ? ' | error: ' + data.error : ''));
+      LOG.sys('syncPull: JSON parsed, ok=' + data.ok);
+      addSyncLog('⟳ [3/4] Data diterima, memproses...');
     } catch(jsonErr) {
       addSyncLog('❌ JSON parse error: ' + jsonErr.message);
       throw jsonErr;
@@ -4611,7 +4614,7 @@ async function syncPull(silent = false) {
     _lastSyncAt = new Date();
     _syncBadge++;
     LOG.ok('Sync selesai: ' + (d.calon?.length||0) + ' calon, ' + (d.pelanggan_aktif||0) + ' aktif, ' + (d.odp?.length||0) + ' ODP');
-    addSyncLog('✅ Sync berhasil — ' + _lastSyncAt.toLocaleTimeString('id-ID')
+    addSyncLog('✅ [4/4] Sync selesai — ' + _lastSyncAt.toLocaleTimeString('id-ID')
       + ' (' + d.calon?.length + ' calon, ' + d.pelanggan_aktif + ' aktif)');
     setSyncBadge('ok');
 
@@ -4623,13 +4626,20 @@ async function syncPull(silent = false) {
 
   } catch(e) {
     _syncStatus = 'error';
-    const errMsg = e.name === 'AbortError' ? 'Timeout (>20 detik)' : e.message;
-    LOG.err('Sync gagal: ' + errMsg);
-    addSyncLog('❌ Sync gagal: ' + errMsg);
+    const errMsg = e.name === 'AbortError' ? 'Timeout (>30 detik)' : e.message;
+    LOG.err('Sync EXCEPTION: ' + e.name + ' — ' + errMsg);
+    addSyncLog('❌ Sync error: ' + errMsg);
+    _syncStatus = 'error';
     setSyncBadge('error');
     updateSyncTopbar();
-    // Fallback ke cache
     loadFromCache();
+  } finally {
+    // SELALU reset status agar sync berikutnya bisa jalan
+    if (_syncStatus === 'syncing' || _syncStatus === 'error') {
+      _syncStatus = 'idle';
+      LOG.sys('syncPull finally: status reset → idle');
+    }
+    LOG.sys('syncPull selesai — status: ' + _syncStatus);
   }
 }
 
