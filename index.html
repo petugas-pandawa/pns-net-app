@@ -128,6 +128,57 @@ if ('serviceWorker' in navigator) {
 .sync-slider-val{font-size:11px;color:var(--accent);font-weight:700;
   min-width:42px;text-align:right}
 
+/* ── GLOBAL DEV LOG PANEL ───────────────────────────── */
+#devLogBtn{
+  position:fixed;bottom:70px;right:12px;z-index:9000;
+  width:36px;height:36px;border-radius:50%;
+  background:#1a1a2e;color:#0f0;border:1px solid #0f0;
+  font-size:14px;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+  opacity:.7;transition:opacity .2s;
+}
+#devLogBtn:hover{opacity:1}
+#devLogPanel{
+  position:fixed;bottom:116px;right:8px;z-index:9000;
+  width:calc(100vw - 16px);max-width:520px;
+  background:#0a0f1a;border:1px solid #0f0;
+  border-radius:10px;display:none;
+  flex-direction:column;overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,.6);
+  max-height:60vh;
+}
+.devlog-head{
+  padding:8px 12px;background:#111827;
+  display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid #1e3a1e;
+}
+.devlog-title{font-size:12px;font-weight:700;color:#0f0;flex:1;font-family:monospace}
+.devlog-btn{
+  background:none;border:1px solid #333;color:#666;
+  font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;
+}
+.devlog-btn:hover{border-color:#0f0;color:#0f0}
+.devlog-body{
+  flex:1;overflow-y:auto;padding:8px 10px;
+  font-family:monospace;font-size:11px;
+  display:flex;flex-direction:column;gap:3px;
+}
+.devlog-line{
+  display:flex;gap:8px;align-items:flex-start;
+  border-bottom:1px solid #111;padding-bottom:3px;
+}
+.devlog-ts{color:#444;white-space:nowrap;font-size:10px;padding-top:1px}
+.devlog-msg{color:#0f0;word-break:break-all;flex:1}
+.devlog-msg.err{color:#f55}
+.devlog-msg.warn{color:#fa0}
+.devlog-msg.info{color:#4af}
+.devlog-msg.ok{color:#4f4}
+.devlog-copy{
+  padding:6px 12px;background:#111827;border-top:1px solid #1e3a1e;
+  display:flex;gap:6px;
+}
+
 /* ── LOGIN SCREEN ────────────────────────────────────── */
 #loginScreen{
   position:fixed;inset:0;z-index:10000;
@@ -2314,6 +2365,71 @@ document.addEventListener('DOMContentLoaded', () => {
   checkAuthAndInit();
 });
 
+// ── Global Dev Log ───────────────────────────────────────
+const _devLogs = [];
+
+function devLog(msg, level) {
+  // level: 'info' | 'ok' | 'warn' | 'err'
+  const ts  = new Date().toLocaleTimeString('id-ID');
+  const entry = { ts, msg: String(msg), level: level || 'info' };
+  _devLogs.push(entry);
+  if (_devLogs.length > 200) _devLogs.shift();
+
+  // Juga log ke console browser
+  const fn = level === 'err' ? console.error
+           : level === 'warn' ? console.warn : console.log;
+  fn('[PNS]', ts, msg);
+
+  // Update panel jika terbuka
+  _renderDevLog();
+}
+
+function _renderDevLog() {
+  const body = document.getElementById('devLogBody');
+  if (!body) return;
+  body.innerHTML = _devLogs.slice().reverse().map(e =>
+    `<div class="devlog-line">
+      <span class="devlog-ts">${e.ts}</span>
+      <span class="devlog-msg ${e.level}">${e.msg}</span>
+    </div>`
+  ).join('');
+}
+
+function toggleDevLog() {
+  const panel = document.getElementById('devLogPanel');
+  if (!panel) return;
+  const isOpen = panel.style.display === 'flex';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) _renderDevLog();
+}
+
+function clearDevLog() {
+  _devLogs.length = 0;
+  _renderDevLog();
+}
+
+function copyDevLog() {
+  const text = _devLogs.map(e => `[${e.ts}] [${e.level.toUpperCase()}] ${e.msg}`).join('\n');
+  navigator.clipboard.writeText(text)
+    .then(() => devLog('✓ Log berhasil disalin ke clipboard', 'ok'))
+    .catch(() => devLog('Gagal copy — salin manual dari panel', 'warn'));
+}
+
+// Override dbg agar juga masuk devLog
+const _origDbg = typeof dbg === 'function' ? dbg : null;
+function dbg(msg, color) {
+  const level = color === '#f55' ? 'err' : 'info';
+  devLog(msg, level);
+  // Update debug panel login jika ada
+  const p = document.getElementById('debugPanel');
+  if (!p) return;
+  const line = document.createElement('div');
+  line.style.color = color || '#0f0';
+  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  p.appendChild(line);
+  p.scrollTop = p.scrollHeight;
+}
+
 // ── Debug logger visual ──────────────────────────────────
 function dbg(msg, color) {
   const p = document.getElementById('debugPanel');
@@ -2475,8 +2591,10 @@ async function doLogin() {
         permissions: d.permissions,
         login_at   : new Date().toISOString(),
       }));
+      devLog('✅ Login berhasil: ' + username, 'ok');
       showApp(JSON.parse(localStorage.getItem('pnsnet_user')));
     } else {
+      devLog('❌ Login gagal: ' + (data.error || 'unknown'), 'err');
       showLoginError(data.error || 'Username atau password salah');
       btn.disabled  = false;
       btn.innerHTML = '🔑 Masuk';
@@ -2671,6 +2789,7 @@ function closeSidebar() {
 
 // ── NAV ──────────────────────────────────────────────────
 function setPage(page) {
+  devLog('→ setPage: ' + page, 'info');
   closeSidebar();
   timerPause();
   ['pageContent','formCalonPage','listCalonPage','formPemasanganPage','modemPage']
@@ -4295,7 +4414,8 @@ async function syncPull(silent = false) {
     const tokenPreview = token.substring(0,20) + '...';
     const url = API_URL + '?action=dashboard_summary&token=' + encodedToken;
     
-    addSyncLog('⟳ Token: ' + tokenPreview);
+    devLog('syncPull dimulai, token: ' + tokenPreview, 'info');
+  addSyncLog('⟳ Token: ' + tokenPreview);
     addSyncLog('⟳ URL length: ' + url.length + ' chars');
     addSyncLog('⟳ Menghubungi server...');
     
@@ -4402,6 +4522,7 @@ async function syncPull(silent = false) {
     _syncStatus = 'ok';
     _lastSyncAt = new Date();
     _syncBadge++;
+    devLog('✅ Sync berhasil: ' + d.calon?.length + ' calon, ' + d.pelanggan_aktif + ' aktif', 'ok');
     addSyncLog('✅ Sync berhasil — ' + _lastSyncAt.toLocaleTimeString('id-ID')
       + ' (' + d.calon?.length + ' calon, ' + d.pelanggan_aktif + ' aktif)');
     setSyncBadge('ok');
@@ -4415,6 +4536,7 @@ async function syncPull(silent = false) {
   } catch(e) {
     _syncStatus = 'error';
     const errMsg = e.name === 'AbortError' ? 'Timeout (>20 detik)' : e.message;
+    devLog('❌ Sync error: ' + errMsg, 'err');
     addSyncLog('❌ Sync gagal: ' + errMsg);
     setSyncBadge('error');
     updateSyncTopbar();
@@ -4608,5 +4730,29 @@ function doSync(btn) {
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
   </div><!-- /.app -->
+
+<!-- ── GLOBAL DEV LOG ─────────────────────────────────── -->
+<button id="devLogBtn" onclick="toggleDevLog()" title="Dev Log">🐛</button>
+<div id="devLogPanel">
+  <div class="devlog-head">
+    <span class="devlog-title">📋 Dev Log — PNS.NET</span>
+    <button class="devlog-btn" onclick="copyDevLog()">Copy</button>
+    <button class="devlog-btn" onclick="clearDevLog()">Clear</button>
+    <button class="devlog-btn" onclick="toggleDevLog()">✕</button>
+  </div>
+  <div class="devlog-body" id="devLogBody">
+    <div class="devlog-line">
+      <span class="devlog-ts">--:--:--</span>
+      <span class="devlog-msg info">Dev Log siap. Semua aktivitas app tercatat di sini.</span>
+    </div>
+  </div>
+  <div class="devlog-copy">
+    <button class="devlog-btn" onclick="copyDevLog()" style="flex:1">
+      📋 Copy semua log
+    </button>
+    <button class="devlog-btn" onclick="clearDevLog()">🗑 Clear</button>
+  </div>
+</div>
+
 </body>
 </html>
