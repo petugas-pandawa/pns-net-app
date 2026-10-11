@@ -2439,15 +2439,14 @@ async function doLogin() {
   errEl.style.display = 'none';
 
   try {
-    const res = await fetch(
-      'https://script.google.com/macros/s/AKfycbyQZHQH5WLDyAiGOxz7NEbbhGXMB4fP4ANkJTN9qJjNjv4Y2xQmZRqXR1tPwvEgTnP1/exec',
-      {
-        method : 'POST',
-        headers: {'Content-Type': 'text/plain'},
-        body   : JSON.stringify({ action: 'login', username, password }),
-        signal : AbortSignal.timeout(20000),
-      }
-    );
+    const loginUrl = API_URL
+      + '?action=login'
+      + '&username=' + encodeURIComponent(username)
+      + '&password=' + encodeURIComponent(password);
+    const res = await fetch(loginUrl, {
+      method : 'GET',
+      signal : AbortSignal.timeout(20000),
+    });
     const data = await res.json();
 
     if (data.ok && data.data?.token) {
@@ -4278,10 +4277,10 @@ async function syncPull(silent = false) {
   if (!silent) setSyncBadge('syncing');
 
   try {
-    const res  = await fetch(API_URL, {
-      method : 'POST',
-      headers: {'Content-Type': 'text/plain'},
-      body   : JSON.stringify({ action: 'dashboard_summary', token }),
+    const encodedToken = encodeURIComponent(token);
+    const url = API_URL + '?action=dashboard_summary&token=' + encodedToken;
+    const res  = await fetch(url, {
+      method : 'GET',
       signal : AbortSignal.timeout(20000),
     });
     const data = await res.json();
