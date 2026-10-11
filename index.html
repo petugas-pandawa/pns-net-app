@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.1.1">
+<meta name="app-version" content="2.1.0">
 <meta name="app-build" content="2026-10-10">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1166,7 +1166,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.1.1 (2026-10-11) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.1.0 (2026-10-10) · PNS.NET Offline-first PWA</div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -2427,6 +2427,12 @@ async function doLogin() {
   const errEl    = document.getElementById('loginError');
 
   dbg('user=' + username + ' pass=' + (password?'ada':'kosong'));
+  
+  const loginUrl = API_URL
+    + '?action=login'
+    + '&username=' + encodeURIComponent(username)
+    + '&password=' + encodeURIComponent(password);
+  dbg('URL: ' + loginUrl.substring(0, 80) + '...');
 
   if (!username || !password) {
     showLoginError('Username dan password tidak boleh kosong');
@@ -2439,14 +2445,22 @@ async function doLogin() {
   errEl.style.display = 'none';
 
   try {
-    const loginUrl = API_URL
+    const loginUrl2 = API_URL
       + '?action=login'
       + '&username=' + encodeURIComponent(username)
       + '&password=' + encodeURIComponent(password);
-    const res = await fetch(loginUrl, {
-      method : 'GET',
-      signal : AbortSignal.timeout(20000),
-    });
+    dbg('Fetch login dimulai...');
+    let res;
+    try {
+      res = await fetch(loginUrl2, {
+        method : 'GET',
+        signal : AbortSignal.timeout(30000),
+      });
+      dbg('Fetch selesai, status HTTP: ' + res.status);
+    } catch(fetchErr) {
+      dbg('Fetch ERROR: ' + fetchErr.name + ' — ' + fetchErr.message, '#f55');
+      throw fetchErr;
+    }
     const data = await res.json();
 
     if (data.ok && data.data?.token) {
@@ -4278,14 +4292,44 @@ async function syncPull(silent = false) {
 
   try {
     const encodedToken = encodeURIComponent(token);
+    const tokenPreview = token.substring(0,20) + '...';
     const url = API_URL + '?action=dashboard_summary&token=' + encodedToken;
-    const res  = await fetch(url, {
-      method : 'GET',
-      signal : AbortSignal.timeout(20000),
-    });
-    const data = await res.json();
+    
+    addSyncLog('⟳ Token: ' + tokenPreview);
+    addSyncLog('⟳ URL length: ' + url.length + ' chars');
+    addSyncLog('⟳ Menghubungi server...');
+    
+    let res;
+    try {
+      res = await fetch(url, {
+        method : 'GET',
+        signal : AbortSignal.timeout(30000),
+      });
+      addSyncLog('⟳ HTTP status: ' + res.status + ' ' + res.statusText);
+    } catch(fetchErr) {
+      addSyncLog('❌ Fetch error: ' + fetchErr.name + ' — ' + fetchErr.message);
+      throw fetchErr;
+    }
+    
+    addSyncLog('⟳ Membaca response body...');
+    let data;
+    try {
+      data = await res.json();
+      addSyncLog('⟳ Response ok: ' + data.ok + (data.error ? ' | error: ' + data.error : ''));
+    } catch(jsonErr) {
+      addSyncLog('❌ JSON parse error: ' + jsonErr.message);
+      throw jsonErr;
+    }
 
-    if (!data.ok) throw new Error(data.error || 'API error');
+    if (!data.ok) {
+      if (data.code === 401) {
+        addSyncLog('⚠️ Token expired — silakan login ulang');
+        setSyncBadge('error');
+        setTimeout(() => logout(), 2000);
+        return;
+      }
+      throw new Error(data.error || 'API error');
+    }
 
     const d = data.data || {};
 
@@ -4358,7 +4402,8 @@ async function syncPull(silent = false) {
     _syncStatus = 'ok';
     _lastSyncAt = new Date();
     _syncBadge++;
-    addSyncLog('✅ Sync berhasil — ' + _lastSyncAt.toLocaleTimeString('id-ID'));
+    addSyncLog('✅ Sync berhasil — ' + _lastSyncAt.toLocaleTimeString('id-ID')
+      + ' (' + d.calon?.length + ' calon, ' + d.pelanggan_aktif + ' aktif)');
     setSyncBadge('ok');
 
     // Re-render semua
@@ -4369,9 +4414,10 @@ async function syncPull(silent = false) {
 
   } catch(e) {
     _syncStatus = 'error';
-    addSyncLog('❌ Sync gagal: ' + e.message);
+    const errMsg = e.name === 'AbortError' ? 'Timeout (>20 detik)' : e.message;
+    addSyncLog('❌ Sync gagal: ' + errMsg);
     setSyncBadge('error');
-
+    updateSyncTopbar();
     // Fallback ke cache
     loadFromCache();
   }
@@ -4445,7 +4491,10 @@ function toggleSyncPanel() {
   const el = document.getElementById('syncPanel');
   if (!el) return;
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  if (el.style.display === 'block') renderSyncLog();
+  if (el.style.display === 'block') {
+    renderSyncLog();
+    updateSyncTopbar();
+  }
 }
 
 // ── Setup auto-sync ───────────────────────────────────────
