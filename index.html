@@ -2365,32 +2365,96 @@ document.addEventListener('DOMContentLoaded', () => {
   checkAuthAndInit();
 });
 
-// ── Global Dev Log ───────────────────────────────────────
+// ════════════════════════════════════════════════════════
+// GLOBAL DEV LOG — Flight Recorder PNS.NET
+// Mencatat SEMUA aktivitas: user action, network, response,
+// navigasi, error, status — segalanya.
+// ════════════════════════════════════════════════════════
 const _devLogs = [];
+let _devSeq = 0;
 
 function devLog(msg, level) {
-  // level: 'info' | 'ok' | 'warn' | 'err'
-  const ts  = new Date().toLocaleTimeString('id-ID');
-  const entry = { ts, msg: String(msg), level: level || 'info' };
+  // level: 'info'|'ok'|'warn'|'err'|'user'|'net'|'data'
+  _devSeq++;
+  const ts    = new Date().toLocaleTimeString('id-ID', {hour12:false});
+  const tsMs  = new Date().toLocaleTimeString('id-ID', {hour12:false,fractionalSecondDigits:1});
+  const entry = { seq:_devSeq, ts:tsMs, msg:String(msg), level:level||'info' };
   _devLogs.push(entry);
-  if (_devLogs.length > 200) _devLogs.shift();
+  if (_devLogs.length > 500) _devLogs.shift();
 
-  // Juga log ke console browser
-  const fn = level === 'err' ? console.error
-           : level === 'warn' ? console.warn : console.log;
-  fn('[PNS]', ts, msg);
-
-  // Update panel jika terbuka
+  const fn = level==='err' ? console.error : level==='warn' ? console.warn : console.log;
+  fn(`[PNS #${_devSeq}]`, tsMs, msg);
   _renderDevLog();
 }
 
+// Shortcut helpers
+const LOG = {
+  user : (msg) => devLog('👆 USER: '   + msg, 'user'),
+  nav  : (msg) => devLog('→ NAV: '     + msg, 'info'),
+  net  : (msg) => devLog('🌐 NET: '    + msg, 'net'),
+  send : (msg) => devLog('📤 KIRIM: '  + msg, 'net'),
+  recv : (msg) => devLog('📥 TERIMA: ' + msg, 'data'),
+  ok   : (msg) => devLog('✅ OK: '     + msg, 'ok'),
+  warn : (msg) => devLog('⚠️ WARN: '   + msg, 'warn'),
+  err  : (msg) => devLog('❌ ERR: '    + msg, 'err'),
+  data : (msg) => devLog('📊 DATA: '   + msg, 'data'),
+  sys  : (msg) => devLog('⚙️ SYS: '    + msg, 'info'),
+};
+
+// Intercept semua fetch secara global
+const _origFetch = window.fetch;
+window.fetch = async function(url, opts) {
+  const method  = (opts?.method || 'GET').toUpperCase();
+  const urlShort= String(url).replace(/https:\/\/script\.google\.com\/macros\/s\/[^\/]+\/exec/, 'API');
+  LOG.net(`${method} → ${urlShort.substring(0,120)}`);
+  const t0 = Date.now();
+  try {
+    const res    = await _origFetch.apply(this, arguments);
+    const ms     = Date.now() - t0;
+    const status = res.status;
+    const lvl    = status >= 400 ? 'err' : status >= 300 ? 'warn' : 'ok';
+    devLog(`📥 HTTP ${status} (${ms}ms) ← ${urlShort.substring(0,80)}`, lvl);
+    return res;
+  } catch(e) {
+    const ms = Date.now() - t0;
+    LOG.err(`FETCH GAGAL (${ms}ms): ${e.name} — ${e.message} ← ${urlShort.substring(0,60)}`);
+    throw e;
+  }
+};
+
+// Intercept klik tombol & tap global
+document.addEventListener('click', function(e) {
+  const el   = e.target.closest('button,a,[onclick],[data-fase],.nav-item,.bn-item,.chip,.panel-action,.btn');
+  if (!el) return;
+  const label = (el.textContent||'').trim().substring(0,50)
+              || el.id || el.className.split(' ')[0] || 'unknown';
+  const type  = el.tagName.toLowerCase();
+  LOG.user(`TAP [${type}] "${label}"`);
+}, true);
+
+// Intercept perubahan input penting
+document.addEventListener('change', function(e) {
+  const el = e.target;
+  if (el.type === 'range') {
+    LOG.user(`SLIDER "${el.id}" → ${el.value}`);
+  } else if (el.tagName === 'SELECT') {
+    LOG.user(`SELECT "${el.id}" → "${el.options[el.selectedIndex]?.text}"`);
+  }
+}, true);
+
 function _renderDevLog() {
   const body = document.getElementById('devLogBody');
-  if (!body) return;
+  if (!body || document.getElementById('devLogPanel')?.style.display === 'none') return;
+  const colorMap = {
+    user:'#f5a623', net:'#4af', data:'#adf', ok:'#4f4',
+    warn:'#fa0',    err:'#f55', info:'#0f0',
+  };
   body.innerHTML = _devLogs.slice().reverse().map(e =>
     `<div class="devlog-line">
-      <span class="devlog-ts">${e.ts}</span>
-      <span class="devlog-msg ${e.level}">${e.msg}</span>
+      <span class="devlog-ts">#${e.seq} ${e.ts}</span>
+      <span class="devlog-msg" style="color:${colorMap[e.level]||'#0f0'}">${
+        e.msg.replace(/</g,'&lt;')
+      }</span>
     </div>`
   ).join('');
 }
@@ -2400,27 +2464,29 @@ function toggleDevLog() {
   if (!panel) return;
   const isOpen = panel.style.display === 'flex';
   panel.style.display = isOpen ? 'none' : 'flex';
-  if (!isOpen) _renderDevLog();
+  if (!isOpen) { _renderDevLog(); LOG.sys('Dev log dibuka'); }
 }
 
 function clearDevLog() {
   _devLogs.length = 0;
+  _devSeq = 0;
   _renderDevLog();
 }
 
 function copyDevLog() {
-  const text = _devLogs.map(e => `[${e.ts}] [${e.level.toUpperCase()}] ${e.msg}`).join('\n');
-  navigator.clipboard.writeText(text)
-    .then(() => devLog('✓ Log berhasil disalin ke clipboard', 'ok'))
-    .catch(() => devLog('Gagal copy — salin manual dari panel', 'warn'));
+  const lines = _devLogs.map(e =>
+    `#${String(e.seq).padStart(3,'0')} [${e.ts}] [${e.level.toUpperCase().padEnd(4)}] ${e.msg}`
+  ).join('\n');
+  const header = `=== PNS.NET Dev Log — ${new Date().toLocaleString('id-ID')} ===\n`;
+  navigator.clipboard.writeText(header + lines)
+    .then(() => { LOG.ok('Log disalin ke clipboard (' + _devLogs.length + ' baris)'); })
+    .catch(() => { LOG.warn('Clipboard gagal — screenshot panel ini'); });
 }
 
-// Override dbg agar juga masuk devLog
-const _origDbg = typeof dbg === 'function' ? dbg : null;
+// Override dbg agar masuk devLog juga
 function dbg(msg, color) {
-  const level = color === '#f55' ? 'err' : 'info';
+  const level = color === '#f55' ? 'err' : color === '#fa0' ? 'warn' : 'info';
   devLog(msg, level);
-  // Update debug panel login jika ada
   const p = document.getElementById('debugPanel');
   if (!p) return;
   const line = document.createElement('div');
@@ -2429,6 +2495,10 @@ function dbg(msg, color) {
   p.appendChild(line);
   p.scrollTop = p.scrollHeight;
 }
+
+// Log info device & browser saat pertama kali
+LOG.sys('App dimuat — ' + navigator.userAgent.substring(0,60));
+LOG.sys('Online: ' + navigator.onLine + ' | ' + new Date().toLocaleString('id-ID'));
 
 // ── Debug logger visual ──────────────────────────────────
 function dbg(msg, color) {
@@ -2591,10 +2661,10 @@ async function doLogin() {
         permissions: d.permissions,
         login_at   : new Date().toISOString(),
       }));
-      devLog('✅ Login berhasil: ' + username, 'ok');
+      LOG.ok('Login berhasil: ' + username);
       showApp(JSON.parse(localStorage.getItem('pnsnet_user')));
     } else {
-      devLog('❌ Login gagal: ' + (data.error || 'unknown'), 'err');
+      LOG.err('Login ditolak: ' + (data.error||'unknown'));
       showLoginError(data.error || 'Username atau password salah');
       btn.disabled  = false;
       btn.innerHTML = '🔑 Masuk';
@@ -2789,7 +2859,7 @@ function closeSidebar() {
 
 // ── NAV ──────────────────────────────────────────────────
 function setPage(page) {
-  devLog('→ setPage: ' + page, 'info');
+  LOG.nav(page);
   closeSidebar();
   timerPause();
   ['pageContent','formCalonPage','listCalonPage','formPemasanganPage','modemPage']
@@ -2816,6 +2886,7 @@ function setPage(page) {
 
 function logout() {
   if (!confirm('Yakin ingin keluar?')) return;
+  LOG.user('LOGOUT — hapus token');
   localStorage.removeItem('pnsnet_token');
   localStorage.removeItem('pnsnet_user');
   // Reset form login
@@ -4414,7 +4485,8 @@ async function syncPull(silent = false) {
     const tokenPreview = token.substring(0,20) + '...';
     const url = API_URL + '?action=dashboard_summary&token=' + encodedToken;
     
-    devLog('syncPull dimulai, token: ' + tokenPreview, 'info');
+    LOG.sys('syncPull dimulai');
+  LOG.data('token: ' + tokenPreview);
   addSyncLog('⟳ Token: ' + tokenPreview);
     addSyncLog('⟳ URL length: ' + url.length + ' chars');
     addSyncLog('⟳ Menghubungi server...');
@@ -4522,7 +4594,7 @@ async function syncPull(silent = false) {
     _syncStatus = 'ok';
     _lastSyncAt = new Date();
     _syncBadge++;
-    devLog('✅ Sync berhasil: ' + d.calon?.length + ' calon, ' + d.pelanggan_aktif + ' aktif', 'ok');
+    LOG.ok('Sync selesai: ' + (d.calon?.length||0) + ' calon, ' + (d.pelanggan_aktif||0) + ' aktif, ' + (d.odp?.length||0) + ' ODP');
     addSyncLog('✅ Sync berhasil — ' + _lastSyncAt.toLocaleTimeString('id-ID')
       + ' (' + d.calon?.length + ' calon, ' + d.pelanggan_aktif + ' aktif)');
     setSyncBadge('ok');
@@ -4536,7 +4608,7 @@ async function syncPull(silent = false) {
   } catch(e) {
     _syncStatus = 'error';
     const errMsg = e.name === 'AbortError' ? 'Timeout (>20 detik)' : e.message;
-    devLog('❌ Sync error: ' + errMsg, 'err');
+    LOG.err('Sync gagal: ' + errMsg);
     addSyncLog('❌ Sync gagal: ' + errMsg);
     setSyncBadge('error');
     updateSyncTopbar();
@@ -4669,8 +4741,10 @@ function setSyncMode(mode) {
     _syncInterval  = setInterval(() => {
       if (navigator.onLine) syncPull(true);
     }, interval * 60 * 1000);
+    LOG.sys('Auto-sync aktif — interval ' + interval + ' menit');
     addSyncLog(`⚙️ Auto-sync aktif — setiap ${interval} menit`);
   } else {
+    LOG.sys('Mode sync: MANUAL');
     addSyncLog('⚙️ Mode manual — sync hanya saat tombol ditekan');
   }
 }
