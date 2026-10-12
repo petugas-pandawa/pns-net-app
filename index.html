@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.4.1">
+<meta name="app-version" content="2.4.2">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1326,7 +1326,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.4.1 (2026-10-12) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.4.2 (2026-10-12) · PNS.NET Offline-first PWA</div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -2503,9 +2503,9 @@ img{max-width:100%;display:block}
           <div style="font-size:12px;color:var(--text);flex:1">nama_ktp</div>
           <div style="font-size:11px;color:var(--text3)">Nama sesuai KTP</div>
         </div>
-        <div class="rekap-row">
-          <div style="font-size:12px;color:var(--text);flex:1">no_hp</div>
-          <div style="font-size:11px;color:var(--text3)">Nomor HP/WA</div>
+        <div class="rekap-row" style="background:var(--danger-soft)">
+          <div style="font-weight:700;font-size:12px;color:var(--danger);flex:1">no_hp *</div>
+          <div style="font-size:11px;color:var(--text3)">Wajib · Nomor HP/WA pelanggan</div>
         </div>
         <div class="rekap-row">
           <div style="font-size:12px;color:var(--text);flex:1">nik</div>
@@ -4443,13 +4443,13 @@ let _importData    = [];
 const PEL_PER_PAGE = 10;
 
 // Kolom wajib import
-const IMPORT_WAJIB = ['id_paket','tgl_aktif','username_pppoe'];
+const IMPORT_WAJIB = ['id_paket','tgl_aktif','username_pppoe','no_hp'];
 const IMPORT_COLS  = [
   { key:'id_paket',       label:'Paket',         wajib:true  },
   { key:'tgl_aktif',      label:'Tgl Aktif',      wajib:true  },
   { key:'username_pppoe', label:'Username PPPoE', wajib:true  },
   { key:'nama_ktp',       label:'Nama KTP',       wajib:false },
-  { key:'no_hp',          label:'No HP',          wajib:false },
+  { key:'no_hp',          label:'No HP / WA',     wajib:true  },
   { key:'nik',            label:'NIK',            wajib:false },
   { key:'id_desa',        label:'Desa',           wajib:false },
   { key:'alamat_detail',  label:'Alamat',         wajib:false },
