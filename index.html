@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.4.0">
+<meta name="app-version" content="2.4.1">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -857,10 +857,12 @@ img{max-width:100%;display:block}
 
 /* ── PEMBAYARAN ──────────────────────────────────────── */
 .bayar-tab{
-  flex:1;padding:8px 4px;border-radius:var(--radius-sm);
-  font-size:12px;font-weight:600;color:var(--text3);
+  flex:1;padding:7px 2px;border-radius:var(--radius-sm);
+  font-size:11px;font-weight:600;color:var(--text3);
   background:none;border:none;cursor:pointer;
   transition:all .15s;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  min-width:0;
 }
 .bayar-tab.active{
   background:var(--surface);color:var(--accent);
@@ -950,6 +952,9 @@ img{max-width:100%;display:block}
   font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;
   background:var(--success-soft);color:var(--success);
 }
+.pel-status-aktif   {background:var(--success-soft);color:var(--success);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.pel-status-istirahat{background:var(--warning-soft);color:var(--warning);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.pel-status-nonaktif {background:var(--danger-soft);color:var(--danger);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
 .pel-tgl{font-size:11px;color:var(--text3)}
 .pel-detail{
   border-top:1px solid var(--border);
@@ -1321,7 +1326,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.4.0 (2026-10-12) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.4.1 (2026-10-12) · PNS.NET Offline-first PWA</div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -2396,17 +2401,161 @@ img{max-width:100%;display:block}
 <div id="listPelangganPage" style="display:none">
 <div class="list-page">
 
-  <div class="list-toolbar">
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="pelSearch" placeholder="Cari nama, HP, lokasi..."
-        oninput="filterPelanggan()">
-    </div>
+  <!-- Tab: Daftar | Import -->
+  <div style="display:flex;gap:0;margin-bottom:16px;
+    background:var(--surface2);border-radius:var(--radius);padding:4px">
+    <button class="bayar-tab active" id="peltab_daftar"
+      onclick="setPelTab('daftar')">👤 Daftar Pelanggan</button>
+    <button class="bayar-tab" id="peltab_import"
+      onclick="setPelTab('import')">📥 Import Massal</button>
   </div>
 
-  <div class="list-stats" id="pelStats"></div>
-  <div class="calon-list" id="pelList"></div>
-  <div class="pagination" id="pelPagination"></div>
+  <!-- TAB: Daftar -->
+  <div id="pelTabDaftar">
+    <div class="list-toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="pelSearch" placeholder="Cari nama, HP, username..."
+          oninput="filterPelanggan()">
+      </div>
+    </div>
+    <div class="list-stats" id="pelStats"></div>
+    <div class="calon-list" id="pelList"></div>
+    <div class="pagination" id="pelPagination"></div>
+  </div>
+
+  <!-- TAB: Import Massal -->
+  <div id="pelTabImport" style="display:none">
+
+    <!-- Info model bisnis -->
+    <div style="background:var(--info-soft);border:1px solid var(--info);
+      border-radius:var(--radius-sm);padding:12px 14px;
+      font-size:12px;color:var(--info);margin-bottom:16px;
+      display:flex;gap:8px;align-items:flex-start">
+      <span style="flex-shrink:0;font-size:16px">ℹ️</span>
+      <div>
+        <div style="font-weight:700;margin-bottom:4px">Model Bisnis PNS.NET</div>
+        <div>Bayar = Aktif · Belum bayar = Nonaktif · Pelanggan boleh istirahat kapan saja tanpa denda. Status mengikuti pembayaran bulan berjalan.</div>
+      </div>
+    </div>
+
+    <!-- Langkah -->
+    <div class="form-card" style="margin-bottom:12px">
+      <div class="form-card-head">
+        <span style="font-size:18px">📋</span>
+        <div class="form-card-title">Panduan Import</div>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;
+            width:22px;height:22px;display:flex;align-items:center;
+            justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">1</span>
+          <div>Download template CSV → isi data pelanggan</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;
+            width:22px;height:22px;display:flex;align-items:center;
+            justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">2</span>
+          <div>Upload file → sistem validasi kolom wajib</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;
+            width:22px;height:22px;display:flex;align-items:center;
+            justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">3</span>
+          <div>Review preview → konfirmasi import</div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-secondary" style="flex:1"
+            onclick="downloadTemplatePelanggan()">
+            📥 Download Template CSV
+          </button>
+          <label class="btn btn-secondary" style="flex:1;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;gap:6px">
+            📤 Upload File
+            <input type="file" accept=".csv,.xlsx,.xls"
+              onchange="uploadImportPelanggan(this)" style="display:none">
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keterangan kolom -->
+    <div class="form-card" style="margin-bottom:12px">
+      <div class="form-card-head">
+        <span style="font-size:18px">🔑</span>
+        <div class="form-card-title">Kolom Template</div>
+      </div>
+      <div style="padding:0">
+        <div class="rekap-row" style="background:var(--danger-soft)">
+          <div style="font-weight:700;font-size:12px;color:var(--danger);flex:1">id_paket *</div>
+          <div style="font-size:11px;color:var(--text3)">Wajib · pk1/pk2/pk3/pk4</div>
+        </div>
+        <div class="rekap-row" style="background:var(--danger-soft)">
+          <div style="font-weight:700;font-size:12px;color:var(--danger);flex:1">tgl_aktif *</div>
+          <div style="font-size:11px;color:var(--text3)">Wajib · Format: YYYY-MM-DD</div>
+        </div>
+        <div class="rekap-row" style="background:var(--danger-soft)">
+          <div style="font-weight:700;font-size:12px;color:var(--danger);flex:1">username_pppoe *</div>
+          <div style="font-size:11px;color:var(--text3)">Wajib · Format: 0001budi.tambu@ogoamas</div>
+        </div>
+        <div class="rekap-row">
+          <div style="font-size:12px;color:var(--text);flex:1">nama_ktp</div>
+          <div style="font-size:11px;color:var(--text3)">Nama sesuai KTP</div>
+        </div>
+        <div class="rekap-row">
+          <div style="font-size:12px;color:var(--text);flex:1">no_hp</div>
+          <div style="font-size:11px;color:var(--text3)">Nomor HP/WA</div>
+        </div>
+        <div class="rekap-row">
+          <div style="font-size:12px;color:var(--text);flex:1">nik</div>
+          <div style="font-size:11px;color:var(--text3)">16 digit NIK</div>
+        </div>
+        <div class="rekap-row">
+          <div style="font-size:12px;color:var(--text);flex:1">id_desa</div>
+          <div style="font-size:11px;color:var(--text3)">Nama desa lokasi</div>
+        </div>
+        <div class="rekap-row">
+          <div style="font-size:12px;color:var(--text);flex:1">alamat_detail</div>
+          <div style="font-size:11px;color:var(--text3)">Alamat lengkap</div>
+        </div>
+        <div class="rekap-row">
+          <div style="font-size:12px;color:var(--text);flex:1">status</div>
+          <div style="font-size:11px;color:var(--text3)">AKTIF / ISTIRAHAT / NONAKTIF</div>
+        </div>
+        <div class="rekap-row" style="border-bottom:none">
+          <div style="font-size:12px;color:var(--text);flex:1">catatan</div>
+          <div style="font-size:11px;color:var(--text3)">Catatan opsional</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview import -->
+    <div id="importPreview" style="display:none">
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-head">
+          <div class="panel-title" id="importPreviewTitle">Preview Import</div>
+        </div>
+        <!-- Validasi summary -->
+        <div id="importValidasi" style="padding:10px 14px;
+          border-bottom:1px solid var(--border)"></div>
+        <!-- Tabel preview -->
+        <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+          <table id="importTable" style="width:100%;border-collapse:collapse;font-size:12px">
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="flex:1"
+          onclick="batalImport()">✕ Batal</button>
+        <button class="btn btn-primary" style="flex:1"
+          id="btnKonfirmasiImport" onclick="konfirmasiImport()">
+          ✅ Import <span id="importJumlah">0</span> Pelanggan
+        </button>
+      </div>
+    </div>
+
+  </div>
 
 </div>
 </div>
@@ -3255,9 +3404,16 @@ function setPage(page) {
     inventori:'Inventori',wilayah:'Wilayah',sdm:'Staf & Karyawan'
   };
   document.getElementById('pageTitle').textContent=titles[page]||page;
+  const pageNavMap = {
+    dashboard:'dashboard', pelanggan:'pelanggan', calon:'calon',
+    pemasangan:'pemasangan', topologi:'topologi', gangguan:'gangguan',
+    keuangan:'keuangan', inventori:'inventori', wilayah:'wilayah',
+    sdm:'staf', modem:'modem'
+  };
+  const navKey = pageNavMap[page] || page;
   document.querySelectorAll('.nav-item').forEach(el=>{
-    el.classList.toggle('active',el.textContent.trim().toLowerCase().includes(
-      page==='dashboard'?'dashboard':page));
+    const txt = el.textContent.trim().toLowerCase();
+    el.classList.toggle('active', txt.includes(navKey));
   });
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
 }
@@ -4275,34 +4431,69 @@ function closeWaModal() {
 // if (action === 'bayar_list_belum') { ... }
 
 // ════════════════════════════════════════════════════════
-// HALAMAN PELANGGAN AKTIF
+// HALAMAN PELANGGAN AKTIF + IMPORT MASSAL
 // ════════════════════════════════════════════════════════
 
 let pelangganData  = [];
 let pelSearch      = '';
 let pelPage        = 1;
 let pelExpandedId  = null;
+let _pelTab        = 'daftar';
+let _importData    = [];
 const PEL_PER_PAGE = 10;
 
+// Kolom wajib import
+const IMPORT_WAJIB = ['id_paket','tgl_aktif','username_pppoe'];
+const IMPORT_COLS  = [
+  { key:'id_paket',       label:'Paket',         wajib:true  },
+  { key:'tgl_aktif',      label:'Tgl Aktif',      wajib:true  },
+  { key:'username_pppoe', label:'Username PPPoE', wajib:true  },
+  { key:'nama_ktp',       label:'Nama KTP',       wajib:false },
+  { key:'no_hp',          label:'No HP',          wajib:false },
+  { key:'nik',            label:'NIK',            wajib:false },
+  { key:'id_desa',        label:'Desa',           wajib:false },
+  { key:'alamat_detail',  label:'Alamat',         wajib:false },
+  { key:'status',         label:'Status',         wajib:false },
+  { key:'catatan',        label:'Catatan',        wajib:false },
+];
+
 function openListPelanggan() {
-  ['pageContent','formCalonPage','listCalonPage','pembayaranPage','formPemasanganPage','modemPage']
+  ['pageContent','formCalonPage','listCalonPage','pembayaranPage',
+   'formPemasanganPage','modemPage']
     .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
   document.getElementById('listPelangganPage').style.display = 'block';
-  document.getElementById('pageTitle').textContent = 'Pelanggan Aktif';
+  document.getElementById('pageTitle').textContent = 'Pelanggan';
+  setPelTab('daftar');
   renderPelangganPage();
 }
 
+function setPelTab(tab) {
+  _pelTab = tab;
+  ['daftar','import'].forEach(t => {
+    document.getElementById('peltab_'+t).classList.toggle('active', t===tab);
+    const el = document.getElementById('pelTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if (el) el.style.display = t===tab ? 'block' : 'none';
+  });
+}
+
+// ── Render daftar pelanggan ───────────────────────────────
 function renderPelangganPage() {
   renderPelangganStats();
   renderPelangganList();
 }
 
 function renderPelangganStats() {
-  const total = pelangganData.length;
+  const total    = pelangganData.length;
+  const aktif    = pelangganData.filter(p => (p.status||'AKTIF') === 'AKTIF').length;
+  const istirahat= pelangganData.filter(p => p.status === 'ISTIRAHAT').length;
+  const nonaktif = pelangganData.filter(p => p.status === 'NONAKTIF').length;
   const el = document.getElementById('pelStats');
   if (!el) return;
   el.innerHTML = `
-    <div class="list-stat"><b>${total}</b> Total Aktif</div>
+    <div class="list-stat"><b>${total}</b> Total</div>
+    <div class="list-stat"><b style="color:var(--success)">${aktif}</b> Aktif</div>
+    ${istirahat ? `<div class="list-stat"><b style="color:var(--warning)">${istirahat}</b> Istirahat</div>` : ''}
+    ${nonaktif  ? `<div class="list-stat"><b style="color:var(--danger)">${nonaktif}</b> Nonaktif</div>`  : ''}
   `;
 }
 
@@ -4317,6 +4508,7 @@ function getPelFiltered() {
   return pelangganData.filter(p =>
     String(p.nama_ktp||'').toLowerCase().includes(pelSearch) ||
     String(p.no_hp||'').includes(pelSearch) ||
+    String(p.username_pppoe||'').toLowerCase().includes(pelSearch) ||
     String(p.nama_desa||p.id_desa||'').toLowerCase().includes(pelSearch)
   );
 }
@@ -4326,57 +4518,65 @@ function renderPelangganList() {
   const total     = filtered.length;
   const totalPage = Math.ceil(total / PEL_PER_PAGE) || 1;
   if (pelPage > totalPage) pelPage = totalPage;
-
-  const start = (pelPage - 1) * PEL_PER_PAGE;
-  const items = filtered.slice(start, start + PEL_PER_PAGE);
+  const start = (pelPage-1)*PEL_PER_PAGE;
+  const items = filtered.slice(start, start+PEL_PER_PAGE);
   const container = document.getElementById('pelList');
   if (!container) return;
 
-  if (items.length === 0) {
+  if (!items.length) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">👤</div>
-        <div class="empty-title">${pelangganData.length === 0
+        <div class="empty-title">${pelangganData.length===0
           ? 'Belum ada pelanggan aktif'
           : 'Tidak ada hasil pencarian'}</div>
-        <div class="empty-sub">${pelangganData.length === 0
-          ? 'Data akan muncul setelah pemasangan selesai dan sync'
+        <div class="empty-sub">${pelangganData.length===0
+          ? 'Gunakan tab Import untuk menambah data massal, atau pemasangan selesai otomatis menambah pelanggan'
           : 'Coba kata kunci lain'}</div>
       </div>`;
     document.getElementById('pelPagination').innerHTML = '';
     return;
   }
-
   container.innerHTML = items.map(p => renderPelangganCard(p)).join('');
   renderPelPagination(total, totalPage);
 }
 
 function renderPelangganCard(p) {
-  const nama    = String(p.nama_ktp || '—');
-  const noHp    = String(p.no_hp   || '');
-  const desa    = String(p.nama_desa || p.id_desa || '—');
-  const paket   = String(p.id_paket  || '—');
-  const tglAktif= p.tgl_aktif || p.created_at || '';
-  const idPel   = p.id_pelanggan || p.id_calon || '';
-  const initials= nama.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
-  const tglStr  = tglAktif ? new Date(tglAktif).toLocaleDateString('id-ID',
+  const nama     = String(p.nama_ktp || '—');
+  const noHp     = String(p.no_hp    || '');
+  const desa     = String(p.nama_desa || p.id_desa || '—');
+  const paket    = String(p.id_paket  || '—');
+  const username = String(p.username_pppoe || '');
+  const tglAktif = p.tgl_aktif || p.created_at || '';
+  const status   = p.status || 'AKTIF';
+  const idPel    = p.id_pelanggan || p.id_calon || '';
+  const initials = nama.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+  const tglStr   = tglAktif ? new Date(tglAktif).toLocaleDateString('id-ID',
     {day:'numeric',month:'short',year:'numeric'}) : '—';
-  const isOpen  = pelExpandedId === idPel;
-  const waNum   = noHp.replace(/[^0-9]/g,'').replace(/^0/,'62');
+  const isOpen   = pelExpandedId === idPel;
+  const waNum    = noHp.replace(/[^0-9]/g,'').replace(/^0/,'62');
+
+  const statusCls = status==='AKTIF' ? 'pel-status-aktif'
+    : status==='ISTIRAHAT' ? 'pel-status-istirahat' : 'pel-status-nonaktif';
+  const statusDot = status==='AKTIF' ? '●' : status==='ISTIRAHAT' ? '⏸' : '○';
 
   return `
   <div class="pel-card" id="pelcard_${idPel}">
     <div class="pel-head" onclick="togglePelCard('${idPel}')">
-      <div class="pel-avatar">${initials}</div>
+      <div class="pel-avatar" style="${status!=='AKTIF'?'opacity:.6':''}">
+        ${initials}
+      </div>
       <div class="pel-main">
         <div class="pel-nama">${nama}</div>
         <div class="pel-meta">
           ${noHp ? `<span>📱 ${noHp}</span>` : ''}
           <span>📍 ${desa}</span>
+          ${username ? `<span>🌐 ${username}</span>` : ''}
         </div>
       </div>
       <div class="pel-right">
         <span class="pel-paket">${paket}</span>
+        <span class="${statusCls}">${statusDot} ${status}</span>
         <span class="pel-tgl">Aktif ${tglStr}</span>
       </div>
     </div>
@@ -4389,10 +4589,8 @@ function renderPelangganCard(p) {
         <div class="detail-item">
           <div class="detail-label">NO. HP / WA</div>
           <div class="detail-val">
-            <a href="https://wa.me/${waNum}" onclick="event.stopPropagation()"
-              style="color:var(--success);font-weight:600">
-              📱 ${noHp || '—'}
-            </a>
+            ${noHp ? `<a href="https://wa.me/${waNum}" onclick="event.stopPropagation()"
+              style="color:var(--success);font-weight:600">📱 ${noHp}</a>` : '—'}
           </div>
         </div>
         <div class="detail-item">
@@ -4404,13 +4602,26 @@ function renderPelangganCard(p) {
           <div class="detail-val">${paket}</div>
         </div>
         <div class="detail-item">
+          <div class="detail-label">USERNAME PPPoE</div>
+          <div class="detail-val" style="font-family:monospace;font-size:11px">
+            ${username || '—'}
+          </div>
+        </div>
+        <div class="detail-item">
           <div class="detail-label">TGL AKTIF</div>
           <div class="detail-val">${tglStr}</div>
         </div>
         <div class="detail-item">
           <div class="detail-label">STATUS</div>
-          <div class="detail-val" style="color:var(--success);font-weight:600">● AKTIF</div>
+          <div class="detail-val">
+            <span class="${statusCls}">${statusDot} ${status}</span>
+          </div>
         </div>
+        ${p.catatan ? `
+        <div class="detail-item" style="grid-column:1/-1">
+          <div class="detail-label">CATATAN</div>
+          <div class="detail-val">${p.catatan}</div>
+        </div>` : ''}
       </div>
       <div class="pel-actions">
         ${noHp ? `
@@ -4418,13 +4629,17 @@ function renderPelangganCard(p) {
           onclick="event.stopPropagation()" target="_blank">
           <button class="btn-sm btn-sm-secondary">💬 WhatsApp</button>
         </a>` : ''}
-        <button class="btn-sm btn-sm-secondary"
-          onclick="event.stopPropagation();showToast('🚧 Laporan gangguan — segera hadir')">
-          ⚠️ Laporkan Gangguan
+        <button class="btn-sm ${status==='AKTIF'?'btn-sm-secondary':'btn-sm-primary'}"
+          onclick="event.stopPropagation();ubahStatusPel('${idPel}','${status}')">
+          ${status==='AKTIF' ? '⏸ Set Istirahat' : status==='ISTIRAHAT' ? '▶ Aktifkan Kembali' : '▶ Aktifkan'}
         </button>
         <button class="btn-sm btn-sm-secondary"
-          onclick="event.stopPropagation();showToast('🚧 Riwayat pembayaran — segera hadir')">
-          💰 Riwayat Bayar
+          onclick="event.stopPropagation();setPage('keuangan');setTimeout(()=>{cariPelangganBayar('${nama}')},300)">
+          💰 Catat Bayar
+        </button>
+        <button class="btn-sm btn-sm-secondary"
+          onclick="event.stopPropagation();showToast('🚧 Riwayat — segera hadir')">
+          📋 Riwayat
         </button>
       </div>
     </div>
@@ -4432,19 +4647,40 @@ function renderPelangganCard(p) {
 }
 
 function togglePelCard(id) {
-  pelExpandedId = pelExpandedId === id ? null : id;
+  pelExpandedId = pelExpandedId===id ? null : id;
   renderPelangganList();
   if (pelExpandedId) {
-    setTimeout(() => {
-      const el = document.getElementById('pelcard_' + id);
-      if (el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
-    }, 100);
+    setTimeout(()=>{
+      const el=document.getElementById('pelcard_'+id);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+    },100);
+  }
+}
+
+function ubahStatusPel(id, statusSaat) {
+  const statusBaru = statusSaat==='AKTIF' ? 'ISTIRAHAT'
+    : statusSaat==='ISTIRAHAT' ? 'AKTIF' : 'AKTIF';
+  const msg = statusBaru==='ISTIRAHAT'
+    ? 'Set pelanggan ke mode ISTIRAHAT? Layanan akan nonaktif sampai bayar lagi.'
+    : 'Aktifkan kembali pelanggan ini?';
+  if (!confirm(msg)) return;
+
+  const pel = pelangganData.find(p => (p.id_pelanggan||p.id_calon)===id);
+  if (pel) {
+    pel.status = statusBaru;
+    renderPelangganPage();
+    showToast('✅ Status diubah ke ' + statusBaru);
+    // Kirim ke API (background)
+    const token = localStorage.getItem('pnsnet_token')||'';
+    fetch(API_URL + '?action=pelanggan_status&token=' + encodeURIComponent(token)
+      + '&id=' + id + '&status=' + statusBaru)
+      .catch(()=>{});
   }
 }
 
 function renderPelPagination(total, totalPage) {
   const el = document.getElementById('pelPagination');
-  if (!el || totalPage <= 1) { if(el) el.innerHTML=''; return; }
+  if (!el||totalPage<=1) { if(el) el.innerHTML=''; return; }
   let html = `<button class="pg-btn" onclick="goPagePel(${pelPage-1})" ${pelPage<=1?'disabled':''}>‹</button>`;
   for (let i=1;i<=totalPage;i++)
     html += `<button class="pg-btn ${i===pelPage?'active':''}" onclick="goPagePel(${i})">${i}</button>`;
@@ -4453,10 +4689,196 @@ function renderPelPagination(total, totalPage) {
   el.innerHTML = html;
 }
 
-function goPagePel(p) {
-  pelPage = p;
-  renderPelangganList();
+function goPagePel(p) { pelPage=p; renderPelangganList(); }
+
+// ── Import Massal ─────────────────────────────────────────
+function downloadTemplatePelanggan() {
+  const headers = IMPORT_COLS.map(c => c.key).join(',');
+  const contoh  = 'pk2,2026-10-01,0001budi.tambu@ogoamas,Budi Santoso,08123456789,3401234567890001,Tambu,Depan masjid,AKTIF,Pelanggan lama';
+  const csv = headers + '\n' + contoh + '\n';
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'template_import_pelanggan.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Template diunduh — kolom merah wajib diisi');
 }
+
+async function uploadImportPelanggan(input) {
+  const file = input.files[0]; if (!file) return;
+  input.value = '';
+  showToast('⟳ Membaca file...');
+
+  try {
+    const text  = await file.text();
+    const lines = text.trim().split('\n');
+    const hdr   = lines[0].split(',').map(h => h.trim().replace(/"/g,'').toLowerCase());
+
+    // Cek kolom wajib
+    const missing = IMPORT_WAJIB.filter(k => !hdr.includes(k));
+    if (missing.length) {
+      showToast('❌ Kolom wajib tidak ada: ' + missing.join(', '));
+      return;
+    }
+
+    const rows = lines.slice(1).map(line => {
+      const vals = line.split(',');
+      const obj  = {};
+      hdr.forEach((h,i) => { obj[h] = (vals[i]||'').trim().replace(/^"|"$/g,''); });
+      return obj;
+    }).filter(r => r.id_paket || r.username_pppoe);
+
+    _importData = rows;
+    tampilkanPreviewImport(rows, hdr);
+  } catch(e) {
+    showToast('❌ Gagal baca file: ' + e.message);
+  }
+}
+
+function tampilkanPreviewImport(rows, hdr) {
+  const preview = document.getElementById('importPreview');
+  preview.style.display = 'block';
+  document.getElementById('importPreviewTitle').textContent =
+    'Preview Import — ' + rows.length + ' baris';
+  document.getElementById('importJumlah').textContent = rows.length;
+
+  // Validasi per baris
+  let valid = 0, invalid = 0;
+  const validasiRows = rows.map(r => {
+    const errors = IMPORT_WAJIB.filter(k => !r[k] || r[k].trim()==='');
+    if (!errors.length) valid++; else invalid++;
+    return { ...r, _errors: errors };
+  });
+
+  // Summary validasi
+  document.getElementById('importValidasi').innerHTML = `
+    <div style="display:flex;gap:12px;font-size:12px">
+      <span style="color:var(--success);font-weight:600">✅ ${valid} valid</span>
+      ${invalid ? `<span style="color:var(--danger);font-weight:600">❌ ${invalid} perlu diperbaiki</span>` : ''}
+    </div>
+    ${invalid ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">
+      Baris merah: kolom wajib (id_paket, tgl_aktif, username_pppoe) belum diisi
+    </div>` : ''}
+  `;
+
+  // Tabel preview
+  const colsToShow = IMPORT_COLS.filter(c => hdr.includes(c.key));
+  const tbl = document.getElementById('importTable');
+  tbl.innerHTML = `
+    <thead>
+      <tr style="background:var(--surface2)">
+        <th style="padding:6px 10px;font-size:11px;text-align:left;
+          border-bottom:1px solid var(--border)">#</th>
+        ${colsToShow.map(c => `
+          <th style="padding:6px 10px;font-size:11px;text-align:left;
+            border-bottom:1px solid var(--border);
+            color:${c.wajib?'var(--danger)':'var(--text2)'};
+            white-space:nowrap">
+            ${c.label}${c.wajib?' *':''}
+          </th>`).join('')}
+        <th style="padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border)">
+          Status
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      ${validasiRows.slice(0,20).map((r,i) => `
+        <tr style="background:${r._errors.length?'var(--danger-soft)':''}">
+          <td style="padding:5px 10px;font-size:11px;color:var(--text3);
+            border-bottom:1px solid var(--border)">${i+1}</td>
+          ${colsToShow.map(c => `
+            <td style="padding:5px 10px;font-size:11px;
+              border-bottom:1px solid var(--border);
+              color:${r._errors.includes(c.key)?'var(--danger)':'var(--text)'};
+              font-weight:${c.wajib?'600':'400'};
+              max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${r[c.key] || (r._errors.includes(c.key) ? '⚠️ WAJIB' : '—')}
+            </td>`).join('')}
+          <td style="padding:5px 10px;font-size:10px;border-bottom:1px solid var(--border)">
+            ${r._errors.length
+              ? '<span style="color:var(--danger)">❌ Error</span>'
+              : '<span style="color:var(--success)">✅ OK</span>'}
+          </td>
+        </tr>
+      `).join('')}
+      ${validasiRows.length > 20 ? `
+        <tr><td colspan="${colsToShow.length+2}"
+          style="padding:8px 10px;font-size:11px;color:var(--text3);text-align:center">
+          ... dan ${validasiRows.length-20} baris lainnya
+        </td></tr>` : ''}
+    </tbody>
+  `;
+
+  // Disable tombol jika ada error
+  document.getElementById('btnKonfirmasiImport').disabled = invalid > 0;
+  if (invalid > 0) {
+    document.getElementById('btnKonfirmasiImport').textContent =
+      '❌ Perbaiki ' + invalid + ' baris terlebih dahulu';
+  }
+
+  preview.scrollIntoView({behavior:'smooth'});
+}
+
+function batalImport() {
+  _importData = [];
+  document.getElementById('importPreview').style.display = 'none';
+}
+
+async function konfirmasiImport() {
+  if (!_importData.length) return;
+  const btn = document.getElementById('btnKonfirmasiImport');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .6s linear infinite;display:inline-block">⟳</span> Mengimport...';
+
+  const token = localStorage.getItem('pnsnet_token') || '';
+  const rowsEncoded = encodeURIComponent(JSON.stringify(_importData));
+
+  try {
+    const res  = await fetch(API_URL +
+      '?action=pelanggan_import&token=' + encodeURIComponent(token) +
+      '&rows=' + rowsEncoded, {
+      signal: AbortSignal.timeout(60000)
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      const d = data.data;
+      showToast('✅ Import selesai: ' + d.berhasil + ' berhasil' +
+        (d.gagal ? ', ' + d.gagal + ' gagal' : ''));
+      batalImport();
+      // Refresh data pelanggan
+      setTimeout(() => syncPull(false), 500);
+      setPelTab('daftar');
+    } else {
+      throw new Error(data.error || 'Gagal import');
+    }
+  } catch(e) {
+    // Simpan lokal sebagai fallback
+    _importData.forEach(row => {
+      pelangganData.push({
+        id_pelanggan   : 'imp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        nama_ktp       : row.nama_ktp       || '',
+        no_hp          : String(row.no_hp   || ''),
+        id_desa        : row.id_desa        || '',
+        nama_desa      : row.id_desa        || '',
+        id_paket       : row.id_paket       || '',
+        username_pppoe : row.username_pppoe || '',
+        tgl_aktif      : row.tgl_aktif      || '',
+        status         : row.status         || 'AKTIF',
+        catatan        : row.catatan        || '',
+        _local         : true,
+      });
+    });
+    renderPelangganPage();
+    showToast('⚠️ Disimpan lokal (' + _importData.length + ' data) — akan sync saat online');
+    batalImport();
+    setPelTab('daftar');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// [DIPINDAH KE ATAS — lihat openListPelanggan di atas]
+// ════════════════════════════════════════════════════════
 
 // ════════════════════════════════════════════════════════
 // FORM PEMASANGAN
