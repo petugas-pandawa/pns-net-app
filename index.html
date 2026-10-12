@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.2.1">
+<meta name="app-version" content="2.2.3">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1217,7 +1217,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.2.1 (2026-10-12) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.2.3 (2026-10-12) · PNS.NET Offline-first PWA</div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -4482,7 +4482,10 @@ async function syncPull(silent = false) {
   }
 
   _syncStatus = 'syncing';
-  if (!silent) setSyncBadge('syncing');
+  LOG.sys('syncPull: status set ke syncing');
+  try { if (!silent) setSyncBadge('syncing'); }
+  catch(badgeErr) { LOG.warn('setSyncBadge error: ' + badgeErr.message); }
+  LOG.sys('syncPull: setSyncBadge selesai, masuk try block');
 
   try {
     LOG.sys('syncPull: masuk try block');
@@ -4685,13 +4688,20 @@ function renderSyncLog() {
 }
 
 function setSyncBadge(status) {
-  const el = document.getElementById('syncStatusDot');
-  if (!el) return;
-  el.className = 'sync-dot sync-' + status;
-  el.title = status === 'syncing' ? 'Menyinkronkan...'
-           : status === 'ok'      ? 'Tersinkron'
-           : status === 'error'   ? 'Gagal sync'
-           : 'Sync idle';
+  try {
+    const el = document.getElementById('syncStatusDot');
+    if (el) {
+      el.className = 'sync-dot sync-' + status;
+      el.title = status === 'syncing' ? 'Menyinkronkan...'
+               : status === 'ok'      ? 'Tersinkron'
+               : status === 'error'   ? 'Gagal sync'
+               : 'Sync idle';
+    }
+    const el2 = document.getElementById('syncStatusDot2');
+    if (el2) el2.className = 'sync-dot sync-' + status;
+  } catch(e) {
+    console.warn('setSyncBadge error:', e.message);
+  }
 }
 
 function updateSyncTopbar() {
@@ -4807,13 +4817,7 @@ document.addEventListener('click', e => {
   }
 });
 
-// Update badge sync dot ke-2 (di dalam panel)
-const _origSetSyncBadge = setSyncBadge;
-function setSyncBadge(status) {
-  _origSetSyncBadge(status);
-  const el2 = document.getElementById('syncStatusDot2');
-  if (el2) el2.className = 'sync-dot sync-' + status;
-}
+// Badge sync dot ke-2 diupdate langsung di fungsi setSyncBadge di atas
 
 // ── SYNC ─────────────────────────────────────────────────────────
 function doSync(btn) {
