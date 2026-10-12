@@ -2,8 +2,8 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.1.0">
-<meta name="app-build" content="2026-10-10">
+<meta name="app-version" content="2.2.0">
+<meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
 // Force unregister semua Service Worker dan hapus semua cache
@@ -1217,7 +1217,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.1.0 (2026-10-10) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.2.0 (2026-10-12) · PNS.NET Offline-first PWA</div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -2329,6 +2329,8 @@ img{max-width:100%;display:block}
 
 <script>
 // ── DATA DEMO ──────────────────────────────────────────────
+// ── API ──────────────────────────────────────────────────────
+const API_URL = 'https://script.google.com/macros/s/AKfycbyQZHQH5WLDyAiGOxz7NEbbhGXMB4fP4ANkJTN9qJjNjv4Y2xQmZRqXR1tPwvEgTnP1/exec';
 // Definisi kartu — value diupdate dari API saat sync
 let ALL_CARDS = [
   { id:'pelanggan_aktif',  icon:'👤', label:'Pelanggan Aktif',     value:'—', delta:'', type:'neu', accent:'#2A6FD4', soft:'#D6E6FA' },
@@ -2507,21 +2509,7 @@ function dbg(msg, color) {
 LOG.sys('App dimuat — ' + navigator.userAgent.substring(0,60));
 LOG.sys('Online: ' + navigator.onLine + ' | ' + new Date().toLocaleString('id-ID'));
 
-// ── Debug logger visual ──────────────────────────────────
-function dbg(msg, color) {
-  const p = document.getElementById('debugPanel');
-  if (!p) return;
-  const line = document.createElement('div');
-  line.style.color = color || '#0f0';
-  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-  p.appendChild(line);
-  p.scrollTop = p.scrollHeight;
-  console.log(msg);
-}
-window.onerror = function(msg, src, line) {
-  dbg('ERROR: ' + msg + ' (line ' + line + ')', '#f55');
-  return false;
-};
+// ── Debug logger (handled by devLog above) ──────────
 
 function checkAuthAndInit() {
   dbg('checkAuthAndInit dipanggil');
@@ -3800,7 +3788,7 @@ function cancelPemasangan(){
 // FORM CALON PELANGGAN
 // ════════════════════════════════════════════════════════
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbyQZHQH5WLDyAiGOxz7NEbbhGXMB4fP4ANkJTN9qJjNjv4Y2xQmZRqXR1tPwvEgTnP1/exec';
+// API_URL dipindah ke atas
 
 const PAKET_LIST = [
   { id:'pk1', speed:'5 Mbps',  price:'Rp175.000/bln', devices:'4 perangkat' },
