@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.2.3">
+<meta name="app-version" content="2.2.4">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1217,7 +1217,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.2.3 (2026-10-12) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.2.4 (2026-10-12) · PNS.NET Offline-first PWA</div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -3075,7 +3075,7 @@ function renderCalonCard(c) {
       <div class="calon-main">
         <div class="calon-nama">${c.nama_ktp}</div>
         <div class="calon-meta">
-          <span>📱 ${c.no_hp}</span>
+          <span>📱 ${c.no_hp||'—'}</span>
           <span class="calon-dot">·</span>
           <span>📍 ${c.nama_desa}${c.nama_sub_wilayah ? ', '+c.nama_sub_wilayah : ''}</span>
           <span class="calon-dot">·</span>
@@ -3097,10 +3097,10 @@ function renderCalonCard(c) {
         <div class="detail-item">
           <div class="detail-label">NO. HP / WA</div>
           <div class="detail-val">
-            <a href="https://wa.me/${c.no_hp.replace(/[^0-9]/g,'').replace(/^0/,'62')}"
+            <a href="https://wa.me/${String(c.no_hp||'').replace(/[^0-9]/g,'').replace(/^0/,'62')}"
               onclick="event.stopPropagation()"
               style="color:var(--success);font-weight:600">
-              📱 ${c.no_hp}
+              📱 ${c.no_hp||'—'}
             </a>
           </div>
         </div>
@@ -3164,7 +3164,7 @@ function renderCalonCard(c) {
           onclick="editCalon('${c.id}',event)">
           ✏️ Edit Data
         </button>
-        <a href="https://wa.me/${c.no_hp.replace(/[^0-9]/g,'').replace(/^0/,'62')}?text=Halo%20${encodeURIComponent(c.nama_ktp)}%2C%20kami%20dari%20PNS.NET..."
+        <a href="https://wa.me/${String(c.no_hp||'').replace(/[^0-9]/g,'').replace(/^0/,'62')}?text=Halo%20${encodeURIComponent(c.nama_ktp)}%2C%20kami%20dari%20PNS.NET..."
           onclick="event.stopPropagation()"
           target="_blank">
           <button class="btn-sm btn-sm-secondary">💬 WhatsApp</button>
@@ -4596,7 +4596,28 @@ async function syncPull(silent = false) {
 
     // ── Update daftar calon ─────────────────────────────
     if (Array.isArray(d.calon) && d.calon.length > 0) {
-      calonData = d.calon;
+      // Pastikan field string selalu string (API kadang return angka)
+      calonData = d.calon.map(cal => ({
+        ...cal,
+        no_hp          : String(cal.no_hp          || ''),
+        nama_ktp       : String(cal.nama_ktp        || ''),
+        id_desa        : String(cal.id_desa         || ''),
+        id_sub_wilayah : String(cal.id_sub_wilayah  || ''),
+        alamat_detail  : String(cal.alamat_detail   || ''),
+        catatan        : String(cal.catatan         || ''),
+        id_status_proses: String(cal.id_status_proses || 'BARU'),
+        // Tambah field yang dibutuhkan renderCalonCard
+        nama_desa      : String(cal.id_desa         || ''),
+        nama_kec       : '',
+        nama_kab       : '',
+        nama_sub_wilayah: String(cal.id_sub_wilayah || ''),
+        paket          : String(cal.id_paket        || ''),
+        harga          : '',
+        jenis_pasang   : '',
+        sumber         : String(cal.id_sumber       || ''),
+        foto_ktp       : !!cal.url_foto_ktp,
+        id             : cal.id_calon,
+      }));
       renderCalonPage();
     }
 
