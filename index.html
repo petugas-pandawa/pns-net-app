@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.3.0">
+<meta name="app-version" content="2.4.0">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -855,6 +855,70 @@ img{max-width:100%;display:block}
 .pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .pg-btn:disabled{opacity:.35;pointer-events:none}
 
+/* ── PEMBAYARAN ──────────────────────────────────────── */
+.bayar-tab{
+  flex:1;padding:8px 4px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:600;color:var(--text3);
+  background:none;border:none;cursor:pointer;
+  transition:all .15s;text-align:center;
+}
+.bayar-tab.active{
+  background:var(--surface);color:var(--accent);
+  box-shadow:0 1px 4px rgba(0,0,0,.1);
+}
+.bayar-metode{
+  flex:1;padding:10px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--border);background:var(--surface2);
+  color:var(--text2);font-size:13px;font-weight:600;
+  cursor:pointer;text-align:center;transition:all .15s;
+}
+.bayar-metode.active{
+  border-color:var(--accent);background:var(--accent-soft);color:var(--accent);
+}
+.konfirmasi-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;
+  margin-bottom:10px;
+}
+.konfirmasi-card-head{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+}
+.konfirmasi-nama{font-size:14px;font-weight:700;color:var(--text)}
+.konfirmasi-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.konfirmasi-nominal{
+  font-size:18px;font-weight:700;color:var(--accent);margin-bottom:4px;
+}
+.konfirmasi-actions{display:flex;gap:8px}
+.btn-konfirmasi{
+  flex:1;padding:8px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:700;cursor:pointer;border:none;
+  font-family:inherit;transition:all .15s;
+}
+.btn-konfirmasi-ok{background:var(--success);color:#fff}
+.btn-konfirmasi-ok:hover{filter:brightness(1.1)}
+.btn-konfirmasi-tolak{background:var(--danger-soft);color:var(--danger)}
+.btn-konfirmasi-tolak:hover{background:var(--danger);color:#fff}
+.rekap-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  font-size:12px;
+}
+.rekap-row:last-child{border-bottom:none}
+.rekap-status{
+  padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
+  white-space:nowrap;
+}
+.rekap-lunas{background:var(--success-soft);color:var(--success)}
+.rekap-pending{background:var(--warning-soft);color:var(--warning)}
+.rekap-tolak{background:var(--danger-soft);color:var(--danger)}
+.belum-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:12px 14px;
+  margin-bottom:8px;display:flex;align-items:center;gap:12px;
+}
+.belum-nama{font-size:13px;font-weight:600;color:var(--text);flex:1}
+.belum-nominal{font-size:13px;font-weight:700;color:var(--accent)}
+
 /* ── PELANGGAN AKTIF ────────────────────────────────── */
 .pel-card{
   background:var(--surface);border:1px solid var(--border);
@@ -1257,7 +1321,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.3.0 (2026-10-12) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.4.0 (2026-10-12) · PNS.NET Offline-first PWA</div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -2055,6 +2119,284 @@ img{max-width:100%;display:block}
   <div class="pagination" id="calonPagination"></div>
 
 </div>
+</div>
+
+<!-- ── HALAMAN PEMBAYARAN ───────────────────────────────── -->
+<div id="pembayaranPage" style="display:none">
+<div class="list-page">
+
+  <!-- Tab bar -->
+  <div style="display:flex;gap:0;margin-bottom:16px;
+    background:var(--surface2);border-radius:var(--radius);padding:4px">
+    <button class="bayar-tab active" id="tab_terima"
+      onclick="setBayarTab('terima')">💰 Terima</button>
+    <button class="bayar-tab" id="tab_konfirmasi"
+      onclick="setBayarTab('konfirmasi')">✅ Konfirmasi</button>
+    <button class="bayar-tab" id="tab_rekap"
+      onclick="setBayarTab('rekap')">📊 Rekap</button>
+    <button class="bayar-tab" id="tab_belum"
+      onclick="setBayarTab('belum')">📋 Belum Bayar</button>
+  </div>
+
+  <!-- TAB: Terima Pembayaran -->
+  <div id="bayarTabTerima">
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">💰</span>
+        <div class="form-card-title">Terima Pembayaran</div>
+      </div>
+      <div class="form-card-body">
+
+        <!-- Cari pelanggan -->
+        <div class="field">
+          <label>Pelanggan<span>*</span></label>
+          <div style="position:relative">
+            <input type="text" id="bayar_cariPel"
+              placeholder="Ketik nama atau nomor HP..."
+              oninput="cariPelangganBayar(this.value)"
+              autocomplete="off">
+            <div id="bayar_dropdownPel" style="display:none;position:absolute;
+              top:100%;left:0;right:0;z-index:100;
+              background:var(--surface);border:1px solid var(--border);
+              border-radius:var(--radius-sm);box-shadow:var(--shadow-md);
+              max-height:180px;overflow-y:auto"></div>
+          </div>
+        </div>
+
+        <!-- Info pelanggan terpilih -->
+        <div id="bayar_infoPel" style="display:none;
+          background:var(--success-soft);border:1px solid var(--success);
+          border-radius:var(--radius-sm);padding:10px 14px;
+          font-size:12px;margin-bottom:4px">
+          <div style="font-weight:700;color:var(--text)" id="bayar_namaPel">—</div>
+          <div style="color:var(--text3);margin-top:2px" id="bayar_infoPelSub">—</div>
+        </div>
+
+        <!-- Detail pembayaran -->
+        <div class="field-row">
+          <div class="field">
+            <label>Nominal (Rp)<span>*</span></label>
+            <input type="number" id="bayar_nominal"
+              placeholder="230000" oninput="updateBayarPreview()">
+          </div>
+          <div class="field">
+            <label>Bulan Tagihan<span>*</span></label>
+            <input type="month" id="bayar_bulan">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Tanggal Transaksi<span>*</span></label>
+          <input type="date" id="bayar_tgl">
+        </div>
+
+        <div class="field">
+          <label>Metode Pembayaran<span>*</span></label>
+          <div style="display:flex;gap:8px">
+            <div class="bayar-metode active" id="met_CASH"
+              onclick="setBayarMetode('CASH')">
+              💵 Cash
+            </div>
+            <div class="bayar-metode" id="met_TRANSFER"
+              onclick="setBayarMetode('TRANSFER')">
+              🏦 Transfer
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload bukti (Transfer) -->
+        <div id="bayar_buktWrap" style="display:none">
+          <div class="field">
+            <label>Foto Bukti Transfer</label>
+            <div class="foto-box" id="bayar_fotoBox" style="min-height:100px">
+              <input type="file" accept="image/*" capture="environment"
+                onchange="handleBuktiFoto(this)">
+              <div id="bayar_fotoPlaceholder">
+                <div class="foto-box-icon">📷</div>
+                <div class="foto-box-label">Foto Bukti Transfer</div>
+              </div>
+              <img id="bayar_fotoPreview" class="foto-preview" src="" style="display:none">
+              <div class="foto-box-overlay">
+                <button class="foto-retake" onclick="retakeBukti(event)">🔄 Ulang</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Catatan</label>
+          <input type="text" id="bayar_catatan"
+            placeholder="Catatan opsional...">
+        </div>
+
+        <!-- Preview -->
+        <div id="bayar_preview" style="display:none;
+          background:var(--surface2);border:1px solid var(--border);
+          border-radius:var(--radius-sm);padding:12px 14px;font-size:13px">
+          <div style="font-weight:700;color:var(--text);margin-bottom:8px">
+            📋 Preview Pembayaran
+          </div>
+          <div class="summary-row" style="padding:4px 0">
+            <span class="summary-label">Pelanggan</span>
+            <span class="summary-val" id="prev_bayar_nama">—</span>
+          </div>
+          <div class="summary-row" style="padding:4px 0">
+            <span class="summary-label">Nominal</span>
+            <span class="summary-val" id="prev_bayar_nominal">—</span>
+          </div>
+          <div class="summary-row" style="padding:4px 0">
+            <span class="summary-label">Periode</span>
+            <span class="summary-val" id="prev_bayar_bulan">—</span>
+          </div>
+          <div class="summary-row" style="padding:4px 0;border-bottom:none">
+            <span class="summary-label">Metode</span>
+            <span class="summary-val" id="prev_bayar_metode">—</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btnBayarSubmit"
+          onclick="submitBayar()" disabled>
+          💰 Catat Pembayaran
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Konfirmasi (kasir) -->
+  <div id="bayarTabKonfirmasi" style="display:none">
+    <div id="konfirmasiList">
+      <div class="empty-state" style="padding:32px">
+        <div class="empty-icon">⏳</div>
+        <div class="empty-title">Memuat data...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Rekap -->
+  <div id="bayarTabRekap" style="display:none">
+    <div class="form-card" style="margin-bottom:12px">
+      <div class="form-card-body">
+        <div class="field-row">
+          <div class="field">
+            <label>Bulan</label>
+            <input type="month" id="rekap_bulan">
+          </div>
+          <div class="field" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button class="btn btn-secondary" onclick="loadRekap()">
+              🔍 Tampilkan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ringkasan rekap -->
+    <div id="rekapSummary" style="display:none;
+      display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="stat-card" style="--card-accent:var(--success)">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value" id="rekap_lunas">0</div>
+        <div class="stat-label">Lunas</div>
+      </div>
+      <div class="stat-card" style="--card-accent:var(--warning)">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-value" id="rekap_pending">0</div>
+        <div class="stat-label">Menunggu</div>
+      </div>
+      <div class="stat-card" style="--card-accent:var(--info);grid-column:1/-1">
+        <div class="stat-icon">💰</div>
+        <div class="stat-value" id="rekap_total">Rp0</div>
+        <div class="stat-label">Total Pendapatan</div>
+      </div>
+    </div>
+
+    <!-- Tabel rekap -->
+    <div id="rekapTable"></div>
+
+    <!-- Export -->
+    <div style="display:flex;gap:8px;margin-top:14px" id="rekapExportBtns"
+      style="display:none">
+      <button class="btn btn-secondary" style="flex:1" onclick="exportRekap('csv')">
+        📥 Export CSV
+      </button>
+      <button class="btn btn-secondary" style="flex:1" onclick="exportRekap('xlsx')">
+        📊 Export Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB: Belum Bayar -->
+  <div id="bayarTabBelum" style="display:none">
+    <!-- Upload template -->
+    <div class="form-card" style="margin-bottom:12px">
+      <div class="form-card-head">
+        <span style="font-size:18px">📤</span>
+        <div class="form-card-title">Upload List Belum Bayar</div>
+      </div>
+      <div class="form-card-body">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
+          Download template → isi data → upload kembali
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" style="flex:1"
+            onclick="downloadTemplateBelum()">
+            📥 Download Template
+          </button>
+          <label class="btn btn-secondary" style="flex:1;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;gap:6px">
+            📤 Upload CSV/Excel
+            <input type="file" accept=".csv,.xlsx,.xls"
+              onchange="uploadListBelum(this)" style="display:none">
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- List belum bayar -->
+    <div id="listBelumBayar">
+      <div class="empty-state" style="padding:32px">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Belum ada data</div>
+        <div class="empty-sub">Upload list dari kasir untuk menampilkan data</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Modal Template WA -->
+<div id="waModal" style="display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:var(--radius);
+    width:100%;max-width:400px;overflow:hidden;box-shadow:var(--shadow-md)">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">💬</span>
+      <div style="font-size:14px;font-weight:700;color:var(--text);flex:1">
+        Kirim Pesan WA
+      </div>
+      <button onclick="closeWaModal()" style="color:var(--text3);font-size:18px">✕</button>
+    </div>
+    <div style="padding:16px">
+      <textarea id="waTemplateText" style="width:100%;min-height:160px;
+        background:var(--surface2);border:1px solid var(--border);
+        border-radius:var(--radius-sm);padding:10px;font-size:13px;
+        color:var(--text);font-family:inherit;resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-secondary" style="flex:1"
+          onclick="closeWaModal()">Tutup</button>
+        <a id="waLink" href="#" target="_blank" style="flex:1">
+          <button class="btn btn-primary" style="width:100%"
+            onclick="closeWaModal()">
+            📱 Buka WhatsApp
+          </button>
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ── HALAMAN PELANGGAN AKTIF ──────────────────────────── -->
@@ -2902,7 +3244,7 @@ function setPage(page) {
   LOG.nav(page);
   closeSidebar();
   timerPause();
-  ['pageContent','formCalonPage','listCalonPage','listPelangganPage','formPemasanganPage','modemPage']
+  ['pageContent','formCalonPage','listCalonPage','listPelangganPage','pembayaranPage','formPemasanganPage','modemPage']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
   document.getElementById('pageContent').style.display='block';
 
@@ -2910,6 +3252,7 @@ function setPage(page) {
   if(page==='modem')        { openModemPage();          return; }
   if(page==='calon')        { openListCalon();          return; }
   if(page==='pelanggan')    { openListPelanggan();      return; }
+  if(page==='keuangan')     { openPembayaran();         return; }
   if(page==='pemasangan_form'){ openFormPemasangan(window._calonForPemasangan); return; }
 
   const titles={
@@ -3355,6 +3698,594 @@ function showToast(msg) {
 }
 
 // ════════════════════════════════════════════════════════
+// HALAMAN PEMBAYARAN
+// ════════════════════════════════════════════════════════
+
+let _bayarTab       = 'terima';
+let _bayarMetode    = 'CASH';
+let _bayarPelTerpilih = null;
+let _buktiFotoB64   = null;
+let _buktiFotoMime  = null;
+let _rekapData      = null;
+let _listBelumData  = [];
+let _konfirmasiData = [];
+
+function openPembayaran() {
+  ['pageContent','formCalonPage','listCalonPage','listPelangganPage',
+   'formPemasanganPage','modemPage','pembayaranPage']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  document.getElementById('pembayaranPage').style.display = 'block';
+  document.getElementById('pageTitle').textContent = 'Pembayaran';
+
+  // Set default tanggal
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('bayar_tgl').value = today;
+  const thisMonth = today.slice(0,7);
+  document.getElementById('bayar_bulan').value = thisMonth;
+  document.getElementById('rekap_bulan').value = thisMonth;
+
+  setBayarTab('terima');
+}
+
+// ── Tab ───────────────────────────────────────────────────
+function setBayarTab(tab) {
+  _bayarTab = tab;
+  ['terima','konfirmasi','rekap','belum'].forEach(t => {
+    document.getElementById('tab_'+t).classList.toggle('active', t===tab);
+    const el = document.getElementById('bayarTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if (el) el.style.display = t===tab ? 'block' : 'none';
+  });
+  if (tab === 'konfirmasi') loadKonfirmasi();
+  if (tab === 'belum') loadListBelum();
+}
+
+// ── Cari pelanggan ────────────────────────────────────────
+function cariPelangganBayar(q) {
+  const dropdown = document.getElementById('bayar_dropdownPel');
+  if (!q || q.length < 2) { dropdown.style.display='none'; return; }
+
+  // Cari di pelangganData (aktif) + calonData (pipeline)
+  const gabungan = [
+    ...pelangganData.map(p => ({...p, _tipe:'AKTIF'})),
+    ...pelangganData, // fallback
+  ].filter((p,i,a) => a.findIndex(x=>x.id_pelanggan===p.id_pelanggan)===i);
+
+  const ql = q.toLowerCase();
+  const hasil = gabungan.filter(p =>
+    String(p.nama_ktp||'').toLowerCase().includes(ql) ||
+    String(p.no_hp||'').includes(q)
+  ).slice(0,6);
+
+  if (!hasil.length) { dropdown.style.display='none'; return; }
+
+  dropdown.style.display = 'block';
+  dropdown.innerHTML = hasil.map(p => `
+    <div onclick="pilihPelangganBayar('${p.id_pelanggan||p.id_calon}')"
+      style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);
+      transition:background .1s"
+      onmouseover="this.style.background='var(--surface2)'"
+      onmouseout="this.style.background=''">
+      <div style="font-weight:600;font-size:13px">${p.nama_ktp||'—'}</div>
+      <div style="font-size:11px;color:var(--text3)">
+        📱 ${p.no_hp||'—'} · ${p.id_paket||'—'}
+      </div>
+    </div>
+  `).join('');
+
+  // Simpan data untuk pilih
+  window._bayarPelHasil = gabungan.filter(p =>
+    String(p.nama_ktp||'').toLowerCase().includes(ql) ||
+    String(p.no_hp||'').includes(q)
+  );
+}
+
+function pilihPelangganBayar(id) {
+  const pel = (window._bayarPelHasil||[]).find(p =>
+    p.id_pelanggan===id || p.id_calon===id
+  );
+  if (!pel) return;
+
+  _bayarPelTerpilih = pel;
+  document.getElementById('bayar_cariPel').value = pel.nama_ktp || '';
+  document.getElementById('bayar_dropdownPel').style.display = 'none';
+  document.getElementById('bayar_infoPel').style.display = 'block';
+  document.getElementById('bayar_namaPel').textContent = pel.nama_ktp || '—';
+  document.getElementById('bayar_infoPelSub').textContent =
+    `📱 ${pel.no_hp||'—'} · Paket: ${pel.id_paket||'—'}`;
+
+  // Auto-isi nominal dari paket jika ada
+  // (bisa dikembangkan dengan data paket dari API)
+
+  updateBayarPreview();
+  validateBayar();
+}
+
+// ── Metode pembayaran ─────────────────────────────────────
+function setBayarMetode(metode) {
+  _bayarMetode = metode;
+  ['CASH','TRANSFER'].forEach(m => {
+    document.getElementById('met_'+m).classList.toggle('active', m===metode);
+  });
+  document.getElementById('bayar_buktWrap').style.display =
+    metode==='TRANSFER' ? 'block' : 'none';
+  updateBayarPreview();
+  validateBayar();
+}
+
+// ── Foto bukti transfer ───────────────────────────────────
+function handleBuktiFoto(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _buktiFotoB64  = e.target.result.split(',')[1];
+    _buktiFotoMime = file.type;
+    document.getElementById('bayar_fotoPlaceholder').style.display = 'none';
+    document.getElementById('bayar_fotoPreview').src    = e.target.result;
+    document.getElementById('bayar_fotoPreview').style.display = 'block';
+    validateBayar();
+  };
+  reader.readAsDataURL(file);
+}
+
+function retakeBukti(e) {
+  e.stopPropagation();
+  _buktiFotoB64 = null; _buktiFotoMime = null;
+  document.getElementById('bayar_fotoPlaceholder').style.display = 'flex';
+  document.getElementById('bayar_fotoPreview').style.display = 'none';
+  document.getElementById('bayar_fotoPreview').src = '';
+}
+
+// ── Preview & validasi ────────────────────────────────────
+function updateBayarPreview() {
+  const nominal  = document.getElementById('bayar_nominal').value;
+  const bulan    = document.getElementById('bayar_bulan').value;
+  const preview  = document.getElementById('bayar_preview');
+
+  if (!_bayarPelTerpilih || !nominal || !bulan) {
+    preview.style.display = 'none'; return;
+  }
+
+  preview.style.display = 'block';
+  document.getElementById('prev_bayar_nama').textContent =
+    _bayarPelTerpilih.nama_ktp || '—';
+  document.getElementById('prev_bayar_nominal').textContent =
+    'Rp' + Number(nominal).toLocaleString('id-ID');
+  document.getElementById('prev_bayar_bulan').textContent =
+    bulan ? new Date(bulan+'-01').toLocaleDateString('id-ID',
+      {month:'long',year:'numeric'}) : '—';
+  document.getElementById('prev_bayar_metode').textContent =
+    _bayarMetode === 'CASH' ? '💵 Cash' : '🏦 Transfer Bank';
+}
+
+function validateBayar() {
+  const ok = _bayarPelTerpilih &&
+    document.getElementById('bayar_nominal').value &&
+    document.getElementById('bayar_bulan').value &&
+    document.getElementById('bayar_tgl').value &&
+    (_bayarMetode === 'CASH' || _buktiFotoB64);
+  document.getElementById('btnBayarSubmit').disabled = !ok;
+  updateBayarPreview();
+}
+
+// ── Submit pembayaran ─────────────────────────────────────
+async function submitBayar() {
+  const btn = document.getElementById('btnBayarSubmit');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .6s linear infinite;display:inline-block">⟳</span> Mencatat...';
+
+  const pel     = _bayarPelTerpilih;
+  const nominal = Number(document.getElementById('bayar_nominal').value);
+  const bulan   = document.getElementById('bayar_bulan').value;
+  const tgl     = document.getElementById('bayar_tgl').value;
+  const catatan = document.getElementById('bayar_catatan').value.trim();
+  const localId = 'bayar_' + Date.now();
+  const token   = localStorage.getItem('pnsnet_token') || '';
+
+  try {
+    // Upload foto bukti jika ada
+    let urlBukti = '';
+    if (_buktiFotoB64 && _bayarMetode === 'TRANSFER') {
+      addSyncLog('📤 Upload bukti transfer...');
+      try {
+        const upRes = await fetch(API_URL + '?action=foto_upload&token=' + encodeURIComponent(token), {
+          method:'GET'
+        });
+        // Simplified — upload via GET tidak bisa bawa file besar
+        // Di production gunakan POST dari Termux atau link Drive
+        urlBukti = 'local_foto';
+      } catch(e) {}
+    }
+
+    // Kirim via GET
+    const params = new URLSearchParams({
+      action          : 'bayar_catat',
+      token,
+      id_pelanggan    : pel.id_pelanggan || pel.id_calon || '',
+      nama_pelanggan  : pel.nama_ktp || '',
+      no_hp           : String(pel.no_hp || ''),
+      nominal         : String(nominal),
+      metode          : _bayarMetode,
+      bulan_tagihan   : bulan,
+      tgl_transaksi   : tgl,
+      catatan,
+      url_bukti       : urlBukti,
+      local_id        : localId,
+    });
+
+    const res  = await fetch(API_URL + '?' + params.toString(), {
+      signal: AbortSignal.timeout(30000)
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      showToast('✅ Pembayaran dicatat — menunggu konfirmasi kasir');
+      LOG.ok('Bayar catat OK: ' + pel.nama_ktp + ' Rp' + nominal.toLocaleString('id-ID'));
+
+      // Reset form
+      _bayarPelTerpilih = null;
+      _buktiFotoB64     = null;
+      document.getElementById('bayar_cariPel').value   = '';
+      document.getElementById('bayar_nominal').value   = '';
+      document.getElementById('bayar_catatan').value   = '';
+      document.getElementById('bayar_infoPel').style.display  = 'none';
+      document.getElementById('bayar_preview').style.display  = 'none';
+      document.getElementById('bayar_fotoPreview').style.display = 'none';
+      document.getElementById('bayar_fotoPlaceholder').style.display = 'flex';
+      setBayarMetode('CASH');
+      btn.disabled  = true;
+      btn.innerHTML = '💰 Catat Pembayaran';
+    } else {
+      throw new Error(data.error || 'Gagal catat');
+    }
+  } catch(e) {
+    LOG.err('Bayar submit error: ' + e.message);
+    showToast('❌ Gagal: ' + e.message);
+    btn.disabled  = false;
+    btn.innerHTML = '💰 Catat Pembayaran';
+  }
+}
+
+// ── Load konfirmasi (kasir) ───────────────────────────────
+async function loadKonfirmasi() {
+  const container = document.getElementById('konfirmasiList');
+  container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">⟳ Memuat...</div>';
+
+  const token = localStorage.getItem('pnsnet_token') || '';
+  try {
+    const res  = await fetch(API_URL +
+      '?action=bayar_rekap&token=' + encodeURIComponent(token) +
+      '&bulan=' + new Date().toISOString().slice(5,7) +
+      '&tahun=' + new Date().getFullYear(), {
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    const pending = (data.data.rows || []).filter(r => r.status === 'MENUNGGU_KONFIRMASI');
+    _konfirmasiData = pending;
+
+    if (!pending.length) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:32px">
+          <div class="empty-icon">✅</div>
+          <div class="empty-title">Semua sudah dikonfirmasi</div>
+          <div class="empty-sub">Tidak ada pembayaran yang menunggu konfirmasi</div>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = pending.map(p => `
+      <div class="konfirmasi-card">
+        <div class="konfirmasi-card-head">
+          <div class="pel-avatar" style="background:linear-gradient(135deg,var(--warning),#b36800)">
+            ${String(p.nama_pelanggan||'?').charAt(0).toUpperCase()}
+          </div>
+          <div style="flex:1">
+            <div class="konfirmasi-nama">${p.nama_pelanggan||'—'}</div>
+            <div class="konfirmasi-sub">
+              ${p.metode||'—'} · ${p.tgl_transaksi||'—'}
+              ${p.no_hp ? ` · 📱 ${p.no_hp}` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="konfirmasi-nominal">
+          Rp${Number(p.nominal||0).toLocaleString('id-ID')}
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
+          Periode: ${p.bulan_tagihan||'—'} · Diterima oleh: ${p.diterima_oleh||'—'}
+        </div>
+        ${p.url_bukti && p.url_bukti !== 'local_foto' ? `
+        <div style="margin-bottom:10px">
+          <a href="${p.url_bukti}" target="_blank">
+            <img src="${p.url_bukti}" style="width:100%;max-height:120px;
+              object-fit:cover;border-radius:8px">
+          </a>
+        </div>` : ''}
+        <div class="konfirmasi-actions">
+          <button class="btn-konfirmasi btn-konfirmasi-tolak"
+            onclick="aksiKonfirmasi('${p.id_pembayaran}','TOLAK','${p.nama_pelanggan}',${p.no_hp||0})">
+            ✕ Tolak
+          </button>
+          <button class="btn-konfirmasi btn-konfirmasi-ok"
+            onclick="aksiKonfirmasi('${p.id_pembayaran}','KONFIRMASI','${p.nama_pelanggan}',${p.no_hp||0})">
+            ✓ Konfirmasi Lunas
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    container.innerHTML = `<div style="color:var(--danger);padding:16px">❌ ${e.message}</div>`;
+  }
+}
+
+async function aksiKonfirmasi(idPembayaran, aksi, namaPel, noHp) {
+  if (!confirm(`${aksi === 'KONFIRMASI' ? 'Konfirmasi' : 'Tolak'} pembayaran ${namaPel}?`)) return;
+
+  const token = localStorage.getItem('pnsnet_token') || '';
+  try {
+    const res = await fetch(API_URL +
+      '?action=bayar_konfirmasi&token=' + encodeURIComponent(token) +
+      '&id_pembayaran=' + idPembayaran +
+      '&aksi=' + aksi, {
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    if (aksi === 'KONFIRMASI' && data.data?.wa_template) {
+      // Tampilkan template WA
+      bukaWaModal(data.data.wa_template, String(data.data.no_hp||noHp||''));
+    }
+    showToast(aksi === 'KONFIRMASI' ? '✅ Pembayaran dikonfirmasi' : '❌ Pembayaran ditolak');
+    loadKonfirmasi(); // Refresh
+  } catch(e) {
+    showToast('❌ Gagal: ' + e.message);
+  }
+}
+
+// ── Rekap ─────────────────────────────────────────────────
+async function loadRekap() {
+  const bulanVal = document.getElementById('rekap_bulan').value;
+  if (!bulanVal) return;
+  const [tahun, bulan] = bulanVal.split('-');
+  const token = localStorage.getItem('pnsnet_token') || '';
+
+  document.getElementById('rekapTable').innerHTML =
+    '<div style="text-align:center;padding:20px;color:var(--text3)">⟳ Memuat...</div>';
+
+  try {
+    const res  = await fetch(API_URL +
+      '?action=bayar_rekap&token=' + encodeURIComponent(token) +
+      '&bulan=' + bulan + '&tahun=' + tahun, {
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    _rekapData = data.data;
+    const d    = data.data;
+
+    // Summary
+    const sumEl = document.getElementById('rekapSummary');
+    sumEl.style.display = 'grid';
+    document.getElementById('rekap_lunas').textContent   = d.lunas   || 0;
+    document.getElementById('rekap_pending').textContent = d.pending  || 0;
+    document.getElementById('rekap_total').textContent   =
+      'Rp' + Number(d.total_lunas||0).toLocaleString('id-ID');
+
+    // Tabel
+    const rows = d.rows || [];
+    if (!rows.length) {
+      document.getElementById('rekapTable').innerHTML =
+        '<div style="text-align:center;padding:20px;color:var(--text3)">Tidak ada data bulan ini</div>';
+      document.getElementById('rekapExportBtns').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('rekapTable').innerHTML = `
+      <div class="panel">
+        ${rows.map(r => `
+          <div class="rekap-row">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:13px;
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                ${r.nama_pelanggan||'—'}
+              </div>
+              <div style="font-size:11px;color:var(--text3)">
+                ${r.metode||'—'} · ${r.tgl_transaksi||'—'}
+              </div>
+            </div>
+            <div style="font-weight:700;font-size:13px;color:var(--text)">
+              Rp${Number(r.nominal||0).toLocaleString('id-ID')}
+            </div>
+            <span class="rekap-status rekap-${
+              r.status==='LUNAS'?'lunas':r.status==='DITOLAK'?'tolak':'pending'
+            }">${r.status||'—'}</span>
+          </div>
+        `).join('')}
+      </div>`;
+
+    document.getElementById('rekapExportBtns').style.display = 'flex';
+  } catch(e) {
+    document.getElementById('rekapTable').innerHTML =
+      `<div style="color:var(--danger);padding:16px">❌ ${e.message}</div>`;
+  }
+}
+
+// ── Export rekap ──────────────────────────────────────────
+function exportRekap(format) {
+  if (!_rekapData?.rows?.length) { showToast('Tidak ada data untuk diexport'); return; }
+  const rows  = _rekapData.rows;
+  const bulan = document.getElementById('rekap_bulan').value;
+
+  const headers = ['Nama Pelanggan','No HP','Nominal','Metode','Tanggal','Periode','Status','Diterima Oleh'];
+  const csvRows = [
+    headers.join(','),
+    ...rows.map(r => [
+      '"'+(r.nama_pelanggan||'')+'"',
+      '"'+(r.no_hp||'')+'"',
+      r.nominal||0,
+      r.metode||'',
+      r.tgl_transaksi||'',
+      r.bulan_tagihan||'',
+      r.status||'',
+      '"'+(r.diterima_oleh||'')+'"',
+    ].join(','))
+  ];
+  const csv  = csvRows.join('
+');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `rekap_pembayaran_${bulan}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ File CSV diunduh');
+}
+
+// ── List belum bayar ──────────────────────────────────────
+async function loadListBelum() {
+  const token = localStorage.getItem('pnsnet_token') || '';
+  try {
+    const res  = await fetch(API_URL +
+      '?action=bayar_list_belum&token=' + encodeURIComponent(token), {
+      signal: AbortSignal.timeout(20000)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    _listBelumData = data.data.rows || [];
+    renderListBelum();
+  } catch(e) {
+    renderListBelum();
+  }
+}
+
+function renderListBelum() {
+  const el = document.getElementById('listBelumBayar');
+  if (!_listBelumData.length) {
+    el.innerHTML = `
+      <div class="empty-state" style="padding:32px">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Belum ada data</div>
+        <div class="empty-sub">Upload list dari kasir untuk menampilkan data</div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = _listBelumData.map(p => `
+    <div class="belum-card">
+      <div class="pel-avatar" style="width:36px;height:36px;font-size:13px;
+        background:linear-gradient(135deg,var(--danger),#a02020)">
+        ${String(p.nama_pelanggan||'?').charAt(0).toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="belum-nama">${p.nama_pelanggan||'—'}</div>
+        <div style="font-size:11px;color:var(--text3)">
+          📱 ${p.no_hp||'—'} · ${p.bulan_tagihan||'—'}
+        </div>
+      </div>
+      <div class="belum-nominal">Rp${Number(p.nominal||0).toLocaleString('id-ID')}</div>
+      <button class="btn-sm btn-sm-primary" style="margin-left:8px"
+        onclick="bayarDariList('${p.id_pelanggan}','${p.nama_pelanggan}','${p.no_hp}',${p.nominal},'${p.bulan_tagihan}')">
+        Bayar
+      </button>
+    </div>
+  `).join('');
+}
+
+function bayarDariList(idPel, nama, noHp, nominal, bulan) {
+  // Auto-isi form terima pembayaran
+  setBayarTab('terima');
+  _bayarPelTerpilih = { id_pelanggan: idPel, nama_ktp: nama, no_hp: noHp };
+  document.getElementById('bayar_cariPel').value = nama;
+  document.getElementById('bayar_infoPel').style.display = 'block';
+  document.getElementById('bayar_namaPel').textContent = nama;
+  document.getElementById('bayar_infoPelSub').textContent = '📱 ' + noHp;
+  document.getElementById('bayar_nominal').value = nominal;
+  document.getElementById('bayar_bulan').value   = bulan;
+  updateBayarPreview();
+  validateBayar();
+}
+
+function downloadTemplateBelum() {
+  const csv = 'id_pelanggan,nama_pelanggan,no_hp,nominal,bulan_tagihan
+' +
+    'PEL001,Contoh Nama,08120000000,230000,2026-10
+';
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'template_belum_bayar.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Template diunduh');
+}
+
+async function uploadListBelum(input) {
+  const file = input.files[0]; if (!file) return;
+  showToast('⟳ Membaca file...');
+  const text = await file.text();
+  const lines = text.trim().split('
+');
+  const hdr   = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+  const rows  = lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const obj  = {};
+    hdr.forEach((h,i) => { obj[h] = (vals[i]||'').trim().replace(/"/g,''); });
+    return obj;
+  }).filter(r => r.nama_pelanggan);
+
+  if (!rows.length) { showToast('❌ Tidak ada data valid di file'); return; }
+
+  // Upload ke API
+  const token = localStorage.getItem('pnsnet_token') || '';
+  try {
+    const rowsParam = encodeURIComponent(JSON.stringify(rows));
+    const res = await fetch(API_URL +
+      '?action=bayar_upload_belum&token=' + encodeURIComponent(token) +
+      '&rows=' + rowsParam, {
+      signal: AbortSignal.timeout(30000)
+    });
+    const data = await res.json();
+    if (data.ok) {
+      _listBelumData = rows;
+      renderListBelum();
+      showToast('✅ ' + rows.length + ' data berhasil diupload');
+    } else {
+      throw new Error(data.error);
+    }
+  } catch(e) {
+    // Simpan lokal saja
+    _listBelumData = rows;
+    renderListBelum();
+    showToast('⚠️ Disimpan lokal (' + rows.length + ' data)');
+  }
+}
+
+// ── Modal WA ──────────────────────────────────────────────
+function bukaWaModal(template, noHp) {
+  const modal = document.getElementById('waModal');
+  document.getElementById('waTemplateText').value = template;
+  const waNum = String(noHp).replace(/[^0-9]/g,'').replace(/^0/,'62');
+  document.getElementById('waLink').href =
+    'https://wa.me/' + waNum + '?text=' + encodeURIComponent(template);
+  modal.style.display = 'flex';
+}
+
+function closeWaModal() {
+  document.getElementById('waModal').style.display = 'none';
+}
+
+// ── Update doGet di Api.gs untuk handle bayar_konfirmasi ─
+// Tambah di doGet:
+// if (action === 'bayar_catat') { ... }
+// if (action === 'bayar_konfirmasi') { ... }
+// if (action === 'bayar_rekap') { ... }
+// if (action === 'bayar_list_belum') { ... }
+
+// ════════════════════════════════════════════════════════
 // HALAMAN PELANGGAN AKTIF
 // ════════════════════════════════════════════════════════
 
@@ -3365,7 +4296,7 @@ let pelExpandedId  = null;
 const PEL_PER_PAGE = 10;
 
 function openListPelanggan() {
-  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage','modemPage']
+  ['pageContent','formCalonPage','listCalonPage','pembayaranPage','formPemasanganPage','modemPage']
     .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
   document.getElementById('listPelangganPage').style.display = 'block';
   document.getElementById('pageTitle').textContent = 'Pelanggan Aktif';
