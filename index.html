@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.2.4">
+<meta name="app-version" content="2.3.0">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -855,6 +855,46 @@ img{max-width:100%;display:block}
 .pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .pg-btn:disabled{opacity:.35;pointer-events:none}
 
+/* ── PELANGGAN AKTIF ────────────────────────────────── */
+.pel-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  transition:box-shadow .2s,border-color .2s;cursor:pointer;
+  margin-bottom:10px;
+}
+.pel-card:hover{box-shadow:var(--shadow-md);border-color:var(--success)}
+.pel-card::before{
+  content:'';display:block;height:3px;
+  background:var(--success);
+}
+.pel-head{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;
+}
+.pel-avatar{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,var(--success),#1a7a4a);
+}
+.pel-main{flex:1;min-width:0}
+.pel-nama{font-size:14px;font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pel-meta{font-size:12px;color:var(--text3);margin-top:2px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pel-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.pel-paket{
+  font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;
+  background:var(--success-soft);color:var(--success);
+}
+.pel-tgl{font-size:11px;color:var(--text3)}
+.pel-detail{
+  border-top:1px solid var(--border);
+  padding:0;max-height:0;overflow:hidden;
+  transition:max-height .3s,padding .3s;
+}
+.pel-detail.open{max-height:400px;padding:14px 16px}
+.pel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
 /* ── FORM PEMASANGAN ──────────────────────────────────── */
 .foto-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .foto-box{
@@ -1217,7 +1257,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.2.4 (2026-10-12) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.3.0 (2026-10-12) · PNS.NET Offline-first PWA</div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -2017,6 +2057,25 @@ img{max-width:100%;display:block}
 </div>
 </div>
 
+<!-- ── HALAMAN PELANGGAN AKTIF ──────────────────────────── -->
+<div id="listPelangganPage" style="display:none">
+<div class="list-page">
+
+  <div class="list-toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="pelSearch" placeholder="Cari nama, HP, lokasi..."
+        oninput="filterPelanggan()">
+    </div>
+  </div>
+
+  <div class="list-stats" id="pelStats"></div>
+  <div class="calon-list" id="pelList"></div>
+  <div class="pagination" id="pelPagination"></div>
+
+</div>
+</div>
+
 <!-- ── FORM CALON PELANGGAN ───────────────────────────── -->
 <div id="formCalonPage" style="display:none;flex-direction:column;align-items:center">
 <div class="form-page">
@@ -2512,7 +2571,6 @@ LOG.sys('Online: ' + navigator.onLine + ' | ' + new Date().toLocaleString('id-ID
 // ── Debug logger (handled by devLog above) ──────────
 
 function checkAuthAndInit() {
-  dbg('checkAuthAndInit dipanggil');
   // Pasang event listener tombol login
   const btnLogin = document.getElementById('loginBtn');
   if (btnLogin) {
@@ -2601,24 +2659,14 @@ function getGreeting() {
 
 // ── Proses login ─────────────────────────────────────────────
 async function doLogin() {
-  dbg('doLogin dipanggil');
   const username = document.getElementById('loginUser').value.trim();
   const password = document.getElementById('loginPass').value;
   const btn      = document.getElementById('loginBtn');
   const errEl    = document.getElementById('loginError');
 
-  dbg('user=' + username + ' pass=' + (password?'ada':'kosong'));
-  
-  const loginUrl = API_URL
-    + '?action=login'
-    + '&username=' + encodeURIComponent(username)
-    + '&password=' + encodeURIComponent(password);
-  dbg('URL: ' + loginUrl.substring(0, 80) + '...');
-
   if (!username || !password) {
     showLoginError('Username dan password tidak boleh kosong');
-    dbg('STOP: username/password kosong', '#fa0');
-    return;
+      return;
   }
 
   btn.disabled     = true;
@@ -2630,16 +2678,13 @@ async function doLogin() {
       + '?action=login'
       + '&username=' + encodeURIComponent(username)
       + '&password=' + encodeURIComponent(password);
-    dbg('Fetch login dimulai...');
     let res;
     try {
       res = await fetch(loginUrl2, {
         method : 'GET',
         signal : AbortSignal.timeout(30000),
       });
-      dbg('Fetch selesai, status HTTP: ' + res.status);
     } catch(fetchErr) {
-      dbg('Fetch ERROR: ' + fetchErr.name + ' — ' + fetchErr.message, '#f55');
       throw fetchErr;
     }
     const data = await res.json();
@@ -2857,13 +2902,14 @@ function setPage(page) {
   LOG.nav(page);
   closeSidebar();
   timerPause();
-  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage','modemPage']
+  ['pageContent','formCalonPage','listCalonPage','listPelangganPage','formPemasanganPage','modemPage']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
   document.getElementById('pageContent').style.display='block';
 
-  if(page==='calon_form')   { openFormCalon();   return; }
-  if(page==='modem')        { openModemPage();  return; }
-  if(page==='calon')        { openListCalon();   return; }
+  if(page==='calon_form')   { openFormCalon();         return; }
+  if(page==='modem')        { openModemPage();          return; }
+  if(page==='calon')        { openListCalon();          return; }
+  if(page==='pelanggan')    { openListPelanggan();      return; }
   if(page==='pemasangan_form'){ openFormPemasangan(window._calonForPemasangan); return; }
 
   const titles={
@@ -3306,6 +3352,190 @@ function showToast(msg) {
     t.style.opacity = '0';
     t.style.transform = 'translateX(-50%) translateY(20px)';
   }, 2800);
+}
+
+// ════════════════════════════════════════════════════════
+// HALAMAN PELANGGAN AKTIF
+// ════════════════════════════════════════════════════════
+
+let pelangganData  = [];
+let pelSearch      = '';
+let pelPage        = 1;
+let pelExpandedId  = null;
+const PEL_PER_PAGE = 10;
+
+function openListPelanggan() {
+  ['pageContent','formCalonPage','listCalonPage','formPemasanganPage','modemPage']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  document.getElementById('listPelangganPage').style.display = 'block';
+  document.getElementById('pageTitle').textContent = 'Pelanggan Aktif';
+  renderPelangganPage();
+}
+
+function renderPelangganPage() {
+  renderPelangganStats();
+  renderPelangganList();
+}
+
+function renderPelangganStats() {
+  const total = pelangganData.length;
+  const el = document.getElementById('pelStats');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="list-stat"><b>${total}</b> Total Aktif</div>
+  `;
+}
+
+function filterPelanggan() {
+  pelSearch = document.getElementById('pelSearch').value.toLowerCase().trim();
+  pelPage   = 1;
+  renderPelangganList();
+}
+
+function getPelFiltered() {
+  if (!pelSearch) return pelangganData;
+  return pelangganData.filter(p =>
+    String(p.nama_ktp||'').toLowerCase().includes(pelSearch) ||
+    String(p.no_hp||'').includes(pelSearch) ||
+    String(p.nama_desa||p.id_desa||'').toLowerCase().includes(pelSearch)
+  );
+}
+
+function renderPelangganList() {
+  const filtered  = getPelFiltered();
+  const total     = filtered.length;
+  const totalPage = Math.ceil(total / PEL_PER_PAGE) || 1;
+  if (pelPage > totalPage) pelPage = totalPage;
+
+  const start = (pelPage - 1) * PEL_PER_PAGE;
+  const items = filtered.slice(start, start + PEL_PER_PAGE);
+  const container = document.getElementById('pelList');
+  if (!container) return;
+
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">👤</div>
+        <div class="empty-title">${pelangganData.length === 0
+          ? 'Belum ada pelanggan aktif'
+          : 'Tidak ada hasil pencarian'}</div>
+        <div class="empty-sub">${pelangganData.length === 0
+          ? 'Data akan muncul setelah pemasangan selesai dan sync'
+          : 'Coba kata kunci lain'}</div>
+      </div>`;
+    document.getElementById('pelPagination').innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = items.map(p => renderPelangganCard(p)).join('');
+  renderPelPagination(total, totalPage);
+}
+
+function renderPelangganCard(p) {
+  const nama    = String(p.nama_ktp || '—');
+  const noHp    = String(p.no_hp   || '');
+  const desa    = String(p.nama_desa || p.id_desa || '—');
+  const paket   = String(p.id_paket  || '—');
+  const tglAktif= p.tgl_aktif || p.created_at || '';
+  const idPel   = p.id_pelanggan || p.id_calon || '';
+  const initials= nama.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+  const tglStr  = tglAktif ? new Date(tglAktif).toLocaleDateString('id-ID',
+    {day:'numeric',month:'short',year:'numeric'}) : '—';
+  const isOpen  = pelExpandedId === idPel;
+  const waNum   = noHp.replace(/[^0-9]/g,'').replace(/^0/,'62');
+
+  return `
+  <div class="pel-card" id="pelcard_${idPel}">
+    <div class="pel-head" onclick="togglePelCard('${idPel}')">
+      <div class="pel-avatar">${initials}</div>
+      <div class="pel-main">
+        <div class="pel-nama">${nama}</div>
+        <div class="pel-meta">
+          ${noHp ? `<span>📱 ${noHp}</span>` : ''}
+          <span>📍 ${desa}</span>
+        </div>
+      </div>
+      <div class="pel-right">
+        <span class="pel-paket">${paket}</span>
+        <span class="pel-tgl">Aktif ${tglStr}</span>
+      </div>
+    </div>
+    <div class="pel-detail ${isOpen?'open':''}" id="peldetail_${idPel}">
+      <div class="detail-grid">
+        <div class="detail-item">
+          <div class="detail-label">NAMA KTP</div>
+          <div class="detail-val">${nama}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">NO. HP / WA</div>
+          <div class="detail-val">
+            <a href="https://wa.me/${waNum}" onclick="event.stopPropagation()"
+              style="color:var(--success);font-weight:600">
+              📱 ${noHp || '—'}
+            </a>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">LOKASI</div>
+          <div class="detail-val">${desa}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">PAKET</div>
+          <div class="detail-val">${paket}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">TGL AKTIF</div>
+          <div class="detail-val">${tglStr}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">STATUS</div>
+          <div class="detail-val" style="color:var(--success);font-weight:600">● AKTIF</div>
+        </div>
+      </div>
+      <div class="pel-actions">
+        ${noHp ? `
+        <a href="https://wa.me/${waNum}?text=Halo%20${encodeURIComponent(nama)}%2C%20kami%20dari%20PNS.NET..."
+          onclick="event.stopPropagation()" target="_blank">
+          <button class="btn-sm btn-sm-secondary">💬 WhatsApp</button>
+        </a>` : ''}
+        <button class="btn-sm btn-sm-secondary"
+          onclick="event.stopPropagation();showToast('🚧 Laporan gangguan — segera hadir')">
+          ⚠️ Laporkan Gangguan
+        </button>
+        <button class="btn-sm btn-sm-secondary"
+          onclick="event.stopPropagation();showToast('🚧 Riwayat pembayaran — segera hadir')">
+          💰 Riwayat Bayar
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function togglePelCard(id) {
+  pelExpandedId = pelExpandedId === id ? null : id;
+  renderPelangganList();
+  if (pelExpandedId) {
+    setTimeout(() => {
+      const el = document.getElementById('pelcard_' + id);
+      if (el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }, 100);
+  }
+}
+
+function renderPelPagination(total, totalPage) {
+  const el = document.getElementById('pelPagination');
+  if (!el || totalPage <= 1) { if(el) el.innerHTML=''; return; }
+  let html = `<button class="pg-btn" onclick="goPagePel(${pelPage-1})" ${pelPage<=1?'disabled':''}>‹</button>`;
+  for (let i=1;i<=totalPage;i++)
+    html += `<button class="pg-btn ${i===pelPage?'active':''}" onclick="goPagePel(${i})">${i}</button>`;
+  html += `<button class="pg-btn" onclick="goPagePel(${pelPage+1})" ${pelPage>=totalPage?'disabled':''}>›</button>`;
+  html += `<span style="font-size:12px;color:var(--text3);margin-left:4px">${total} pelanggan</span>`;
+  el.innerHTML = html;
+}
+
+function goPagePel(p) {
+  pelPage = p;
+  renderPelangganList();
 }
 
 // ════════════════════════════════════════════════════════
@@ -4483,36 +4713,18 @@ async function syncPull(silent = false) {
 
   _syncStatus = 'syncing';
   LOG.sys('syncPull: status set ke syncing');
-  try { if (!silent) setSyncBadge('syncing'); }
-  catch(badgeErr) { LOG.warn('setSyncBadge error: ' + badgeErr.message); }
-  LOG.sys('syncPull: setSyncBadge selesai, masuk try block');
-
   try {
-    LOG.sys('syncPull: masuk try block');
-    LOG.sys('API_URL tersedia: ' + (typeof API_URL !== 'undefined'));
-    let encodedToken, tokenPreview, url;
-    try {
-      encodedToken = encodeURIComponent(token);
-      tokenPreview = token.substring(0,20) + '...';
-      url = API_URL + '?action=dashboard_summary&token=' + encodedToken;
-    } catch(prepErr) {
-      LOG.err('syncPull PREP ERROR: ' + prepErr.name + ' — ' + prepErr.message);
-      throw prepErr;
-    }
-    LOG.sys('syncPull: encodeURIComponent selesai');
-    LOG.sys('syncPull: URL dibuat, panjang=' + url.length);
-    LOG.sys('syncPull dimulai — akan fetch ke API');
-    LOG.data('token preview: ' + tokenPreview);
-    LOG.net('URL: ' + url.substring(0,100) + '...');
+    const encodedToken = encodeURIComponent(token);
+    const tokenPreview = token.substring(0,20) + '...';
+    const url = API_URL + '?action=dashboard_summary&token=' + encodedToken;
     addSyncLog('⟳ [1/4] Menyiapkan request...');
-    
+
     let res;
     try {
       res = await fetch(url, {
         method : 'GET',
         signal : AbortSignal.timeout(30000),
       });
-      LOG.sys('syncPull: response diterima HTTP ' + res.status);
       addSyncLog('⟳ [2/4] Response HTTP ' + res.status + ' diterima...');
     } catch(fetchErr) {
       addSyncLog('❌ Fetch error: ' + fetchErr.name + ' — ' + fetchErr.message);
@@ -4523,7 +4735,6 @@ async function syncPull(silent = false) {
     let data;
     try {
       data = await res.json();
-      LOG.sys('syncPull: JSON parsed, ok=' + data.ok);
       addSyncLog('⟳ [3/4] Data diterima, memproses...');
     } catch(jsonErr) {
       addSyncLog('❌ JSON parse error: ' + jsonErr.message);
@@ -4595,6 +4806,21 @@ async function syncPull(silent = false) {
     }
 
     // ── Update daftar calon ─────────────────────────────
+    // Update data pelanggan aktif
+    if (Array.isArray(d.pelanggan_list)) {
+      pelangganData = d.pelanggan_list.map(p => ({
+        ...p,
+        nama_ktp : String(p.nama_ktp || ''),
+        no_hp    : String(p.no_hp    || ''),
+        id_desa  : String(p.id_desa  || ''),
+        nama_desa: String(p.nama_desa || p.id_desa || ''),
+        id_paket : String(p.id_paket || ''),
+      }));
+      // Update badge sidebar
+      const badge = document.querySelector('.nav-item:nth-child(2) .badge');
+      if (badge) badge.textContent = pelangganData.length;
+    }
+
     if (Array.isArray(d.calon) && d.calon.length > 0) {
       // Pastikan field string selalu string (API kadang return angka)
       calonData = d.calon.map(cal => ({
@@ -4657,9 +4883,7 @@ async function syncPull(silent = false) {
     // SELALU reset status agar sync berikutnya bisa jalan
     if (_syncStatus === 'syncing' || _syncStatus === 'error') {
       _syncStatus = 'idle';
-      LOG.sys('syncPull finally: status reset → idle');
-    }
-    LOG.sys('syncPull selesai — status: ' + _syncStatus);
+      }
   }
 }
 
