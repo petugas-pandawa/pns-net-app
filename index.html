@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.4.2">
+<meta name="app-version" content="2.5.0">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -259,6 +259,72 @@ if ('serviceWorker' in navigator) {
   font-size:11px;color:var(--text3);
   text-align:center;margin-top:16px;
 }
+
+/* ── LAYOUT MODE ────────────────────────────────────────── */
+/* Mode disimpan di localStorage: pnsnet_layout = 'hp' | 'tablet' | 'desktop' */
+
+/* ── HP mode: bottom nav, no sidebar ── */
+body.mode-hp .sidebar         { display:none !important; }
+body.mode-hp .main            { margin-left:0 !important; }
+body.mode-hp .bottom-nav      { display:block !important; }
+body.mode-hp .fab             { display:flex !important; }
+body.mode-hp .burger          { display:flex !important; }
+
+/* ── TABLET mode: narrow icon sidebar (52px) ── */
+body.mode-tablet .sidebar {
+  width:52px !important;
+  overflow:hidden;
+}
+body.mode-tablet .sidebar-logo { padding:14px 8px !important; }
+body.mode-tablet .sidebar-logo .logo-text,
+body.mode-tablet .sidebar-logo .logo-sub { display:none !important; }
+body.mode-tablet .sidebar-nav { padding:8px 6px !important; gap:4px !important; }
+body.mode-tablet .nav-section  { display:none !important; }
+body.mode-tablet .nav-item {
+  padding:10px !important;
+  border-radius:10px !important;
+  justify-content:center !important;
+  gap:0 !important;
+}
+body.mode-tablet .nav-item .icon { font-size:20px !important; width:auto !important; }
+body.mode-tablet .nav-item span:not(.icon):not(.badge) { display:none !important; }
+body.mode-tablet .nav-item .badge {
+  position:absolute;top:4px;right:4px;
+  font-size:8px;min-width:14px;height:14px;
+}
+body.mode-tablet .nav-item { position:relative; }
+body.mode-tablet .sidebar-footer { padding:8px !important; flex-direction:column; gap:6px; }
+body.mode-tablet .sidebar-footer .user-info { display:none !important; }
+body.mode-tablet .sidebar-footer .btn-icon  { margin:0 auto; }
+body.mode-tablet .main { margin-left:52px !important; }
+body.mode-tablet .bottom-nav { display:none !important; }
+body.mode-tablet .burger      { display:none !important; }
+body.mode-tablet .fab         { display:none !important; }
+
+/* ── DESKTOP mode: full sidebar (240px) ── */
+body.mode-desktop .sidebar    { width:var(--sidebar-w) !important; transform:none !important; }
+body.mode-desktop .main       { margin-left:var(--sidebar-w) !important; }
+body.mode-desktop .bottom-nav { display:none !important; }
+body.mode-desktop .burger     { display:none !important; }
+body.mode-desktop .fab        { display:none !important; }
+
+/* Mode picker card di login */
+.mode-picker {
+  display:flex;gap:10px;margin-top:16px;margin-bottom:4px;
+}
+.mode-card {
+  flex:1;border:2px solid var(--border);border-radius:var(--radius);
+  padding:12px 8px;text-align:center;cursor:pointer;
+  background:var(--surface2);transition:all .2s;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.mode-card:hover { border-color:var(--accent); }
+.mode-card.selected {
+  border-color:var(--accent);background:var(--accent-soft);
+}
+.mode-card-icon { font-size:24px; }
+.mode-card-label { font-size:12px;font-weight:700;color:var(--text); }
+.mode-card-sub   { font-size:10px;color:var(--text3);line-height:1.3; }
 
 /* ── RESET ────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1326,7 +1392,31 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.4.2 (2026-10-12) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.5.0 (2026-10-12) · PNS.NET Offline-first PWA</div>
+
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);
+        text-align:center;margin-bottom:10px;letter-spacing:.06em">
+        PILIH TAMPILAN
+      </div>
+      <div class="mode-picker">
+        <div class="mode-card" id="mcard_hp" onclick="setLayoutMode('hp')">
+          <div class="mode-card-icon">📱</div>
+          <div class="mode-card-label">HP</div>
+          <div class="mode-card-sub">Layar kecil<br>Tab bawah</div>
+        </div>
+        <div class="mode-card" id="mcard_tablet" onclick="setLayoutMode('tablet')">
+          <div class="mode-card-icon">📟</div>
+          <div class="mode-card-label">Tablet</div>
+          <div class="mode-card-sub">Layar sedang<br>Sidebar icon</div>
+        </div>
+        <div class="mode-card" id="mcard_desktop" onclick="setLayoutMode('desktop')">
+          <div class="mode-card-icon">🖥️</div>
+          <div class="mode-card-label">Desktop</div>
+          <div class="mode-card-sub">Layar besar<br>Sidebar penuh</div>
+        </div>
+      </div>
+    </div>
     <div id="debugPanel" style="margin-top:10px;padding:8px;background:#000;
       color:#0f0;font-family:monospace;font-size:10px;border-radius:6px;
       text-align:left;max-height:120px;overflow-y:auto;display:none;
@@ -1368,47 +1458,47 @@ img{max-width:100%;display:block}
     <div class="nav-item active" onclick="setPage('dashboard')">
       <span class="icon">⊞</span> Dashboard
     </div>
-    <div class="nav-item" onclick="setPage('pelanggan')">
+    <div class="nav-item" title="Pelanggan" onclick="setPage('pelanggan')">
       <span class="icon">👤</span> Pelanggan
       <span class="badge">3</span>
     </div>
-    <div class="nav-item" onclick="setPage('calon')">
+    <div class="nav-item" title="Calon Pelanggan" onclick="setPage('calon')">
       <span class="icon">📋</span> Calon Pelanggan
       <span class="badge">7</span>
     </div>
-    <div class="nav-item" onclick="setPage('pemasangan')">
+    <div class="nav-item" title="Pemasangan" onclick="setPage('pemasangan')">
       <span class="icon">🔧</span> Pemasangan
     </div>
 
     <div class="nav-section">Jaringan</div>
-    <div class="nav-item" onclick="setPage('topologi')">
+    <div class="nav-item" title="Topologi FO" onclick="setPage('topologi')">
       <span class="icon">🌐</span> Topologi FO
     </div>
-    <div class="nav-item" onclick="setPage('gangguan')">
+    <div class="nav-item" title="Gangguan" onclick="setPage('gangguan')">
       <span class="icon">⚠️</span> Gangguan
       <span class="badge">1</span>
     </div>
 
     <div class="nav-section">Operasional</div>
-    <div class="nav-item" onclick="setPage('keuangan')">
+    <div class="nav-item" title="Keuangan" onclick="setPage('keuangan')">
       <span class="icon">💰</span> Keuangan
     </div>
-    <div class="nav-item" onclick="setPage('inventori')">
+    <div class="nav-item" title="Inventori" onclick="setPage('inventori')">
       <span class="icon">📦</span> Inventori
     </div>
-    <div class="nav-item" onclick="setPage('wilayah')">
+    <div class="nav-item" title="Wilayah" onclick="setPage('wilayah')">
       <span class="icon">🗺️</span> Wilayah
     </div>
 
     <div class="nav-section">Lapangan</div>
-    <div class="nav-item" onclick="setPage('modem')">
+    <div class="nav-item" title="Konfigurasi Modem" onclick="setPage('modem')">
       <span class="icon">📡</span> Konfigurasi Modem
     </div>
     <div class="nav-section">Sistem</div>
-    <div class="nav-item" onclick="setPage('sdm')">
+    <div class="nav-item" title="Staf & Karyawan" onclick="setPage('sdm')">
       <span class="icon">👥</span> Staf & Karyawan
     </div>
-    <div class="nav-item" onclick="openSettings()">
+    <div class="nav-item" title="Pengaturan" onclick="openSettings()">
       <span class="icon">⚙️</span> Pengaturan
     </div>
   </nav>
@@ -2855,6 +2945,25 @@ img{max-width:100%;display:block}
   </div>
   <div class="drawer-body">
 
+    <div class="setting-section">TAMPILAN</div>
+    <div class="mode-picker" style="margin-bottom:8px">
+      <div class="mode-card" id="scard_hp" onclick="setLayoutMode('hp')">
+        <div class="mode-card-icon">📱</div>
+        <div class="mode-card-label">HP</div>
+        <div class="mode-card-sub">Tab bawah</div>
+      </div>
+      <div class="mode-card" id="scard_tablet" onclick="setLayoutMode('tablet')">
+        <div class="mode-card-icon">📟</div>
+        <div class="mode-card-label">Tablet</div>
+        <div class="mode-card-sub">Icon sidebar</div>
+      </div>
+      <div class="mode-card" id="scard_desktop" onclick="setLayoutMode('desktop')">
+        <div class="mode-card-icon">🖥️</div>
+        <div class="mode-card-label">Desktop</div>
+        <div class="mode-card-sub">Sidebar penuh</div>
+      </div>
+    </div>
+
     <div class="setting-section">TEMA</div>
     <div class="toggle-row">
       <span class="toggle-label">Mode Gelap</span>
@@ -2909,6 +3018,39 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
   checkAuthAndInit();
 });
+
+// ════════════════════════════════════════════════════════
+// LAYOUT MODE — HP | TABLET | DESKTOP
+// ════════════════════════════════════════════════════════
+
+function setLayoutMode(mode) {
+  localStorage.setItem('pnsnet_layout', mode);
+  document.body.classList.remove('mode-hp','mode-tablet','mode-desktop');
+  document.body.classList.add('mode-' + mode);
+  ['hp','tablet','desktop'].forEach(m => {
+    const c1 = document.getElementById('mcard_' + m);
+    const c2 = document.getElementById('scard_' + m);
+    if (c1) c1.classList.toggle('selected', m===mode);
+    if (c2) c2.classList.toggle('selected', m===mode);
+  });
+  if (mode === 'hp') {
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('overlay');
+    if (sb) sb.classList.remove('open');
+    if (ov) ov.classList.remove('show');
+  }
+}
+
+function initLayoutMode() {
+  const saved = localStorage.getItem('pnsnet_layout');
+  if (saved) { setLayoutMode(saved); return; }
+  const w = window.innerWidth;
+  const hasTouch = navigator.maxTouchPoints > 0;
+  let auto = 'hp';
+  if (w >= 1024 && !hasTouch) auto = 'desktop';
+  else if (w >= 600) auto = 'tablet';
+  setLayoutMode(auto);
+}
 
 // ════════════════════════════════════════════════════════
 // GLOBAL DEV LOG — Flight Recorder PNS.NET
@@ -3053,6 +3195,9 @@ function dbg(msg, color) {
 LOG.sys('App dimuat — ' + navigator.userAgent.substring(0,60));
 LOG.sys('Online: ' + navigator.onLine + ' | ' + new Date().toLocaleString('id-ID'));
 
+// Init layout mode sebelum apapun
+initLayoutMode();
+
 // ── Debug logger (handled by devLog above) ──────────
 
 function checkAuthAndInit() {
@@ -3129,6 +3274,9 @@ function showApp(userInfo) {
   setDateGreeting();
   renderSwatches();
   renderCardToggles();
+
+  // Pastikan layout mode tetap terapply setelah login
+  initLayoutMode();
 
   // Load cache dulu (tampil cepat) lalu sync dari API
   loadFromCache();
