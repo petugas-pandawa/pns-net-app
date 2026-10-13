@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.6.0">
+<meta name="app-version" content="2.6.1">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -416,15 +416,25 @@ img{max-width:100%;display:block}
 
 /* Topbar */
 .topbar{
-  height:var(--nav-h);
   background:var(--surface);
   border-bottom:1px solid var(--border);
-  display:flex;align-items:center;
-  padding:0 20px;gap:12px;
+  padding:0;
   position:sticky;top:0;z-index:50;
   transition:background .25s;
+  display:flex;flex-direction:column;
 }
-.topbar-title{font-size:15px;font-weight:700;color:var(--text);flex:1}
+.topbar-row1{
+  display:flex;align-items:center;
+  padding:4px 12px;gap:4px;
+  min-height:40px;
+}
+.topbar-row2{
+  padding:2px 16px 10px;
+}
+.topbar-title{
+  font-size:20px;font-weight:800;color:var(--text);
+  line-height:1.2;
+}
 .topbar-btn{
   width:36px;height:36px;border-radius:var(--radius-sm);
   background:var(--surface2);
@@ -796,6 +806,15 @@ img{max-width:100%;display:block}
   font-size:15px;color:var(--text3);pointer-events:none;
 }
 .filter-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:16px;height:16px;
+  background:var(--accent);color:#fff;
+  border-radius:20px;font-size:9px;font-weight:700;
+  padding:0 4px;margin-left:4px;
+  vertical-align:middle;line-height:1;
+}
+.chip.active .chip-badge{background:rgba(255,255,255,0.3)}
 .chip{
   padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;
   border:1.5px solid var(--border);color:var(--text3);
@@ -1447,7 +1466,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.6.0 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.6.1 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1573,14 +1592,21 @@ img{max-width:100%;display:block}
 
   <!-- Topbar -->
   <header class="topbar">
-    <button class="topbar-btn burger" onclick="toggleSidebar()">☰</button>
-    <div class="topbar-title" id="pageTitle">Dashboard</div>
-    <button class="topbar-btn notif-dot" title="Notifikasi">🔔</button>
-    <div class="sync-topbar" onclick="toggleSyncPanel()" title="Status Sinkronisasi">
-      <span class="sync-dot sync-idle" id="syncStatusDot"></span>
-      <span id="syncLastTime"></span>
+    <!-- Baris 1: burger kiri, ikon kanan -->
+    <div class="topbar-row1">
+      <button class="topbar-btn burger" onclick="toggleSidebar()">☰</button>
+      <div style="flex:1"></div>
+      <button class="topbar-btn notif-dot" title="Notifikasi">🔔</button>
+      <div class="sync-topbar" onclick="toggleSyncPanel()" title="Status Sinkronisasi">
+        <span class="sync-dot sync-idle" id="syncStatusDot"></span>
+        <span id="syncLastTime"></span>
+      </div>
+      <button class="topbar-btn" title="Pengaturan" onclick="openSettings()">⚙️</button>
     </div>
-    <button class="topbar-btn" title="Pengaturan" onclick="openSettings()">⚙️</button>
+    <!-- Baris 2: judul halaman -->
+    <div class="topbar-row2">
+      <div class="topbar-title" id="pageTitle">Dashboard</div>
+    </div>
   </header>
 
   <!-- Panel sync dropdown -->
@@ -2235,10 +2261,7 @@ img{max-width:100%;display:block}
   </div>
 
   <!-- Filter chips fase -->
-  <div class="filter-chips" id="filterChips" style="margin-bottom:14px">
-    <div class="chip active" data-fase="SEMUA" onclick="setFaseFilter('SEMUA',this)">Semua</div>\n    <div class="chip" data-fase="BARU" onclick="setFaseFilter('BARU',this)">🆕 Baru</div>\n    <div class="chip" data-fase="DIHUBUNGI" onclick="setFaseFilter('DIHUBUNGI',this)">📞 Dihubungi</div>\n    <div class="chip" data-fase="SURVEY" onclick="setFaseFilter('SURVEY',this)">🏠 Survey</div>\n    <div class="chip" data-fase="MENUNGGU" onclick="setFaseFilter('MENUNGGU',this)">⏳ Menunggu</div>\n    <div class="chip" data-fase="PROSES_PASANG" onclick="setFaseFilter('PROSES_PASANG',this)">🔧 Proses Pasang</div>\n    <div class="chip" data-fase="DITUNDA" onclick="setFaseFilter('DITUNDA',this)">⏸ Ditunda</div>\n    <div class="chip" data-fase="BATAL" onclick="setFaseFilter('BATAL',this)">✕ Batal</div>
-  </div>
-
+    <div class="filter-chips" id="filterChips" style="margin-bottom:14px"></div>
   <!-- Stats bar -->
   <div class="list-stats" id="calonStats"></div>
 
@@ -3748,6 +3771,7 @@ const FASE_LABEL = {
   DITUNDA:'⏸ Ditunda', TIDAK_TERJANGKAU:'📡 Tidak Terjangkau', BATAL:'✕ Batal'
 };
 
+let currentFaseFilter = 'SEMUA';
 let calonData       = [...DEMO_CALON];
 let calonFaseFilter = 'SEMUA';
 let calonSearch     = '';
@@ -3765,7 +3789,45 @@ function openListCalon() {
   renderCalonPage();
 }
 
+function renderFaseFilter() {
+  const el = document.getElementById('filterChips');
+  if (!el) return;
+
+  // Hitung jumlah per fase
+  const counts = {};
+  calonData.forEach(c => {
+    const f = c.id_status_proses || 'BARU';
+    counts[f] = (counts[f]||0) + 1;
+  });
+  const total = calonData.length;
+
+  const phases = [
+    { key:'SEMUA',             label:'Semua',         icon:'' },
+    { key:'BARU',              label:'Baru',          icon:'🆕' },
+    { key:'DIHUBUNGI',         label:'Dihubungi',     icon:'📞' },
+    { key:'SURVEY',            label:'Survey',        icon:'🏠' },
+    { key:'MENUNGGU',          label:'Menunggu',      icon:'⏳' },
+    { key:'PROSES_PASANG',     label:'Proses Pasang', icon:'🔧' },
+    { key:'DITUNDA',           label:'Ditunda',       icon:'⏸' },
+    { key:'TIDAK_TERJANGKAU',  label:'Tdk Terjangkau',icon:'📡' },
+    { key:'BATAL',             label:'Batal',         icon:'✕'  },
+  ];
+
+  el.innerHTML = phases.map(p => {
+    const n = p.key==='SEMUA' ? total : (counts[p.key]||0);
+    const isActive = (currentFaseFilter||'SEMUA') === p.key;
+    return `<div class="chip ${isActive?'active':''}"
+      data-fase="${p.key}"
+      onclick="setFaseFilter('${p.key}',this)"
+      style="position:relative">
+      ${p.icon ? p.icon+' ' : ''}${p.label}
+      ${n > 0 ? `<span class="chip-badge">${n}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
 function renderCalonPage() {
+  renderFaseFilter();
   renderCalonStats();
   renderCalonList();
 }
@@ -3788,10 +3850,9 @@ function renderCalonStats() {
 
 // ── Filter ───────────────────────────────────────────
 function setFaseFilter(fase, el) {
-  calonFaseFilter = fase;
+  currentFaseFilter = fase;
   calonPage = 1;
-  document.querySelectorAll('#filterChips .chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
+  renderFaseFilter();
   renderCalonList();
 }
 
