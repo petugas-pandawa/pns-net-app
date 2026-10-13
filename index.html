@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.6.1">
+<meta name="app-version" content="2.6.2">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -90,7 +90,7 @@ if ('serviceWorker' in navigator) {
 }
 .sync-topbar:hover{background:var(--surface2)}
 .sync-panel{
-  position:fixed;top:56px;right:8px;width:300px;
+  position:fixed;top:80px;right:8px;width:300px;
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,.18);
   z-index:500;display:none;overflow:hidden;
@@ -377,7 +377,9 @@ img{max-width:100%;display:block}
   cursor:pointer;
 }
 .nav-item:hover{background:var(--accent-soft);color:var(--accent)}
-.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600
+  font-weight:700;
+}
 .nav-item .icon{width:18px;text-align:center;font-size:16px;flex-shrink:0}
 .nav-item .badge{
   margin-left:auto;background:var(--accent);color:#fff;
@@ -1466,7 +1468,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.6.1 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.6.2 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1532,44 +1534,44 @@ img{max-width:100%;display:block}
     <div class="nav-item active" onclick="setPage('dashboard')">
       <span class="icon">⊞</span> Dashboard
     </div>
-    <div class="nav-item" title="Pelanggan" onclick="setPage('pelanggan')">
+    <div class="nav-item" title="Pelanggan" data-page="pelanggan" onclick="setPage('pelanggan')">
       <span class="icon">👤</span> Pelanggan
       <span class="badge">3</span>
     </div>
-    <div class="nav-item" title="Calon Pelanggan" onclick="setPage('calon')">
+    <div class="nav-item" title="Calon Pelanggan" data-page="calon" onclick="setPage('calon')">
       <span class="icon">📋</span> Calon Pelanggan
       <span class="badge">7</span>
     </div>
-    <div class="nav-item" title="Pemasangan" onclick="setPage('pemasangan')">
+    <div class="nav-item" title="Pemasangan" data-page="pemasangan" onclick="setPage('pemasangan')">
       <span class="icon">🔧</span> Pemasangan
     </div>
 
     <div class="nav-section">Jaringan</div>
-    <div class="nav-item" title="Topologi FO" onclick="setPage('topologi')">
+    <div class="nav-item" title="Topologi FO" data-page="topologi" onclick="setPage('topologi')">
       <span class="icon">🌐</span> Topologi FO
     </div>
-    <div class="nav-item" title="Gangguan" onclick="setPage('gangguan')">
+    <div class="nav-item" title="Gangguan" data-page="gangguan" onclick="setPage('gangguan')">
       <span class="icon">⚠️</span> Gangguan
       <span class="badge">1</span>
     </div>
 
     <div class="nav-section">Operasional</div>
-    <div class="nav-item" title="Keuangan" onclick="setPage('keuangan')">
+    <div class="nav-item" title="Keuangan" data-page="keuangan" onclick="setPage('keuangan')">
       <span class="icon">💰</span> Keuangan
     </div>
-    <div class="nav-item" title="Inventori" onclick="setPage('inventori')">
+    <div class="nav-item" title="Inventori" data-page="inventori" onclick="setPage('inventori')">
       <span class="icon">📦</span> Inventori
     </div>
-    <div class="nav-item" title="Wilayah" onclick="setPage('wilayah')">
+    <div class="nav-item" title="Wilayah" data-page="wilayah" onclick="setPage('wilayah')">
       <span class="icon">🗺️</span> Wilayah
     </div>
 
     <div class="nav-section">Lapangan</div>
-    <div class="nav-item" title="Konfigurasi Modem" onclick="setPage('modem')">
+    <div class="nav-item" title="Konfigurasi Modem" data-page="modem" onclick="setPage('modem')">
       <span class="icon">📡</span> Konfigurasi Modem
     </div>
     <div class="nav-section">Sistem</div>
-    <div class="nav-item" title="Staf & Karyawan" onclick="setPage('sdm')">
+    <div class="nav-item" title="Staf & Karyawan" data-page="sdm" onclick="setPage('sdm')">
       <span class="icon">👥</span> Staf & Karyawan
     </div>
     <div class="nav-item" title="Pengaturan" onclick="openSettings()">
@@ -3665,9 +3667,10 @@ function setPage(page) {
   if(page==='pemasangan_form'){ openFormPemasangan(window._calonForPemasangan); return; }
 
   const titles={
-    dashboard:'Dashboard',pelanggan:'Pelanggan',pemasangan:'Pemasangan',
-    topologi:'Topologi FO',gangguan:'Gangguan',keuangan:'Keuangan',
-    inventori:'Inventori',wilayah:'Wilayah',sdm:'Staf & Karyawan'
+    dashboard:'Dashboard', pelanggan:'Pelanggan', calon:'Calon Pelanggan',
+    pemasangan:'Pemasangan', topologi:'Topologi FO', gangguan:'Gangguan',
+    keuangan:'Keuangan', inventori:'Inventori', wilayah:'Wilayah',
+    sdm:'Staf & Karyawan', modem:'Konfigurasi Modem'
   };
   document.getElementById('pageTitle').textContent=titles[page]||page;
   const pageNavMap = {
@@ -3677,9 +3680,12 @@ function setPage(page) {
     sdm:'staf', modem:'modem'
   };
   const navKey = pageNavMap[page] || page;
-  document.querySelectorAll('.nav-item').forEach(el=>{
-    const txt = el.textContent.trim().toLowerCase();
-    el.classList.toggle('active', txt.includes(navKey));
+  document.querySelectorAll('.nav-item').forEach(el => {
+    const dp = el.getAttribute('data-page') || '';
+    const isActive = dp === navKey || dp === page;
+    el.classList.toggle('active', isActive);
+    // Bold teks jika aktif
+    el.style.fontWeight = isActive ? '700' : '500';
   });
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
 }
