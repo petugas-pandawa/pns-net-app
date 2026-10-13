@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.5.3">
+<meta name="app-version" content="2.5.4">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1392,7 +1392,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.5.3 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.5.4 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -3927,7 +3927,147 @@ function bukaPemasangan(id, e) {
 // ── Edit data calon ──────────────────────────────────
 function editCalon(id, e) {
   e.stopPropagation();
-  showToast('✏️ Edit data — segera hadir!');
+  const calon = calonData.find(c => c.id === id || c.id_calon === id);
+  if (!calon) { showToast('Data tidak ditemukan'); return; }
+
+  // Simpan referensi calon yang sedang diedit
+  window._editingCalonId = id;
+  window._editingCalon   = calon;
+
+  // Buka form calon (sama dengan form tambah baru)
+  openFormCalon();
+
+  // Ubah judul dan tombol submit jadi mode edit
+  document.getElementById('pageTitle').textContent = 'Edit Calon';
+  const btnSubmit = document.getElementById('btnSubmit');
+  if (btnSubmit) {
+    btnSubmit.textContent = '💾 Simpan Perubahan';
+  }
+
+  // Tandai form sebagai mode edit
+  const formPage = document.getElementById('formCalonPage');
+  if (formPage) formPage.dataset.mode = 'edit';
+
+  // Isi field dengan data yang ada — tunggu DOM siap
+  setTimeout(() => {
+    // Step 1 — Data Pribadi
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val || '';
+    };
+    setVal('f_nama',   calon.nama_ktp);
+    setVal('f_nik',    calon.nik);
+    setVal('f_hp',     calon.no_hp);
+    setVal('f_catatan',calon.catatan);
+    setVal('f_sumber', calon.id_sumber || calon.sumber);
+
+    // Step 2 — Lokasi
+    setVal('f_kab',    calon.nama_kab);
+    setVal('f_kec',    calon.nama_kec);
+    setVal('f_desa',   calon.id_desa || calon.nama_desa);
+    setVal('f_dusun',  calon.id_sub_wilayah);
+    setVal('f_alamat', calon.alamat_detail);
+
+    // Step 3 — Paket
+    if (calon.id_paket) {
+      selectedPaket = calon.id_paket;
+      renderPaketGrid(); // re-render agar paket terpilih highlight
+    }
+
+    // Step 4 — Jenis Pasang
+    setVal('f_jenis_pasang', calon.id_jenis_pemasangan || calon.jenis_pasang);
+
+    LOG.sys('Edit calon: ' + calon.nama_ktp);
+  }, 100);
+}
+
+// Submit saat mode edit — update, bukan insert baru
+const _origSubmitCalon = submitCalon;
+function submitCalon() {
+  const formPage = document.getElementById('formCalonPage');
+  if (formPage && formPage.dataset.mode === 'edit' && window._editingCalonId) {
+    submitEditCalon();
+    return;
+  }
+  _origSubmitCalon();
+}
+
+async function submitEditCalon() {
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin .6s linear infinite;display:inline-block">⟳</span> Menyimpan...';
+
+  const id    = window._editingCalonId;
+  const token = localStorage.getItem('pnsnet_token') || '';
+
+  const payload = {
+    action        : 'calon_update',
+    token,
+    id_calon      : id,
+    nama_ktp      : document.getElementById('f_nama').value.trim(),
+    nik           : document.getElementById('f_nik').value.trim(),
+    no_hp         : document.getElementById('f_hp').value.trim(),
+    catatan       : document.getElementById('f_catatan').value.trim(),
+    id_sumber     : document.getElementById('f_sumber').value,
+    id_desa       : document.getElementById('f_desa').value,
+    nama_desa     : document.getElementById('f_desa').value,
+    nama_kec      : document.getElementById('f_kec').value,
+    nama_kab      : document.getElementById('f_kab').value,
+    id_sub_wilayah: document.getElementById('f_dusun').value.trim(),
+    alamat_detail : document.getElementById('f_alamat').value.trim(),
+    id_paket      : selectedPaket,
+    id_jenis_pemasangan: (document.getElementById('f_jenis_pasang')||{}).value || '',
+  };
+
+  // Update lokal dulu
+  const calon = calonData.find(c => c.id === id || c.id_calon === id);
+  if (calon) {
+    Object.assign(calon, {
+      nama_ktp      : payload.nama_ktp,
+      nik           : payload.nik,
+      no_hp         : payload.no_hp,
+      catatan       : payload.catatan,
+      id_sumber     : payload.id_sumber,
+      id_desa       : payload.id_desa,
+      nama_desa     : payload.nama_desa,
+      nama_kec      : payload.nama_kec,
+      nama_kab      : payload.nama_kab,
+      id_sub_wilayah: payload.id_sub_wilayah,
+      alamat_detail : payload.alamat_detail,
+      id_paket      : payload.id_paket,
+    });
+  }
+
+  try {
+    const res  = await fetch(API_URL + '?action=calon_update&token=' +
+      encodeURIComponent(token) + '&id_calon=' + encodeURIComponent(id) +
+      '&nama_ktp=' + encodeURIComponent(payload.nama_ktp) +
+      '&no_hp='    + encodeURIComponent(payload.no_hp) +
+      '&catatan='  + encodeURIComponent(payload.catatan) +
+      '&id_paket=' + encodeURIComponent(payload.id_paket || ''),
+      { signal: AbortSignal.timeout(20000) }
+    );
+    const data = await res.json();
+    if (data.ok) {
+      showToast('✅ Data berhasil diperbarui');
+      LOG.ok('Edit calon OK: ' + payload.nama_ktp);
+    } else {
+      showToast('⚠️ Tersimpan lokal — ' + (data.error || 'API error'));
+    }
+  } catch(e) {
+    showToast('⚠️ Tersimpan lokal (offline)');
+    LOG.warn('Edit calon offline: ' + e.message);
+  }
+
+  // Reset mode dan kembali ke list
+  window._editingCalonId = null;
+  window._editingCalon   = null;
+  const fp = document.getElementById('formCalonPage');
+  if (fp) delete fp.dataset.mode;
+  btn.disabled  = false;
+  btn.innerHTML = '💾 Simpan Perubahan';
+  renderCalonPage();
+  setPage('calon');
 }
 
 // ── Pagination ────────────────────────────────────────
