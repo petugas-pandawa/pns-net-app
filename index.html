@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.5.1">
+<meta name="app-version" content="2.5.2">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1392,7 +1392,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.5.1 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.5.2 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1763,7 +1763,7 @@ img{max-width:100%;display:block}
       <div class="form-card-head">
         <span style="font-size:18px">📡</span>
         <div class="form-card-title">Foto Belakang ONT / Modem</div>
-        <span id="pem_ontOcrTag" class="tag tag-online">● OCR Aktif</span>
+
       </div>
       <div class="form-card-body">
         <div class="foto-box" id="ontFotoBox">
@@ -1772,28 +1772,16 @@ img{max-width:100%;display:block}
           <div id="ontPlaceholder">
             <div class="foto-box-icon">📷</div>
             <div class="foto-box-label">Foto Belakang ONT</div>
-            <div class="foto-box-sub">Label SN, MAC, Password WiFi</div>
+            <div class="foto-box-sub">Untuk dokumentasi pemasangan</div>
           </div>
           <img id="ontPreviewImg" class="foto-preview" src="" alt="" style="display:none">
           <div class="foto-box-overlay">
             <button class="foto-retake" onclick="retakeOnt(event)">🔄 Ulang Foto</button>
           </div>
         </div>
-        <div id="ontOcrStatus" style="display:none"></div>
-
-        <!-- Hasil OCR ONT -->
-        <!-- SN & MAC: dicatat otomatis via CIOT tool, tidak perlu diisi manual -->
         <input type="hidden" id="pem_sn" value="">
         <input type="hidden" id="pem_mac" value="">
-        <div class="field">
-          <label>Password WiFi Default (dari label)
-            <span id="passOcrBadge" class="ocr-mini" style="display:none">✨ OCR</span>
-          </label>
-          <input type="text" id="pem_passDefault"
-            placeholder="Password bawaan untuk pairing awal"
-            oninput="updateWifiPreview()">
-          <div class="field-hint">Digunakan teknisi untuk akses panel modem — tidak ditampilkan ke pelanggan</div>
-        </div>
+        <input type="hidden" id="pem_passDefault" value="">
       </div>
     </div>
 
@@ -5234,31 +5222,29 @@ function handleOntFoto(input){
   const file=input.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
-    const src=e.target.result;
-    ontBase64=src.split(',')[1]; ontMime=file.type;
+    ontBase64=e.target.result.split(',')[1];
+    ontMime=file.type;
     document.getElementById('ontPlaceholder').style.display='none';
-    document.getElementById('ontPreviewImg').src=src;
+    document.getElementById('ontPreviewImg').src=e.target.result;
     document.getElementById('ontPreviewImg').style.display='block';
-    runOntOcr(src);
-    validatePem2();
+    validateStep3();
   };
   reader.readAsDataURL(file);
 }
-
 function retakeOnt(e){
   e.stopPropagation();
   ontBase64=null; ontMime=null;
   document.getElementById('ontPlaceholder').style.display='flex';
   document.getElementById('ontPreviewImg').style.display='none';
   document.getElementById('ontPreviewImg').src='';
-  document.getElementById('ontOcrStatus').style.display='none';
+  null//ocr-removed.style.display='none';
   ['pem_sn','pem_mac','pem_passDefault'].forEach(id=>document.getElementById(id).value='');
   ['snOcrBadge','passOcrBadge'].forEach(id=>document.getElementById(id).style.display='none');
   validatePem2();
 }
 
 async function runOntOcr(src){
-  const st=document.getElementById('ontOcrStatus');
+  const st=null//ocr-removed;
   st.style.display='flex';
   st.className='ocr-status ocr-scanning';
   st.innerHTML='<span class="ocr-spin">⟳</span> Membaca label ONT...';
