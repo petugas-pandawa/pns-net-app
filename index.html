@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.5.2">
+<meta name="app-version" content="2.5.3">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1392,7 +1392,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.5.2 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.5.3 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1659,16 +1659,6 @@ img{max-width:100%;display:block}
             <label>Jam Mulai<span>*</span></label>
             <input type="time" id="pem_jam" oninput="validatePem0()">
           </div>
-        </div>
-        <div class="field">
-          <label>Timer Durasi Pemasangan</label>
-          <div class="timer-display" id="pem_timer">00:00:00</div>
-          <div class="timer-btns">
-            <button class="btn btn-secondary" style="flex:1" onclick="timerStart()">▶ Mulai</button>
-            <button class="btn btn-secondary" style="flex:1" onclick="timerPause()">⏸ Jeda</button>
-            <button class="btn btn-secondary" style="flex:1" onclick="timerReset()">⟳ Reset</button>
-          </div>
-          <div class="field-hint" style="margin-top:6px">Timer otomatis mencatat durasi kerja lapangan</div>
         </div>
       </div>
     </div>
@@ -3890,6 +3880,16 @@ function ubahFase(id, faseBaru, e) {
 
   // Update lokal dulu
   calon.id_status_proses = faseBaru;
+
+  // Jika PROSES_PASANG → langsung buka form pemasangan
+  if (faseBaru === 'PROSES_PASANG') {
+    renderCalonPage(); // update badge dll
+    setTimeout(() => {
+      window._calonForPemasangan = calon;
+      setPage('pemasangan_form');
+    }, 150);
+    // Tetap kirim ke API di background
+  }
 
   // Kirim ke API (jika online)
   if (isOnline()) {
