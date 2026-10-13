@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.5.0">
+<meta name="app-version" content="2.5.1">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1392,7 +1392,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.5.0 (2026-10-12) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.5.1 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1722,6 +1722,21 @@ img{max-width:100%;display:block}
           </div>
         </div>
         <div class="field">
+          <label>Nomor Urut PPPoE
+            <span style="font-size:10px;font-weight:400;color:var(--text3);margin-left:4px">
+              (diisi petugas Mikrotik)
+            </span>
+          </label>
+          <input type="text" id="pem_urut" maxlength="4"
+            placeholder="cth: 0080 — tunggu dari petugas Mikrotik"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'');updateUsernamePreview()"
+            style="font-family:monospace;letter-spacing:.08em">
+          <div class="field-hint" style="color:var(--warning)">
+            ⚠️ Kosongkan jika belum dapat nomor dari Mikrotik
+          </div>
+        </div>
+
+        <div class="field">
           <label>Preview Username PPPoE</label>
           <div style="background:var(--surface2);border:1px solid var(--border);
             border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;
@@ -1730,6 +1745,7 @@ img{max-width:100%;display:block}
             — isi data di atas untuk generate username —
           </div>
           <div class="field-hint">Format: {urut}{namaktp}.{desa}@{server}</div>
+        <input type="hidden" id="pem_username_pppoe" value="">
         </div>
       </div>
     </div>
@@ -1766,17 +1782,9 @@ img{max-width:100%;display:block}
         <div id="ontOcrStatus" style="display:none"></div>
 
         <!-- Hasil OCR ONT -->
-        <div class="field-row" style="margin-top:4px">
-          <div class="field">
-            <label>Serial Number <span id="snOcrBadge" class="ocr-mini" style="display:none">✨ OCR</span></label>
-            <input type="text" id="pem_sn" placeholder="SN dari label modem"
-              oninput="validatePem2()">
-          </div>
-          <div class="field">
-            <label>MAC Address</label>
-            <input type="text" id="pem_mac" placeholder="A4:B2:39:xx:xx:xx">
-          </div>
-        </div>
+        <!-- SN & MAC: dicatat otomatis via CIOT tool, tidak perlu diisi manual -->
+        <input type="hidden" id="pem_sn" value="">
+        <input type="hidden" id="pem_mac" value="">
         <div class="field">
           <label>Password WiFi Default (dari label)
             <span id="passOcrBadge" class="ocr-mini" style="display:none">✨ OCR</span>
@@ -1992,7 +2000,8 @@ img{max-width:100%;display:block}
           Laporan terkirim. Notifikasi dikirim ke Telegram topik Teknis & Pemasangan.
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px">
-          <button class="btn btn-primary" onclick="setPage('calon')">← Daftar Calon</button>\n          <button class="btn btn-secondary" onclick="setPage('pelanggan')">Lihat Pelanggan Aktif</button>
+          <button class="btn btn-primary" onclick="setPage('calon')">← Daftar Calon</button>
+          <button class="btn btn-secondary" onclick="setPage('pelanggan')">Lihat Pelanggan Aktif</button>
         </div>
       </div>
     </div>
@@ -5181,14 +5190,43 @@ function onOdpChange(){
 }
 
 function updateUsernamePreview(){
-  const svrEl = document.getElementById('pem_server');
-  const calon = window._pemCalon;
-  if(!calon||!svrEl.value) return;
-  const nama  = calon.nama_ktp.toLowerCase().replace(/[^a-z]/g,'');
-  const desa  = calon.nama_desa.toLowerCase().replace(/[^a-z]/g,'');
-  const suf   = svrEl.value==='sv-002'?'@bangkir':'@ogoamas';
-  const urut  = '0'+String(Math.floor(Math.random()*99)+43).padStart(3,'0');
-  document.getElementById('pem_usernamePreview').textContent=`${urut}${nama}.${desa}${suf}`;
+  const svrEl  = document.getElementById('pem_server');
+  const urutEl = document.getElementById('pem_urut');
+  const calon  = window._pemCalon;
+  const prevEl = document.getElementById('pem_usernamePreview');
+  if (!prevEl) return;
+  if (!calon || !svrEl || !svrEl.value) {
+    prevEl.textContent = '— isi data di atas untuk generate username —';
+    prevEl.style.color = 'var(--text3)';
+    return;
+  }
+  const nama  = (calon.nama_ktp||'').toLowerCase().replace(/[^a-z]/g,'');
+  const desa  = (calon.nama_desa||calon.id_desa||'').toLowerCase().replace(/[^a-z]/g,'');
+  const server= svrEl.value==='sv-002' ? 'bangkir' : 'ogoamas';
+  const urut  = (urutEl&&urutEl.value.trim()) ? urutEl.value.trim() : '????';
+
+  // Tag lokasi: dari ODP yang dipilih (step 2)
+  const odpEl   = document.getElementById('pem_odp');
+  const odpNama = odpEl&&odpEl.value
+    ? (odpEl.options[odpEl.selectedIndex]?.text.split(' ')[0]||'')
+    : '';
+  const lokasiTag = odpNama ? ` [${odpNama}]` : '';
+
+  const username = `${urut}${nama}.${desa}@${server}`;
+  prevEl.textContent = username;
+  prevEl.style.color = urut==='????' ? 'var(--warning)' : 'var(--accent)';
+
+  // Simpan ke field hidden untuk submit
+  const unameHidden = document.getElementById('pem_username_pppoe');
+  if (unameHidden) unameHidden.value = username;
+
+  // Update hint dengan tag lokasi
+  const hint = document.querySelector('.field-hint');
+  if (hint) {
+    hint.innerHTML = urut==='????'
+      ? '<span style="color:var(--warning)">⚠️ Nomor urut diisi petugas Mikrotik</span> · Format: {urut}{namaktp}.{desa}@{server}'
+      : `Format: {urut}{namaktp}.{desa}@{server}${lokasiTag}`;
+  }
 }
 
 // ── Foto ONT ──────────────────────────────────────────
