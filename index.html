@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.6.5">
+<meta name="app-version" content="2.7.0">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -949,6 +949,39 @@ img{max-width:100%;display:block}
 .pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .pg-btn:disabled{opacity:.35;pointer-events:none}
 
+/* ── PEMASANGAN LIST ─────────────────────────────────── */
+.stat-mini{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:10px 12px;text-align:center;
+  border-top:3px solid var(--c, var(--accent));
+}
+.stat-mini-val{font-size:20px;font-weight:800;color:var(--text)}
+.stat-mini-label{font-size:10px;color:var(--text3);margin-top:2px}
+.pem-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;
+  margin-bottom:10px;cursor:pointer;
+  transition:box-shadow .2s,border-color .2s;
+}
+.pem-card:hover{box-shadow:var(--shadow-md)}
+.pem-card-head{display:flex;align-items:flex-start;gap:12px}
+.pem-avatar{
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;background:var(--accent-soft);
+}
+.pem-nama{font-size:14px;font-weight:700;color:var(--text)}
+.pem-meta{font-size:12px;color:var(--text3);margin-top:3px;
+  display:flex;flex-wrap:wrap;gap:8px}
+.pem-status{
+  font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;
+  white-space:nowrap;
+}
+.ps-TERJADWAL{background:var(--accent-soft);color:var(--accent)}
+.ps-PROSES{background:var(--warning-soft);color:var(--warning)}
+.ps-SELESAI{background:var(--success-soft);color:var(--success)}
+.ps-GAGAL{background:var(--danger-soft);color:var(--danger)}
+
 /* ── TOPOLOGI FO ─────────────────────────────────────── */
 .odp-card{
   background:var(--surface);border:1px solid var(--border);
@@ -1475,7 +1508,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.6.5 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.7.0 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1541,15 +1574,27 @@ img{max-width:100%;display:block}
     <div class="nav-item" data-page="dashboard" onclick="setPage('dashboard')">
       <span class="icon">⊞</span> Dashboard
     </div>
-    <div class="nav-item" title="Pelanggan" data-page="pelanggan" onclick="setPage('pelanggan')">
+    <!-- Pelanggan group -->
+    <div class="nav-item nav-parent" data-page="pelanggan"
+      onclick="toggleNavGroup('navGroupPelanggan')">
       <span class="icon">👤</span> Pelanggan
-      <span class="badge">3</span>
+      <span class="badge" id="badgePelanggan">3</span>
+      <span class="nav-arrow" id="arrowPelanggan">›</span>
     </div>
-    <div class="nav-item" title="Calon Pelanggan" data-page="calon" onclick="setPage('calon')">
-      <span class="icon">📋</span> Calon Pelanggan
-      <span class="badge">7</span>
+    <div class="nav-group" id="navGroupPelanggan">
+      <div class="nav-item nav-child" data-page="pelanggan"
+        onclick="setPage('pelanggan')">
+        <span class="icon" style="font-size:12px">👤</span> Terdaftar
+      </div>
+      <div class="nav-item nav-child" data-page="calon"
+        onclick="setPage('calon')">
+        <span class="icon" style="font-size:12px">📋</span> Calon
+        <span class="badge" id="badgeCalon">7</span>
+      </div>
     </div>
-    <div class="nav-item" title="Pemasangan" data-page="pemasangan" onclick="setPage('pemasangan')">
+
+    <div class="nav-item" title="Pemasangan" data-page="pemasangan"
+      onclick="setPage('pemasangan')">
       <span class="icon">🔧</span> Pemasangan
     </div>
 
@@ -1849,8 +1894,9 @@ img{max-width:100%;display:block}
       </div>
       <div class="form-card-body">
         <div class="foto-box" id="ontFotoBox">
-          <input type="file" accept="image/*" capture="environment"
-            onchange="handleOntFoto(this)">
+          <input type="file" id="ontFileInput" accept="image/*" capture="environment"
+            onchange="handleOntFoto(this)"
+            style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2">
           <div id="ontPlaceholder">
             <div class="foto-box-icon">📷</div>
             <div class="foto-box-label">Foto Belakang ONT</div>
@@ -1876,8 +1922,9 @@ img{max-width:100%;display:block}
       <div class="form-card-body">
         <div class="foto-upload-grid">
           <div class="foto-box" id="opmFotoBox">
-            <input type="file" accept="image/*" capture="environment"
-              onchange="handleOpmFoto(this)">
+            <input type="file" id="opmFileInput" accept="image/*" capture="environment"
+            onchange="handleOpmFoto(this)"
+            style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2">
             <div id="opmPlaceholder">
               <div class="foto-box-icon">📷</div>
               <div class="foto-box-label">Foto Layar OPM</div>
@@ -2281,6 +2328,49 @@ img{max-width:100%;display:block}
 
   <!-- Pagination -->
   <div class="pagination" id="calonPagination"></div>
+
+</div>
+</div>
+
+<!-- ── HALAMAN PEMASANGAN ───────────────────────────────── -->
+<div id="listPemasanganPage" style="display:none">
+<div class="list-page">
+
+  <!-- Stats ringkasan -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px"
+    id="pemStats">
+    <div class="stat-mini"><div class="stat-mini-val" id="pem_statTerjadwal">—</div>
+      <div class="stat-mini-label">Terjadwal</div></div>
+    <div class="stat-mini" style="--c:var(--warning)">
+      <div class="stat-mini-val" id="pem_statProses">—</div>
+      <div class="stat-mini-label">Proses</div></div>
+    <div class="stat-mini" style="--c:var(--success)">
+      <div class="stat-mini-val" id="pem_statSelesai">—</div>
+      <div class="stat-mini-label">Selesai</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="list-toolbar">
+    <div class="search-wrap" style="flex:1">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="pemListSearch"
+        placeholder="Cari nama, teknisi, lokasi..."
+        oninput="filterPemList()">
+    </div>
+    <button class="btn btn-primary" style="white-space:nowrap"
+      onclick="buatPemasanganBaru()">+ Pemasangan</button>
+  </div>
+
+  <!-- Filter status -->
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <div class="chip active" id="pemf_SEMUA" onclick="setPemFilter('SEMUA',this)">Semua</div>
+    <div class="chip" id="pemf_TERJADWAL" onclick="setPemFilter('TERJADWAL',this)">📅 Terjadwal</div>
+    <div class="chip" id="pemf_PROSES" onclick="setPemFilter('PROSES',this)">🔧 Proses</div>
+    <div class="chip" id="pemf_SELESAI" onclick="setPemFilter('SELESAI',this)">✅ Selesai</div>
+    <div class="chip" id="pemf_GAGAL" onclick="setPemFilter('GAGAL',this)">❌ Gagal</div>
+  </div>
+
+  <div id="pemListContainer"></div>
 
 </div>
 </div>
@@ -3158,7 +3248,35 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Nav Highlight ────────────────────────────────────────
+function toggleNavGroup(groupId) {
+  const el    = document.getElementById(groupId);
+  const arrow = document.getElementById(groupId.replace('navGroup','arrow'));
+  if (!el) return;
+  const isOpen = el.classList.toggle('open');
+  if (arrow) {
+    arrow.style.transform = isOpen ? 'rotate(90deg)' : '';
+  }
+}
+
+// Auto-buka grup saat halaman di dalamnya aktif
+function autoOpenNavGroup(page) {
+  const groupMap = {
+    pelanggan: 'navGroupPelanggan',
+    calon:     'navGroupPelanggan',
+  };
+  const groupId = groupMap[page];
+  if (groupId) {
+    const el = document.getElementById(groupId);
+    const arrow = document.getElementById(groupId.replace('navGroup','arrow'));
+    if (el && !el.classList.contains('open')) {
+      el.classList.add('open');
+      if (arrow) arrow.style.transform = 'rotate(90deg)';
+    }
+  }
+}
+
 function updateNavHighlight(pageKey) {
+  autoOpenNavGroup(pageKey);
   document.querySelectorAll('.nav-item').forEach(el => {
     const dp = el.getAttribute('data-page') || '';
     const isActive = dp === pageKey;
@@ -3684,7 +3802,7 @@ function setPage(page) {
   LOG.nav(page);
   closeSidebar();
   timerPause();
-  ['pageContent','formCalonPage','listCalonPage','listPelangganPage','topologiPage','pembayaranPage','formPemasanganPage','modemPage']
+  ['pageContent','formCalonPage','listCalonPage','listPelangganPage','listPemasanganPage','topologiPage','pembayaranPage','formPemasanganPage','modemPage']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
   document.getElementById('pageContent').style.display='block';
 
@@ -3693,11 +3811,12 @@ function setPage(page) {
   if(page==='calon')        { openListCalon();          return; }
   if(page==='pelanggan')    { openListPelanggan();      return; }
   if(page==='topologi')     { openTopologi();           return; }
+  if(page==='pemasangan')   { openListPemasangan();     return; }
   if(page==='keuangan')     { openPembayaran();         return; }
   if(page==='pemasangan_form'){ openFormPemasangan(window._calonForPemasangan); return; }
 
   const titles={
-    dashboard:'Dashboard', pelanggan:'Pelanggan', calon:'Calon Pelanggan',
+    dashboard:'Dashboard', pelanggan:'Pelanggan', calon:'Calon Pelanggan', pemasangan:'Pemasangan',
     pemasangan:'Pemasangan', topologi:'Topologi FO', gangguan:'Gangguan',
     keuangan:'Keuangan', inventori:'Inventori', wilayah:'Wilayah',
     sdm:'Staf & Karyawan', modem:'Konfigurasi Modem'
@@ -4348,6 +4467,126 @@ function showToast(msg) {
     t.style.opacity = '0';
     t.style.transform = 'translateX(-50%) translateY(20px)';
   }, 2800);
+}
+
+// ════════════════════════════════════════════════════════
+// HALAMAN PEMASANGAN
+// ════════════════════════════════════════════════════════
+
+let PEMASANGAN_DATA = [];
+let _pemListFilter  = 'SEMUA';
+let _pemListSearch  = '';
+
+function openListPemasangan() {
+  ['pageContent','formCalonPage','listCalonPage','listPelangganPage',
+   'pembayaranPage','topologiPage','formPemasanganPage','modemPage']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  document.getElementById('listPemasanganPage').style.display = 'block';
+  document.getElementById('pageTitle').textContent = 'Pemasangan';
+  updateNavHighlight('pemasangan');
+  renderPemList();
+}
+
+function buatPemasanganBaru() {
+  // Buka form pemasangan tanpa data calon
+  window._calonForPemasangan = null;
+  setPage('pemasangan_form');
+}
+
+function setPemFilter(filter, el) {
+  _pemListFilter = filter;
+  document.querySelectorAll('[id^="pemf_"]').forEach(e =>
+    e.classList.toggle('active', e === el));
+  renderPemList();
+}
+
+function filterPemList() {
+  _pemListSearch = document.getElementById('pemListSearch').value.toLowerCase().trim();
+  renderPemList();
+}
+
+function getPemFiltered() {
+  return PEMASANGAN_DATA.filter(p => {
+    const matchFilter = _pemListFilter === 'SEMUA' || p.status === _pemListFilter;
+    const matchSearch = !_pemListSearch ||
+      (p.nama_pelanggan||'').toLowerCase().includes(_pemListSearch) ||
+      (p.nama_teknisi||'').toLowerCase().includes(_pemListSearch) ||
+      (p.id_odp||'').toLowerCase().includes(_pemListSearch) ||
+      (p.id_desa||p.nama_desa||'').toLowerCase().includes(_pemListSearch);
+    return matchFilter && matchSearch;
+  });
+}
+
+function renderPemList() {
+  // Stats
+  const total      = PEMASANGAN_DATA.length;
+  const terjadwal  = PEMASANGAN_DATA.filter(p => p.status==='TERJADWAL').length;
+  const proses     = PEMASANGAN_DATA.filter(p => p.status==='PROSES').length;
+  const selesai    = PEMASANGAN_DATA.filter(p => p.status==='SELESAI').length;
+
+  const setS = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  setS('pem_statTerjadwal', terjadwal);
+  setS('pem_statProses',    proses);
+  setS('pem_statSelesai',   selesai);
+
+  const filtered  = getPemFiltered();
+  const container = document.getElementById('pemListContainer');
+  if (!container) return;
+
+  if (!filtered.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔧</div>
+        <div class="empty-title">${PEMASANGAN_DATA.length===0
+          ? 'Belum ada data pemasangan'
+          : 'Tidak ada hasil'}</div>
+        <div class="empty-sub">${PEMASANGAN_DATA.length===0
+          ? 'Tap + Pemasangan untuk buat baru, atau data akan muncul setelah sync'
+          : 'Coba kata kunci atau filter lain'}</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(p => {
+    const nama     = p.nama_pelanggan || '—';
+    const teknisi  = p.nama_teknisi   || p.id_teknisi || '—';
+    const tgl      = p.tgl_pasang     || p.created_at || '';
+    const tglStr   = tgl ? new Date(tgl).toLocaleDateString('id-ID',
+      {day:'numeric',month:'short',year:'numeric'}) : '—';
+    const odp      = p.id_odp         || '—';
+    const lokasi   = p.nama_desa      || p.id_desa || '—';
+    const status   = p.status         || 'TERJADWAL';
+    const initials = nama.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+
+    const statusLabel = {
+      TERJADWAL:'📅 Terjadwal', PROSES:'🔧 Proses',
+      SELESAI:'✅ Selesai', GAGAL:'❌ Gagal'
+    }[status] || status;
+
+    return `
+    <div class="pem-card" onclick="lihatDetailPemasangan('${p.id_pemasangan||p.id||''}')">
+      <div class="pem-card-head">
+        <div class="pem-avatar">🔧</div>
+        <div style="flex:1;min-width:0">
+          <div class="pem-nama">${nama}</div>
+          <div class="pem-meta">
+            <span>👷 ${teknisi}</span>
+            <span>📡 ${odp}</span>
+            <span>📍 ${lokasi}</span>
+            <span>📅 ${tglStr}</span>
+          </div>
+        </div>
+        <span class="pem-status ps-${status}">${statusLabel}</span>
+      </div>
+      ${p.catatan ? `<div style="font-size:11px;color:var(--text3);margin-top:8px;
+        padding-top:8px;border-top:1px solid var(--border)">
+        📝 ${p.catatan}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function lihatDetailPemasangan(id) {
+  showToast('🚧 Detail pemasangan — segera hadir');
 }
 
 // ════════════════════════════════════════════════════════
@@ -6914,6 +7153,14 @@ async function syncPull(silent = false) {
     }
 
     // ── Update ODP ──────────────────────────────────────
+    if (Array.isArray(d.pemasangan)) {
+      PEMASANGAN_DATA = d.pemasangan.map(p => ({
+        ...p,
+        nama_pelanggan: String(p.nama_pelanggan || ''),
+        status: String(p.status || 'TERJADWAL'),
+      }));
+    }
+
     if (Array.isArray(d.jalur)) {
       JALUR_DATA = d.jalur;
     }
