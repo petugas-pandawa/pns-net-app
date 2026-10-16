@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.7.0">
+<meta name="app-version" content="2.7.1">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -480,9 +480,11 @@ img{max-width:100%;display:block}
   border:1px solid var(--border);
   border-radius:var(--radius);
   padding:16px;
-  cursor:pointer;
-  transition:box-shadow .2s,transform .15s,border-color .2s;
-  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+  align-items:flex-start;gap:4px;
+  border-top:3px solid var(--card-accent,var(--accent));
+  min-height:110px;
+  box-sizing:border-box;
 }
 .stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);border-color:var(--accent)}
 .stat-card::before{
@@ -1403,9 +1405,10 @@ img{max-width:100%;display:block}
 
 /* Form nav buttons */
 .form-nav{
-  display:flex;align-items:center;gap:10px;
-  padding:16px 0 0;
+  display:flex;gap:8px;margin-top:20px;align-items:center;
 }
+.form-nav .btn{flex:0 0 auto}
+.form-nav .btn-primary{margin-left:auto}
 .btn{
   display:inline-flex;align-items:center;gap:6px;
   padding:10px 20px;border-radius:var(--radius-sm);
@@ -1508,7 +1511,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.7.0 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.7.1 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1860,6 +1863,42 @@ img{max-width:100%;display:block}
             style="font-family:monospace;letter-spacing:.08em">
           <div class="field-hint" style="color:var(--warning)">
             ⚠️ Kosongkan jika belum dapat nomor dari Mikrotik
+          </div>
+        </div>
+
+        <!-- Kalkulator panjang kabel dropcore -->
+        <div class="form-card" style="margin:8px 0">
+          <div class="form-card-head">
+            <span style="font-size:18px">📏</span>
+            <div class="form-card-title">Panjang Kabel Dropcore</div>
+          </div>
+          <div class="form-card-body">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
+              Lihat kode meter di kabel. Kode akhir dikurangi kode awal = panjang terpakai.
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Kode Awal (m)</label>
+                <input type="number" id="kabel_awal" placeholder="cth: 180"
+                  oninput="hitungKabel()" min="0" style="font-family:monospace">
+              </div>
+              <div class="field">
+                <label>Kode Akhir (m)</label>
+                <input type="number" id="kabel_akhir" placeholder="cth: 340"
+                  oninput="hitungKabel()" min="0" style="font-family:monospace">
+              </div>
+            </div>
+            <div id="kabel_result" style="display:none;
+              background:var(--success-soft);border:1px solid var(--success);
+              border-radius:var(--radius-sm);padding:10px 14px;
+              margin-top:8px;text-align:center">
+              <div style="font-size:11px;color:var(--text3)">Panjang Kabel Terpakai</div>
+              <div style="font-size:28px;font-weight:800;color:var(--success);line-height:1.2"
+                id="kabel_panjang">0</div>
+              <div style="font-size:11px;color:var(--success)">meter</div>
+            </div>
+            <div id="kabel_error" style="display:none;font-size:11px;
+              color:var(--danger);margin-top:4px"></div>
           </div>
         </div>
 
@@ -3018,6 +3057,7 @@ img{max-width:100%;display:block}
       </div>
     </div>
     <div class="form-nav">
+      <button class="btn btn-secondary" onclick="cancelForm()">✕ Batal</button>
       <button class="btn btn-secondary" onclick="goStep(0)">← Kembali</button>
       <button class="btn btn-primary" id="btnStep1Next" onclick="goStep(2)" disabled>
         Selanjutnya →
@@ -3054,6 +3094,7 @@ img{max-width:100%;display:block}
       </div>
     </div>
     <div class="form-nav">
+      <button class="btn btn-secondary" onclick="cancelForm()">✕ Batal</button>
       <button class="btn btn-secondary" onclick="goStep(1)">← Kembali</button>
       <button class="btn btn-primary" id="btnStep2Next" onclick="goStep(3)" disabled>
         Review & Simpan →
@@ -3095,9 +3136,10 @@ img{max-width:100%;display:block}
     </div>
 
     <div class="form-nav">
+      <button class="btn btn-secondary" onclick="cancelForm()">✕ Batal</button>
       <button class="btn btn-secondary" onclick="goStep(2)">← Kembali</button>
       <button class="btn btn-primary" id="btnSubmit" onclick="submitCalon()">
-        💾 Simpan Calon Pelanggan
+        💾 Simpan
       </button>
     </div>
   </div>
@@ -3939,6 +3981,7 @@ const FASE_LABEL = {
 };
 
 let currentFaseFilter = 'SEMUA';
+let LOCAL_QUEUE = JSON.parse(localStorage.getItem('pnsnet_queue') || '[]');
 let calonData       = [...DEMO_CALON];
 let calonFaseFilter = 'SEMUA';
 let calonSearch     = '';
@@ -4488,8 +4531,64 @@ function openListPemasangan() {
 }
 
 function buatPemasanganBaru() {
-  // Buka form pemasangan tanpa data calon
-  window._calonForPemasangan = null;
+  // Wajib pilih calon dulu
+  tampilkanPilihCalon();
+}
+
+function tampilkanPilihCalon() {
+  // Buat modal pilih calon
+  const candidates = calonData.filter(c =>
+    ['MENUNGGU','PROSES_PASANG','SURVEY'].includes(c.id_status_proses)
+  );
+  if (!candidates.length) {
+    showToast('⚠️ Tidak ada calon yang siap dipasang (fase Menunggu/Proses Pasang)');
+    return;
+  }
+  // Buat overlay pilih calon
+  let modal = document.getElementById('pilihCalonModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pilihCalonModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--radius);width:100%;max-width:420px;overflow:hidden;box-shadow:var(--shadow-md)">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">👤</span>
+        <div style="font-size:14px;font-weight:700;flex:1">Pilih Calon Pelanggan</div>
+        <button onclick="document.getElementById('pilihCalonModal').style.display='none'"
+          style="color:var(--text3);font-size:18px;background:none;border:none;cursor:pointer">✕</button>
+      </div>
+      <div style="max-height:320px;overflow-y:auto">
+        ${candidates.map(cal => `
+          <div onclick="pilihCalonUntukPasang('${cal.id||cal.id_calon}')"
+            style="padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .1s"
+            onmouseover="this.style.background='var(--surface2)'"
+            onmouseout="this.style.background=''">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">
+              ${(cal.nama_ktp||'?').charAt(0).toUpperCase()}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${cal.nama_ktp||'—'}</div>
+              <div style="font-size:11px;color:var(--text3)">
+                📱 ${cal.no_hp||'—'} · 📍 ${cal.nama_desa||cal.id_desa||'—'}
+              </div>
+            </div>
+            <span class="phase-pill ph-${cal.id_status_proses||'BARU'}" style="font-size:10px">
+              ${cal.id_status_proses||'BARU'}
+            </span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function pilihCalonUntukPasang(id) {
+  const calon = calonData.find(c => (c.id||c.id_calon) === id);
+  if (!calon) return;
+  document.getElementById('pilihCalonModal').style.display = 'none';
+  window._calonForPemasangan = calon;
   setPage('pemasangan_form');
 }
 
@@ -4556,7 +4655,8 @@ function renderPemList() {
     const odp      = p.id_odp         || '—';
     const lokasi   = p.nama_desa      || p.id_desa || '—';
     const status   = p.status         || 'TERJADWAL';
-    const initials = nama.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    const isOffline = c._offline || c._localId;
+  const initials = nama.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
 
     const statusLabel = {
       TERJADWAL:'📅 Terjadwal', PROSES:'🔧 Proses',
@@ -6046,6 +6146,42 @@ function onOdpChange(){
     portSel.innerHTML+=`<option value="${p.id}">${p.label}</option>`;
   });
   updateUsernamePreview();
+}
+
+function hitungKabel() {
+  const awal  = parseFloat(document.getElementById('kabel_awal').value);
+  const akhir = parseFloat(document.getElementById('kabel_akhir').value);
+  const resEl = document.getElementById('kabel_result');
+  const errEl = document.getElementById('kabel_error');
+  const pjgEl = document.getElementById('kabel_panjang');
+
+  if (isNaN(awal) || isNaN(akhir)) {
+    resEl.style.display = 'none';
+    errEl.style.display = 'none';
+    return;
+  }
+  const besar  = Math.max(awal, akhir);
+  const kecil  = Math.min(awal, akhir);
+  const panjang = besar - kecil;
+
+  if (panjang <= 0) {
+    resEl.style.display = 'none';
+    errEl.style.display = 'block';
+    errEl.textContent   = '⚠️ Kode akhir harus lebih besar dari kode awal';
+    return;
+  }
+  errEl.style.display = 'none';
+  resEl.style.display = 'block';
+  pjgEl.textContent   = panjang;
+
+  // Simpan ke hidden field
+  let el = document.getElementById('pem_kabel_m');
+  if (!el) {
+    el = document.createElement('input');
+    el.type = 'hidden'; el.id = 'pem_kabel_m';
+    document.body.appendChild(el);
+  }
+  el.value = panjang;
 }
 
 function updateUsernamePreview(){
