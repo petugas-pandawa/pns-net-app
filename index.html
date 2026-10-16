@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.6.2">
+<meta name="app-version" content="2.6.5">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -414,6 +414,13 @@ img{max-width:100%;display:block}
   margin-left:var(--sidebar-w);
   display:flex;flex-direction:column;
   min-height:100dvh;
+}
+.content-area{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  overflow-y:auto;
+  min-height:0;
 }
 
 /* Topbar */
@@ -1468,7 +1475,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.6.2 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.6.5 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1531,7 +1538,7 @@ img{max-width:100%;display:block}
 
   <nav class="sidebar-nav">
     <div class="nav-section">Utama</div>
-    <div class="nav-item active" onclick="setPage('dashboard')">
+    <div class="nav-item" data-page="dashboard" onclick="setPage('dashboard')">
       <span class="icon">⊞</span> Dashboard
     </div>
     <div class="nav-item" title="Pelanggan" data-page="pelanggan" onclick="setPage('pelanggan')">
@@ -1584,6 +1591,7 @@ img{max-width:100%;display:block}
     <div class="user-info">
       <div class="user-name" id="sidebarName">Administrator</div>
       <div class="user-role" id="sidebarRole">Direktur</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:1px" id="sidebarVersion">v2.6.5</div>
     </div>
     <button class="btn-icon" title="Keluar" onclick="logout()">🚪</button>
   </div>
@@ -1644,6 +1652,7 @@ img{max-width:100%;display:block}
   </div>
 
   <!-- Page content -->
+  <div class="content-area" id="contentArea">
   <div class="page" id="pageContent">
 
     <div class="page-header">
@@ -3095,8 +3104,18 @@ img{max-width:100%;display:block}
     <div class="setting-section">KARTU DASHBOARD</div>
     <div class="card-toggle-list" id="cardToggleList"></div>
 
+    <div class="setting-section">SISTEM</div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding-bottom:8px">
+      <button class="btn btn-secondary" style="width:100%"
+        onclick="hardRefreshApp()">🔄 Hard Refresh</button>
+      <button class="btn btn-secondary" style="width:100%;color:var(--danger)"
+        onclick="logout()">🚪 Logout</button>
+    </div>
+
   </div>
-</div>
+</div><!-- /content-area -->
+
+</div><!-- /main -->
 
 <script>
 // ── DATA DEMO ──────────────────────────────────────────────
@@ -3137,6 +3156,16 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
   checkAuthAndInit();
 });
+
+// ── Nav Highlight ────────────────────────────────────────
+function updateNavHighlight(pageKey) {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    const dp = el.getAttribute('data-page') || '';
+    const isActive = dp === pageKey;
+    el.classList.toggle('active', isActive);
+    el.style.fontWeight = isActive ? '700' : '500';
+  });
+}
 
 // ════════════════════════════════════════════════════════
 // LAYOUT MODE — HP | TABLET | DESKTOP
@@ -3396,6 +3425,7 @@ function showApp(userInfo) {
 
   // Pastikan layout mode tetap terapply setelah login
   initLayoutMode();
+  updateNavHighlight('dashboard');
 
   // Load cache dulu (tampil cepat) lalu sync dari API
   loadFromCache();
@@ -3680,14 +3710,26 @@ function setPage(page) {
     sdm:'staf', modem:'modem'
   };
   const navKey = pageNavMap[page] || page;
-  document.querySelectorAll('.nav-item').forEach(el => {
-    const dp = el.getAttribute('data-page') || '';
-    const isActive = dp === navKey || dp === page;
-    el.classList.toggle('active', isActive);
-    // Bold teks jika aktif
-    el.style.fontWeight = isActive ? '700' : '500';
-  });
+  updateNavHighlight(navKey);
   document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('active'));
+}
+
+function hardRefreshApp() {
+  if (!confirm('Hard refresh akan menghapus cache dan memuat ulang aplikasi. Lanjutkan?')) return;
+  // Hapus service worker cache
+  if ('caches' in window) {
+    caches.keys().then(keys => {
+      keys.forEach(key => caches.delete(key));
+    });
+  }
+  // Hapus SW
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => reg.unregister());
+    });
+  }
+  // Hard reload
+  setTimeout(() => { window.location.reload(true); }, 300);
 }
 
 function logout() {
@@ -3787,6 +3829,7 @@ let expandedId      = null;
 
 // ── Buka halaman daftar calon ─────────────────────────
 function openListCalon() {
+  updateNavHighlight('calon');
   ['pageContent','formCalonPage','formPemasanganPage','modemPage'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
   });
@@ -4317,6 +4360,7 @@ let _odpSearch   = '';
 let JALUR_DATA   = [];
 
 function openTopologi() {
+  updateNavHighlight('topologi');
   ['pageContent','formCalonPage','listCalonPage','listPelangganPage',
    'pembayaranPage','formPemasanganPage','modemPage','topologiPage']
     .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
@@ -4592,6 +4636,7 @@ let _listBelumData  = [];
 let _konfirmasiData = [];
 
 function openPembayaran() {
+  updateNavHighlight('keuangan');
   ['pageContent','formCalonPage','listCalonPage','listPelangganPage',
    'formPemasanganPage','modemPage','pembayaranPage']
     .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
@@ -5189,6 +5234,7 @@ const IMPORT_COLS  = [
 ];
 
 function openListPelanggan() {
+  updateNavHighlight('pelanggan');
   ['pageContent','formCalonPage','listCalonPage','pembayaranPage',
    'formPemasanganPage','modemPage']
     .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
