@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.7.1">
+<meta name="app-version" content="2.7.3">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1511,7 +1511,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.7.1 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.7.3 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1997,7 +1997,7 @@ img{max-width:100%;display:block}
 
     <div class="form-nav">
       <button class="btn btn-secondary" onclick="goPemStep(1)">← Kembali</button>
-      <button class="btn btn-primary" id="btnPem2Next" onclick="goPemStep(3)" disabled>Selanjutnya →</button>
+      <button class="btn btn-primary" id="btnPem2Next" onclick="goPemStep(3)">Selanjutnya →</button>
     </div>
   </div>
 
@@ -6087,6 +6087,10 @@ function renderPemStep(step) {
 function goPemStep(n){
   renderPemStep(n);
   window.scrollTo({top:0,behavior:'smooth'});
+  // Jalankan validasi step yang baru dibuka
+  if (n===1) validatePem0();
+  if (n===2) validatePem2();  // step 3: OPM opsional → langsung enable
+  if (n===3) validatePem3();
 }
 
 // ── Teknisi selector ─────────────────────────────────
@@ -6366,10 +6370,12 @@ function validatePem1(){
   if(document.getElementById('pem_server').value) updateUsernamePreview();
 }
 function validatePem2(){
-  const ok=document.getElementById('pem_sn').value.trim() &&
-            document.getElementById('pem_opm').value;
-  const btn=document.getElementById('btnPem2Next');
-  if(btn) btn.disabled=!ok;
+  // SN sudah dihapus dari form — cukup cek nilai OPM
+  // Foto ONT opsional (untuk dokumentasi)
+  const opmVal = document.getElementById('pem_opm');
+  const ok = opmVal ? opmVal.value.trim() !== '' : true;
+  const btn = document.getElementById('btnPem2Next');
+  if (btn) btn.disabled = !ok;
 }
 function validatePem3(){
   const ok=document.getElementById('pem_ssid').value.trim() &&
