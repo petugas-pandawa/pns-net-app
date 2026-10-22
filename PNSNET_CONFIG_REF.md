@@ -9,7 +9,7 @@ Update di sini jika ada perubahan, lalu sesuaikan di file yang merujuk ke nilai 
 
 ### Deployment URL
 ```
-https://script.google.com/macros/s/AKfycbyQZHQH5WLDyAiGOxz7NEbbhGXMB4fP4ANkJTN9qJjNjv4Y2xQmZRqXR1tPwvEgTnP1/exec
+[Disimpan privat; jangan commit URL deployment.]
 ```
 **Dipakai di:**
 - `index.html` (GitHub Pages) — untuk login, sync data
@@ -24,10 +24,10 @@ Setiap "New version" deployment di Apps Script menghasilkan URL yang SAMA selama
 PNS-NET Central Setup
 ```
 
-### Akun Login Default (ganti setelah production)
+### Kredensial Login (disimpan privat)
 ```
-Username : admin
-Password : admin123
+Username dan password tidak disimpan di repository publik.
+Simpan melalui Apps Script Script Properties dan gunakan akun individual.
 ```
 
 ---
@@ -36,18 +36,18 @@ Password : admin123
 
 | Nama Spreadsheet | ID | Isi |
 |---|---|---|
-| PNS_NET_WILAYAH | `1fPxDRhZo-RPRSl_e72FX18xLYe4CoSia-xLtNp-hLew` | Wilayah, sub-wilayah |
-| PNS_NET_JARINGAN_FO | `1oWr-4eCSc0yaiGWJnYst7m5gowBaLqEy65JDwrhV2Dc` | OLT, ODC, ODP, Port, Kabel, Server |
-| PNS_NET_SDM | `1i0V8ZQKhjaYUUGwiNyA3DKHfAXoq9R_VvGissK1RW-A` | Karyawan, Teknisi, User, Role, Permission |
-| PNS_NET_PELANGGAN | `1zS4rK-rZrAFG-ApsP8QIbfHBp5AF5ge35KyrQVP9YT4` | Calon, Pemasangan, Pelanggan |
-| PNS_NET_INVENTORI | `198MQSiLOvbW3ozZN7r74NPKyk98hkOOTw1-bNCs9J9g` | Modem, Material, Stok, Log Konfigurasi |
-| PNS_NET_KEUANGAN | `1CHPklTjMC1s6RLQhHbD0rL7Tg5rnclDiSDLDQOBDVI0` | Tagihan, Pembayaran, Setoran |
+| PNS_NET_WILAYAH | `[Disimpan di konfigurasi privat]` | Wilayah, sub-wilayah |
+| PNS_NET_JARINGAN_FO | `[Disimpan di konfigurasi privat]` | OLT, ODC, ODP, Port, Kabel, Server |
+| PNS_NET_SDM | `[Disimpan di konfigurasi privat]` | Karyawan, Teknisi, User, Role, Permission |
+| PNS_NET_PELANGGAN | `[Disimpan di konfigurasi privat]` | Calon, Pemasangan, Pelanggan |
+| PNS_NET_INVENTORI | `[Disimpan di konfigurasi privat]` | Modem, Material, Stok, Log Konfigurasi |
+| PNS_NET_KEUANGAN | `[Disimpan di konfigurasi privat]` | Tagihan, Pembayaran, Setoran |
 
 **Dipakai di:** `Api.gs` → konstanta `SS_IDS`
 
 ### Google Drive — Folder Gallery Pelanggan
 ```
-Folder ID : 1UkZ644pW93_Cuf995B9FY2BnZ6hPGlr0
+Folder ID : [Disimpan di konfigurasi privat]
 Path      : /PNS.NET/gallery pelanggan/
 ```
 **Dipakai di:** `Api.gs` → `SS_IDS.GALLERY_FOLDER`
