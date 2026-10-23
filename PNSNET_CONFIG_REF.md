@@ -1,7 +1,6 @@
 # PNS.NET — Referensi Konfigurasi Terpusat
 **PT. Pandawa Nusantara Solusindo**
-Dokumen ini berisi semua credential, ID, URL, dan token yang dipakai di seluruh sistem PNS.NET.
-Update di sini jika ada perubahan, lalu sesuaikan di file yang merujuk ke nilai ini.
+Dokumen ini mencatat nama kunci dan lokasi konfigurasi PNS.NET, bukan nilai rahasia atau identifier privat. Simpan semua nilai di Apps Script Script Properties atau konfigurasi privat; jangan commit nilainya ke repository.
 
 ---
 
@@ -24,6 +23,21 @@ Setiap "New version" deployment di Apps Script menghasilkan URL yang SAMA selama
 PNS-NET Central Setup
 ```
 
+### Script Properties yang diperlukan `Api.gs`
+Atur nilai secara langsung di **Apps Script → Project Settings → Script Properties**. Baris berikut hanya nama kunci; jangan menaruh nilainya di GitHub atau chat.
+
+| Kunci | Tujuan |
+|---|---|
+| `API_SECRET` | Menandatangani token sesi API |
+| `SS_WILAYAH`, `SS_JARINGAN`, `SS_SDM` | ID spreadsheet wilayah, jaringan, dan SDM |
+| `SS_PELANGGAN`, `SS_INVENTORI`, `SS_KEUANGAN` | ID spreadsheet pelanggan, inventori, dan keuangan |
+| `SS_GALLERY_FOLDER` | ID folder Drive foto pelanggan |
+| `MODEM_WIFI_DEFAULT_PASSWORD` | Password default konfigurasi modem, bila digunakan |
+| `TG_BOT_TOKEN`, `TG_CHAT_ID`, `TG_TOPIC_TEKNIS` | Konfigurasi notifikasi CIOT |
+
+`setupTelegramForCiot()` hanya memeriksa konfigurasi; fungsi tersebut tidak lagi menulis kredensial ke source code. Rotasi token yang pernah terpapar harus dilakukan di penyedia terkait lalu diperbarui di Script Properties.
+
+
 ### Kredensial Login (disimpan privat)
 ```
 Username dan password tidak disimpan di repository publik.
@@ -43,14 +57,14 @@ Simpan melalui Apps Script Script Properties dan gunakan akun individual.
 | PNS_NET_INVENTORI | `[Disimpan di konfigurasi privat]` | Modem, Material, Stok, Log Konfigurasi |
 | PNS_NET_KEUANGAN | `[Disimpan di konfigurasi privat]` | Tagihan, Pembayaran, Setoran |
 
-**Dipakai di:** `Api.gs` → konstanta `SS_IDS`
+**Dipakai di:** `Api.gs` → nama Script Properties `SS_PROP_KEYS` (nilai ID disimpan privat di Apps Script)
 
 ### Google Drive — Folder Gallery Pelanggan
 ```
 Folder ID : [Disimpan di konfigurasi privat]
 Path      : /PNS.NET/gallery pelanggan/
 ```
-**Dipakai di:** `Api.gs` → `SS_IDS.GALLERY_FOLDER`
+**Dipakai di:** `Api.gs` → Script Property `SS_GALLERY_FOLDER`
 
 ---
 
@@ -86,22 +100,7 @@ Nilai: -100xxxxxxxxxx (format supergroup, awalan -100)
 - `Api.gs` → `ciotNotifTelegram_()` untuk notif modem
 - `bridge.py` / `web_ui.py` → via API PNS.NET (tidak langsung)
 
-**Cara set di Apps Script:**
-```javascript
-// Jalankan sekali di Apps Script
-function setupTelegramConfig() {
-  const props = PropertiesService.getScriptProperties();
-  props.setProperty('TG_BOT_TOKEN',         'ISI_DI_SINI');
-  props.setProperty('TG_CHAT_ID',           'ISI_DI_SINI');
-  props.setProperty('TG_TOPIC_PENGUMUMAN',  '4');
-  props.setProperty('TG_TOPIC_PELANGGAN',   '6');
-  props.setProperty('TG_TOPIC_PEMBAYARAN',  '7');
-  props.setProperty('TG_TOPIC_TEKNIS',      '8');
-  props.setProperty('TG_TOPIC_GANGGUAN',    '9');
-  props.setProperty('TG_TOPIC_INVENTORI',   '10');
-  props.setProperty('TG_TOPIC_REVIEW',      '11');
-}
-```
+**Cara set di Apps Script:** buka Project Settings → Script Properties, lalu isi key dan nilainya secara privat. Jangan menanam token atau ID di fungsi setup yang ikut di-commit.
 
 ---
 
@@ -118,6 +117,7 @@ function setupTelegramConfig() {
 **pns-net-app:**
 ```
 index.html    ← Web app utama (dashboard, calon, pemasangan, login)
+Api.gs        ← Router Apps Script (tanpa nilai secret/ID konfigurasi)
 manifest.json ← PWA manifest
 sw.js         ← Service worker (cache, offline)
 ```

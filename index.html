@@ -3252,6 +3252,15 @@ img{max-width:100%;display:block}
 // ── DATA DEMO ──────────────────────────────────────────────
 // ── API ──────────────────────────────────────────────────────
 const API_URL = 'https://script.google.com/macros/s/AKfycbyQZHQH5WLDyAiGOxz7NEbbhGXMB4fP4ANkJTN9qJjNjv4Y2xQmZRqXR1tPwvEgTnP1/exec';
+
+// POST keeps credentials and auth tokens out of URL/query logs. No custom header: avoids CORS preflight with Apps Script.
+function pnsApiPost(payload, timeoutMs = 30000) {
+  return fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+}
 // Definisi kartu — value diupdate dari API saat sync
 let ALL_CARDS = [
   { id:'pelanggan_aktif',  icon:'👤', label:'Pelanggan Aktif',     value:'—', delta:'', type:'neu', accent:'#2A6FD4', soft:'#D6E6FA' },
@@ -3615,19 +3624,7 @@ async function doLogin() {
   errEl.style.display = 'none';
 
   try {
-    const loginUrl2 = API_URL
-      + '?action=login'
-      + '&username=' + encodeURIComponent(username)
-      + '&password=' + encodeURIComponent(password);
-    let res;
-    try {
-      res = await fetch(loginUrl2, {
-        method : 'GET',
-        signal : AbortSignal.timeout(30000),
-      });
-    } catch(fetchErr) {
-      throw fetchErr;
-    }
+    const res = await pnsApiPost({ action: 'login', username, password }, 30000);
     const data = await res.json();
 
     if (data.ok && data.data?.token) {
@@ -4416,20 +4413,23 @@ async function submitEditCalon() {
   }
 
   try {
-    const res  = await fetch(API_URL + '?action=calon_update&token=' +
-      encodeURIComponent(token) + '&id_calon=' + encodeURIComponent(id) +
-      '&nama_ktp=' + encodeURIComponent(payload.nama_ktp) +
-      '&no_hp='    + encodeURIComponent(payload.no_hp) +
-      '&catatan='  + encodeURIComponent(payload.catatan) +
-      '&id_paket=' + encodeURIComponent(payload.id_paket || ''),
-      { signal: AbortSignal.timeout(20000) }
-    );
+    const localId = 'edit_calon_' + id + '_' + Date.now();
+    const res = await pnsApiPost({
+      action: 'sync_push',
+      token,
+      transactions: [{
+        entity_type: 'CALON_UPDATE',
+        local_id: localId,
+        payload: { id_calon: id, nama_ktp: payload.nama_ktp, no_hp: payload.no_hp, catatan: payload.catatan, id_paket: payload.id_paket || '' },
+      }],
+    }, 20000);
     const data = await res.json();
-    if (data.ok) {
+    const result = data.data?.results?.[0];
+    if (data.ok && result?.ok) {
       showToast('✅ Data berhasil diperbarui');
       LOG.ok('Edit calon OK: ' + payload.nama_ktp);
     } else {
-      showToast('⚠️ Tersimpan lokal — ' + (data.error || 'API error'));
+      showToast('⚠️ Perubahan belum dikonfirmasi server — ' + (result?.error || data.error || 'API error'));
     }
   } catch(e) {
     showToast('⚠️ Tersimpan lokal (offline)');
@@ -5144,21 +5144,13 @@ async function submitBayar() {
   const token   = localStorage.getItem('pnsnet_token') || '';
 
   try {
-    // Upload foto bukti jika ada
     let urlBukti = '';
     if (_buktiFotoB64 && _bayarMetode === 'TRANSFER') {
-      addSyncLog('📤 Upload bukti transfer...');
-      try {
-        const upRes = await fetch(API_URL + '?action=foto_upload&token=' + encodeURIComponent(token), {
-          method:'GET'
-        });
-        // Simplified — upload via GET tidak bisa bawa file besar
-        // Di production gunakan POST dari Termux atau link Drive
-        urlBukti = 'local_foto';
-      } catch(e) {}
+      addSyncLog('⚠️ API belum mendukung penyimpanan foto bukti transfer; pembayaran akan tercatat tanpa tautan foto.');
+      showToast('⚠️ Foto bukti transfer belum tersimpan; pembayaran dikirim tanpa lampiran.');
     }
 
-    // Kirim via GET
+    // Kirim pembayaran via POST
     const params = new URLSearchParams({
       action          : 'bayar_catat',
       token,
@@ -5174,9 +5166,7 @@ async function submitBayar() {
       local_id        : localId,
     });
 
-    const res  = await fetch(API_URL + '?' + params.toString(), {
-      signal: AbortSignal.timeout(30000)
-    });
+    const res  = await pnsApiPost(Object.fromEntries(params.entries()), 30000);
     const data = await res.json();
 
     if (data.ok) {
@@ -5214,12 +5204,7 @@ async function loadKonfirmasi() {
 
   const token = localStorage.getItem('pnsnet_token') || '';
   try {
-    const res  = await fetch(API_URL +
-      '?action=bayar_rekap&token=' + encodeURIComponent(token) +
-      '&bulan=' + new Date().toISOString().slice(5,7) +
-      '&tahun=' + new Date().getFullYear(), {
-      signal: AbortSignal.timeout(20000)
-    });
+    const res  = await pnsApiPost({ action: 'bayar_rekap', token, bulan: new Date().toISOString().slice(5,7), tahun: new Date().getFullYear() }, 20000);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
 
@@ -5285,12 +5270,7 @@ async function aksiKonfirmasi(idPembayaran, aksi, namaPel, noHp) {
 
   const token = localStorage.getItem('pnsnet_token') || '';
   try {
-    const res = await fetch(API_URL +
-      '?action=bayar_konfirmasi&token=' + encodeURIComponent(token) +
-      '&id_pembayaran=' + idPembayaran +
-      '&aksi=' + aksi, {
-      signal: AbortSignal.timeout(20000)
-    });
+    const res = await pnsApiPost({ action: 'bayar_konfirmasi', token, id_pembayaran: idPembayaran, aksi }, 20000);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
 
@@ -5316,11 +5296,7 @@ async function loadRekap() {
     '<div style="text-align:center;padding:20px;color:var(--text3)">⟳ Memuat...</div>';
 
   try {
-    const res  = await fetch(API_URL +
-      '?action=bayar_rekap&token=' + encodeURIComponent(token) +
-      '&bulan=' + bulan + '&tahun=' + tahun, {
-      signal: AbortSignal.timeout(20000)
-    });
+    const res  = await pnsApiPost({ action: 'bayar_rekap', token, bulan, tahun }, 20000);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
 
@@ -5409,10 +5385,7 @@ function exportRekap(format) {
 async function loadListBelum() {
   const token = localStorage.getItem('pnsnet_token') || '';
   try {
-    const res  = await fetch(API_URL +
-      '?action=bayar_list_belum&token=' + encodeURIComponent(token), {
-      signal: AbortSignal.timeout(20000)
-    });
+    const res  = await pnsApiPost({ action: 'bayar_list_belum', token }, 20000);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
     _listBelumData = data.data.rows || [];
@@ -5500,11 +5473,7 @@ async function uploadListBelum(input) {
   const token = localStorage.getItem('pnsnet_token') || '';
   try {
     const rowsParam = encodeURIComponent(JSON.stringify(rows));
-    const res = await fetch(API_URL +
-      '?action=bayar_upload_belum&token=' + encodeURIComponent(token) +
-      '&rows=' + rowsParam, {
-      signal: AbortSignal.timeout(30000)
-    });
+    const res = await pnsApiPost({ action: 'bayar_upload_belum', token, rows }, 30000);
     const data = await res.json();
     if (data.ok) {
       _listBelumData = rows;
@@ -5770,24 +5739,26 @@ function togglePelCard(id) {
   }
 }
 
-function ubahStatusPel(id, statusSaat) {
-  const statusBaru = statusSaat==='AKTIF' ? 'ISTIRAHAT'
-    : statusSaat==='ISTIRAHAT' ? 'AKTIF' : 'AKTIF';
-  const msg = statusBaru==='ISTIRAHAT'
+async function ubahStatusPel(id, statusSaat) {
+  const statusBaru = statusSaat === 'AKTIF' ? 'ISTIRAHAT'
+    : statusSaat === 'ISTIRAHAT' ? 'AKTIF' : 'AKTIF';
+  const msg = statusBaru === 'ISTIRAHAT'
     ? 'Set pelanggan ke mode ISTIRAHAT? Layanan akan nonaktif sampai bayar lagi.'
     : 'Aktifkan kembali pelanggan ini?';
   if (!confirm(msg)) return;
-
-  const pel = pelangganData.find(p => (p.id_pelanggan||p.id_calon)===id);
-  if (pel) {
+  const pel = pelangganData.find(p => (p.id_pelanggan || p.id_calon) === id);
+  if (!pel) return showToast('❌ Pelanggan tidak ditemukan');
+  const token = localStorage.getItem('pnsnet_token') || '';
+  if (!token) return showToast('❌ Sesi login tidak valid');
+  try {
+    const res = await pnsApiPost({ action: 'pelanggan_status', token, id, status: statusBaru }, 20000);
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Server menolak perubahan status');
     pel.status = statusBaru;
     renderPelangganPage();
-    showToast('✅ Status diubah ke ' + statusBaru);
-    // Kirim ke API (background)
-    const token = localStorage.getItem('pnsnet_token')||'';
-    fetch(API_URL + '?action=pelanggan_status&token=' + encodeURIComponent(token)
-      + '&id=' + id + '&status=' + statusBaru)
-      .catch(()=>{});
+    showToast('✅ Server mengonfirmasi status ' + statusBaru);
+  } catch (e) {
+    showToast('⚠️ Status belum berubah di server: ' + (e.message || 'gagal menghubungi API'));
   }
 }
 
@@ -5947,11 +5918,7 @@ async function konfirmasiImport() {
   const rowsEncoded = encodeURIComponent(JSON.stringify(_importData));
 
   try {
-    const res  = await fetch(API_URL +
-      '?action=pelanggan_import&token=' + encodeURIComponent(token) +
-      '&rows=' + rowsEncoded, {
-      signal: AbortSignal.timeout(60000)
-    });
+    const res  = await pnsApiPost({ action: 'pelanggan_import', token, rows: _importData }, 60000);
     const data = await res.json();
 
     if (data.ok) {
@@ -6955,7 +6922,8 @@ async function submitCalonCreate() {
         })
       });
       const upData = await upRes.json();
-      if (upData.ok) urlFotoKtp = upData.data.url;
+      if (!upRes.ok || !upData.ok || !upData.data?.url) throw new Error(upData.error || 'Upload foto KTP belum dikonfirmasi');
+      urlFotoKtp = upData.data.url;
     }
 
     // 2. Simpan calon
@@ -6970,11 +6938,11 @@ async function submitCalonCreate() {
       })
     });
     const data = await res.json();
-
-    if (data.ok && data.data.results[0].ok) {
+    const txResult = data?.data?.results?.[0];
+    if (res.ok && data.ok && txResult?.ok) {
       showSuccess(true);
     } else {
-      throw new Error(data.error || 'Gagal menyimpan');
+      throw new Error(txResult?.error || data.error || 'Server belum mengonfirmasi data calon');
     }
   } catch(err) {
     // Fallback ke lokal
@@ -7259,17 +7227,9 @@ async function syncPull(silent = false) {
   _syncStatus = 'syncing';
   LOG.sys('syncPull: status set ke syncing');
   try {
-    const encodedToken = encodeURIComponent(token);
-    const tokenPreview = token.substring(0,20) + '...';
-    const url = API_URL + '?action=dashboard_summary&token=' + encodedToken;
-    addSyncLog('⟳ [1/4] Menyiapkan request...');
-
     let res;
     try {
-      res = await fetch(url, {
-        method : 'GET',
-        signal : AbortSignal.timeout(30000),
-      });
+      res = await pnsApiPost({ action: 'dashboard_summary', token }, 30000);
       addSyncLog('⟳ [2/4] Response HTTP ' + res.status + ' diterima...');
     } catch(fetchErr) {
       addSyncLog('❌ Fetch error: ' + fetchErr.name + ' — ' + fetchErr.message);
