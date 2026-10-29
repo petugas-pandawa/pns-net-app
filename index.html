@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.7.4">
+<meta name="app-version" content="2.7.5">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1511,7 +1511,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.7.4 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.7.5 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -5898,7 +5898,7 @@ function tampilkanPreviewImport(rows, hdr) {
       </tr>
     </thead>
     <tbody>
-      ${validasiRows.slice(0,20).map((r,i) => `
+      ${validasiRows.map((r,i) => `
         <tr style="background:${r._errors.length?'var(--danger-soft)':''}">
           <td style="padding:5px 10px;font-size:11px;color:var(--text3);
             border-bottom:1px solid var(--border)">${i+1}</td>
