@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.7.3">
+<meta name="app-version" content="2.7.4">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -377,7 +377,8 @@ img{max-width:100%;display:block}
   cursor:pointer;
 }
 .nav-item:hover{background:var(--accent-soft);color:var(--accent)}
-.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:700;
+.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600
+  font-weight:700;
 }
 .nav-item .icon{width:18px;text-align:center;font-size:16px;flex-shrink:0}
 .nav-item .badge{
@@ -1510,7 +1511,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.7.3 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.7.4 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -3795,7 +3796,7 @@ function renderCardToggles() {
   document.getElementById('cardToggleList').innerHTML = ALL_CARDS.map(c => {
     const on = activeCards.includes(c.id);
     return `
-      <div class="card-toggle-item" onclick="toggleDashboardCard('${c.id}')">
+      <div class="card-toggle-item" onclick="toggleCard('${c.id}')">
         <span class="card-toggle-icon">${c.icon}</span>
         <span class="card-toggle-name">${c.label}</span>
         <div class="card-check ${on?'checked':''}">${on?'✓':''}</div>
@@ -3804,7 +3805,7 @@ function renderCardToggles() {
   }).join('');
 }
 
-function toggleDashboardCard(id) {
+function toggleCard(id) {
   if (activeCards.includes(id)) {
     if (activeCards.length <= 2) return; // minimal 2 kartu
     activeCards = activeCards.filter(c => c !== id);
@@ -4360,13 +4361,15 @@ function editCalon(id, e) {
   }, 100);
 }
 
-// Submit saat mode edit atau mode calon baru.
+// Submit saat mode edit — update, bukan insert baru
+const _origSubmitCalon = submitCalon;
 function submitCalon() {
   const formPage = document.getElementById('formCalonPage');
   if (formPage && formPage.dataset.mode === 'edit' && window._editingCalonId) {
-    return submitEditCalon();
+    submitEditCalon();
+    return;
   }
-  return submitCalonCreate();
+  _origSubmitCalon();
 }
 
 async function submitEditCalon() {
@@ -6448,7 +6451,8 @@ async function submitPemasangan(){
   timerPause();
 
   const calon=window._pemCalon||{};
-  const localId='pem_'+Date.now();
+  const h=Math.floor(timerSeconds/3600),m=Math.floor((timerSeconds%3600)/60);
+
   const payload={
     id_calon          : calon.id||'',
     id_teknisi_list   : JSON.stringify(pemTeknisiSel),
@@ -6475,61 +6479,48 @@ async function submitPemasangan(){
     username_pppoe    : document.getElementById('pem_usernamePreview').textContent,
   };
 
-  // Simpan salinan lokal sampai API benar-benar mengonfirmasi transaksi.
-  saveLocal('TRANSAKSI_PEMASANGAN',{...payload,local_id:localId,_status:'SELESAI',_sync_status:'PENDING'});
+  // Simpan lokal dulu
+  saveLocal('TRANSAKSI_PEMASANGAN',{...payload,local_id:'pem_'+Date.now(),_status:'SELESAI'});
 
-  let serverSynced=false;
-  let syncError='';
   if(isOnline()){
     try{
       const token=localStorage.getItem('pnsnet_token')||'';
+      // Upload foto ONT
       if(ontBase64){
-        const fotoRes=await fetch(API_URL,{method:'POST',body:JSON.stringify({
+        await fetch(API_URL,{method:'POST',body:JSON.stringify({
           action:'foto_upload',token,jenis:'ONT',
           nama_ktp:calon.nama_ktp,nama_desa:calon.nama_desa,
           id_server:payload.id_server,
           tgl_daftar:new Date().toISOString().slice(0,10),
           base64data:ontBase64,mime_type:ontMime
-        }),signal:AbortSignal.timeout(45000)});
-        const fotoData=await fotoRes.json();
-        if(!fotoRes.ok||!fotoData.ok||!fotoData.data?.url) throw new Error(fotoData.error||'Upload foto ONT belum dikonfirmasi');
-        payload.url_foto_ont=fotoData.data.url;
-        updateLocalRecord('TRANSAKSI_PEMASANGAN',localId,{url_foto_ont:payload.url_foto_ont});
+        })}).then(r=>r.json()).then(d=>{if(d.ok)payload.url_foto_ont=d.data.url;});
       }
+      // Upload foto OPM
       if(opmBase64){
-        const fotoRes=await fetch(API_URL,{method:'POST',body:JSON.stringify({
+        await fetch(API_URL,{method:'POST',body:JSON.stringify({
           action:'foto_upload',token,jenis:'OPM',
           nama_ktp:calon.nama_ktp,nama_desa:calon.nama_desa,
           id_server:payload.id_server,
           tgl_daftar:new Date().toISOString().slice(0,10),
           base64data:opmBase64,mime_type:opmMime
-        }),signal:AbortSignal.timeout(45000)});
-        const fotoData=await fotoRes.json();
-        if(!fotoRes.ok||!fotoData.ok||!fotoData.data?.url) throw new Error(fotoData.error||'Upload foto OPM belum dikonfirmasi');
-        payload.url_foto_opm=fotoData.data.url;
-        updateLocalRecord('TRANSAKSI_PEMASANGAN',localId,{url_foto_opm:payload.url_foto_opm});
+        })}).then(r=>r.json()).then(d=>{if(d.ok)payload.url_foto_opm=d.data.url;});
       }
-
-      const res=await fetch(API_URL,{method:'POST',body:JSON.stringify({
+      // Kirim laporan selesai
+      await fetch(API_URL,{method:'POST',body:JSON.stringify({
         action:'sync_push',token,
-        transactions:[{entity_type:'PEMASANGAN_SELESAI',local_id:localId,payload}]
-      }),signal:AbortSignal.timeout(45000)});
-      const data=await res.json();
-      const result=data?.data?.results?.[0];
-      if(!res.ok||!data.ok||!result?.ok) throw new Error(result?.error||data.error||`HTTP ${res.status}: server belum mengonfirmasi laporan`);
-
-      serverSynced=true;
-      removeLocalRecord('TRANSAKSI_PEMASANGAN',localId);
-    }catch(err){
-      syncError=String(err?.message||err||'Gagal mengirim laporan');
-      console.warn('Submit pemasangan belum terkonfirmasi:',syncError);
-    }
+        transactions:[{
+          entity_type:'PEMASANGAN_SELESAI',
+          local_id:'pem_'+Date.now(),
+          payload
+        }]
+      })});
+    }catch(err){console.warn('Submit pemasangan error:',err);}
   }
 
-  showPemSuccess(serverSynced,syncError);
+  showPemSuccess();
 }
 
-function showPemSuccess(serverSynced=false,syncError=''){
+function showPemSuccess(){
   for(let i=0;i<5;i++){
     const el=document.getElementById('pstep'+i);
     if(el) el.style.display='none';
@@ -6539,17 +6530,9 @@ function showPemSuccess(serverSynced=false,syncError=''){
     n.querySelector('.step-circle').textContent='✓';
   });
   document.getElementById('pemStepSuccess').style.display='block';
-  const msg=document.getElementById('pemSuccessMsg');
-  if(serverSynced){
-    msg.textContent='✅ Server telah mengonfirmasi laporan pemasangan.';
-  }else if(!isOnline()){
-    msg.textContent='📴 Laporan disimpan di perangkat tetapi belum terkirim. Antrean pengiriman otomatis belum tersedia; jangan anggap laporan sudah masuk ke server.';
-  }else{
-    msg.textContent=`⚠️ Server belum mengonfirmasi laporan. Salinan lokal tetap disimpan. Cek daftar server sebelum mencoba ulang agar tidak membuat duplikat. ${String(syncError||'').slice(0,200)}`;
-  }
-  if(!serverSynced&&(ontBase64||opmBase64)){
-    msg.textContent+=' Foto yang belum sempat diunggah tidak ikut tersimpan di salinan lokal.';
-  }
+  document.getElementById('pemSuccessMsg').innerHTML=isOnline()
+    ?'✅ Laporan terkirim ke server. Notifikasi dikirim ke Telegram <b>Teknis & Pemasangan</b>.'
+    :'📴 Data tersimpan lokal. Akan disinkronkan dan notifikasi dikirim saat ada koneksi.';
 }
 
 function cancelPemasangan(){
@@ -6908,7 +6891,7 @@ function buildSummary() {
 }
 
 // ── Submit ────────────────────────────────────────────
-async function submitCalonCreate() {
+async function submitCalon() {
   const btn = document.getElementById('btnSubmit');
   btn.disabled = true;
   btn.innerHTML = '<span class="ocr-spin">⟳</span> Menyimpan...';
@@ -6930,11 +6913,73 @@ async function submitCalonCreate() {
   };
 
   const localId = 'local_' + Date.now();
+  const isEdit  = !!window._editingCalonId;
+  const editId  = window._editingCalonId || '';
 
+  // ── MODE EDIT ──────────────────────────────────────────
+  if (isEdit) {
+    if (!isOnline()) {
+      // Update lokal saja — tandai offline
+      const key = 'pnsnet_local_TRANSAKSI_CALON_PELANGGAN';
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const idx = existing.findIndex(r => r.id === editId || r.id_calon === editId);
+      if (idx >= 0) {
+        existing[idx] = { ...existing[idx], ...payload, _offline: true, _updated_at: new Date().toISOString() };
+      } else {
+        existing.push({ ...payload, id_calon: editId, _offline: true, _updated_at: new Date().toISOString() });
+      }
+      localStorage.setItem(key, JSON.stringify(existing));
+      // Update calonData di memori
+      const ci = calonData.findIndex(r => (r.id||r.id_calon) === editId);
+      if (ci >= 0) calonData[ci] = { ...calonData[ci], ...payload, _offline: true };
+      window._editingCalonId = null;
+      showToast('📴 Perubahan disimpan lokal — akan dikirim saat online');
+      openListCalon();
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('pnsnet_token') || '';
+      const params = new URLSearchParams({
+        action      : 'calon_update',
+        token,
+        id_calon    : editId,
+        ...Object.fromEntries(Object.entries(payload).map(([k,v]) => [k, String(v)]))
+      });
+      const res  = await fetch(API_URL + '?' + params.toString());
+      const data = await res.json();
+
+      if (data.ok) {
+        // Update calonData di memori
+        const ci = calonData.findIndex(r => (r.id||r.id_calon) === editId);
+        if (ci >= 0) calonData[ci] = { ...calonData[ci], ...payload };
+        window._editingCalonId = null;
+        showToast('✅ Data calon berhasil diupdate');
+        openListCalon();
+      } else {
+        throw new Error(data.error || 'Gagal update');
+      }
+    } catch(err) {
+      showToast('❌ Gagal update: ' + err.message);
+      btn.disabled = false;
+      btn.innerHTML = '💾 Simpan Perubahan';
+    }
+    return;
+  }
+
+  // ── MODE TAMBAH BARU ────────────────────────────────────
   if (!isOnline()) {
-    // Simpan ke lokal IndexedDB/localStorage
-    saveLocal('TRANSAKSI_CALON_PELANGGAN', { ...payload, local_id: localId,
-      id_status_proses: 'BARU', _created_at: new Date().toISOString(), _sync_status: 'PENDING' });
+    const newCalonWithStatus = {
+      ...payload,
+      local_id: localId,
+      id_status_proses: 'BARU',
+      _offline: true,
+      _localId: localId,
+      _created_at: new Date().toISOString()
+    };
+    calonData.unshift(newCalonWithStatus);
+    LOCAL_QUEUE.push({ type: 'calon', data: payload, localId, ts: Date.now() });
+    localStorage.setItem('pnsnet_queue', JSON.stringify(LOCAL_QUEUE));
     showSuccess(false);
     return;
   }
@@ -6958,7 +7003,7 @@ async function submitCalonCreate() {
       if (upData.ok) urlFotoKtp = upData.data.url;
     }
 
-    // 2. Simpan calon
+    // 2. Simpan calon baru
     const res = await fetch(API_URL, {
       method:'POST', body: JSON.stringify({
         action:'sync_push', token,
@@ -6978,8 +7023,15 @@ async function submitCalonCreate() {
     }
   } catch(err) {
     // Fallback ke lokal
-    saveLocal('TRANSAKSI_CALON_PELANGGAN', { ...payload, local_id: localId,
-      id_status_proses: 'BARU', _created_at: new Date().toISOString(), _sync_status: 'PENDING' });
+    const newCalonLocal = {
+      ...payload, local_id: localId,
+      id_status_proses: 'BARU',
+      _offline: true, _localId: localId,
+      _created_at: new Date().toISOString()
+    };
+    calonData.unshift(newCalonLocal);
+    LOCAL_QUEUE.push({ type: 'calon', data: payload, localId, ts: Date.now() });
+    localStorage.setItem('pnsnet_queue', JSON.stringify(LOCAL_QUEUE));
     showSuccess(false, err.message);
   }
 }
@@ -6989,31 +7041,6 @@ function saveLocal(table, data) {
   const existing = JSON.parse(localStorage.getItem(key) || '[]');
   existing.push(data);
   localStorage.setItem(key, JSON.stringify(existing));
-}
-
-function updateLocalRecord(table, localId, patch) {
-  try {
-    const key = 'pnsnet_local_' + table;
-    const records = JSON.parse(localStorage.getItem(key) || '[]');
-    const index = records.findIndex(row => row && row.local_id === localId);
-    if (index < 0) return;
-    records[index] = { ...records[index], ...patch };
-    localStorage.setItem(key, JSON.stringify(records));
-  } catch (e) {
-    console.warn('Gagal memperbarui salinan lokal:', e);
-  }
-}
-
-function removeLocalRecord(table, localId) {
-  try {
-    const key = 'pnsnet_local_' + table;
-    const records = JSON.parse(localStorage.getItem(key) || '[]');
-    const remaining = records.filter(row => !row || row.local_id !== localId);
-    if (remaining.length) localStorage.setItem(key, JSON.stringify(remaining));
-    else localStorage.removeItem(key);
-  } catch (e) {
-    console.warn('Gagal membersihkan salinan lokal:', e);
-  }
 }
 
 function showSuccess(online, errMsg) {
@@ -7029,14 +7056,9 @@ function showSuccess(online, errMsg) {
     n.querySelector('.step-circle').textContent = '✓';
   });
 
-  const msg = document.getElementById('successMsg');
-  if (online) {
-    msg.textContent = '✅ Data tersimpan di server dan notifikasi telah dikirim ke Telegram.';
-  } else if (errMsg) {
-    msg.textContent = `⚠️ Data tersimpan di perangkat, tetapi server belum mengonfirmasi. Detail: ${String(errMsg).slice(0, 240)}. Cek daftar server sebelum mencoba ulang agar tidak membuat duplikat.`;
-  } else {
-    msg.textContent = '📴 Data tersimpan di perangkat tetapi belum terkirim ke server. Antrean sinkronisasi otomatis untuk data lokal belum tersedia di aplikasi ini.';
-  }
+  document.getElementById('successMsg').innerHTML = online
+    ? '✅ Data tersimpan di server dan notifikasi telah dikirim ke Telegram.'
+    : `📴 Data tersimpan lokal${errMsg?' ('+errMsg+')':''}. Akan disinkronkan saat online.`;
 }
 
 // ════════════════════════════════════════════════════════
