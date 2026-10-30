@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.7.9">
+<meta name="app-version" content="2.8.0">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -5774,6 +5774,85 @@ function renderPelangganCard(p) {
   </div>`;
 }
 
+// ── Dropdown lokasi bertingkat untuk form edit pelanggan ──
+function cariLokasiDesa(namaDesa, kecHint) {
+  const target = String(namaDesa || '').trim().toLowerCase();
+  if (!target) return null;
+  const hasil = [];
+  Object.keys(WILAYAH_DATA).forEach(kab => {
+    const kecs = WILAYAH_DATA[kab].kec || {};
+    Object.keys(kecs).forEach(kec => {
+      const desa = kecs[kec].find(d => String(d).toLowerCase() === target);
+      if (desa) hasil.push({ kab, kec, desa });
+    });
+  });
+  if (!hasil.length) return null;
+  const hint = String(kecHint || '').trim().toLowerCase();
+  return (hint && hasil.find(h => h.kec.toLowerCase() === hint)) || hasil[0];
+}
+
+function onEditKabChange() {
+  const kab    = document.getElementById('epf_kab').value;
+  const kecSel = document.getElementById('epf_kec');
+  const dSel   = document.getElementById('epf_desa');
+  kecSel.innerHTML = '<option value="">— Pilih kecamatan —</option>';
+  dSel.innerHTML   = '<option value="">— Pilih desa —</option>';
+  kecSel.disabled  = !kab;
+  dSel.disabled    = true;
+  if (!kab) return;
+  Object.keys(WILAYAH_DATA[kab]?.kec || {}).forEach(k => {
+    kecSel.innerHTML += `<option value="${k}">${k}</option>`;
+  });
+}
+
+function onEditKecChange() {
+  const kab  = document.getElementById('epf_kab').value;
+  const kec  = document.getElementById('epf_kec').value;
+  const dSel = document.getElementById('epf_desa');
+  dSel.innerHTML = '<option value="">— Pilih desa —</option>';
+  dSel.disabled  = !kec;
+  if (!kec) return;
+  (WILAYAH_DATA[kab]?.kec[kec] || []).forEach(d => {
+    dSel.innerHTML += `<option value="${d}">${d}</option>`;
+  });
+}
+
+function wilayahBlockHtml(pel) {
+  const esc  = v => String(v || '').replace(/"/g, '&quot;');
+  const desaSkrg = pel.id_desa || pel.nama_desa || '';
+  const lok  = cariLokasiDesa(desaSkrg, pel.nama_kec);
+  const sel  = 'width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)';
+  const lbl  = 'font-size:12px;color:var(--text3);display:block;margin-bottom:4px';
+
+  const kabOpts = '<option value="">— Pilih kabupaten —</option>' +
+    Object.keys(WILAYAH_DATA).map(k =>
+      `<option value="${k}" ${lok && lok.kab === k ? 'selected' : ''}>${WILAYAH_DATA[k].label}</option>`).join('');
+  const kecOpts = '<option value="">— Pilih kecamatan —</option>' + (lok
+    ? Object.keys(WILAYAH_DATA[lok.kab].kec).map(k =>
+        `<option value="${k}" ${k === lok.kec ? 'selected' : ''}>${k}</option>`).join('') : '');
+  const desaOpts = '<option value="">— Pilih desa —</option>' + (lok
+    ? WILAYAH_DATA[lok.kab].kec[lok.kec].map(d =>
+        `<option value="${d}" ${d === lok.desa ? 'selected' : ''}>${d}</option>`).join('') : '');
+
+  const info = desaSkrg
+    ? `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">Lokasi tersimpan: <b>${esc(desaSkrg)}</b>${pel.id_sub_wilayah ? ', ' + esc(pel.id_sub_wilayah) : ''}${lok ? '' : ' — tidak ada di daftar wilayah, pilih ulang bila perlu'}</div>`
+    : '';
+
+  return `
+    <div style="margin-bottom:12px;padding:12px;border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px">📍 Lokasi</div>
+      ${info}
+      <div style="margin-bottom:8px"><label style="${lbl}">Kabupaten</label>
+        <select id="epf_kab" onchange="onEditKabChange()" style="${sel}">${kabOpts}</select></div>
+      <div style="margin-bottom:8px"><label style="${lbl}">Kecamatan</label>
+        <select id="epf_kec" onchange="onEditKecChange()" ${lok ? '' : 'disabled'} style="${sel}">${kecOpts}</select></div>
+      <div style="margin-bottom:8px"><label style="${lbl}">Desa / Kelurahan</label>
+        <select id="epf_desa" ${lok ? '' : 'disabled'} style="${sel}">${desaOpts}</select></div>
+      <div><label style="${lbl}">Dusun / Lingkungan</label>
+        <input type="text" id="epf_dusun" value="${esc(pel.id_sub_wilayah)}" style="${sel}"></div>
+    </div>`;
+}
+
 function editPelanggan(idPel) {
   const pel = pelangganData.find(p =>
     (p.id_pelanggan||p.id_calon||p.id) === idPel);
@@ -5801,6 +5880,8 @@ function editPelanggan(idPel) {
       opts:['CIOT','HUAWEI','FIBERHOME','ZTE','LAINNYA'] },
     { key:'id_paket',      label:'Paket',           type:'select',
       opts: PAKET_LIST.map(p => ({ val: p.id, label: p.speed + ' — ' + p.price })) },
+    { key:'__wilayah', type:'wilayah' },
+    { key:'alamat_detail', label:'Alamat Detail (patokan)', type:'textarea' },
     { key:'catatan',       label:'Catatan',         type:'textarea' },
   ];
 
@@ -5833,7 +5914,7 @@ function editPelanggan(idPel) {
         <button onclick="document.getElementById('editPelModal').style.display='none'"
           style="color:var(--text3);font-size:20px;background:none;border:none;cursor:pointer;padding:4px">✕</button>
       </div>
-      ${fields.map(f => `
+      ${fields.map(f => f.type==='wilayah' ? wilayahBlockHtml(pel) : `
         <div style="margin-bottom:12px">
           <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">${f.label}</label>
           ${buatInput(f)}
@@ -5877,7 +5958,20 @@ async function simpanEditPelanggan() {
     merek_ont     : getValue('epf_merek_ont'),
     id_paket      : getValue('epf_id_paket'),
     catatan       : getValue('epf_catatan'),
+    id_desa       : getValue('epf_desa'),
+    id_sub_wilayah: getValue('epf_dusun'),
+    alamat_detail : getValue('epf_alamat_detail'),
   };
+
+  // Lokasi: kabupaten/kecamatan dipilih tapi desa belum → minta lengkapi
+  if ((getValue('epf_kab') || getValue('epf_kec')) && !getValue('epf_desa')) {
+    showToast('⚠️ Lengkapi lokasi: pilih desa');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan Perubahan'; }
+    return;
+  }
+  // Desa kosong = tidak diubah (jangan timpa data lama dengan kosong)
+  if (!payload.id_desa) delete payload.id_desa;
+  else payload.nama_desa = payload.id_desa;
 
   try {
     const token  = localStorage.getItem('pnsnet_token') || '';
