@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.7.6">
+<meta name="app-version" content="2.7.7">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1511,7 +1511,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.7.6 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.7.7 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -4151,7 +4151,7 @@ function renderCalonCard(c) {
         <div class="detail-item">
           <div class="detail-label">NO. HP / WA</div>
           <div class="detail-val">
-            <a href="https://wa.me/${String(c.no_hp||'').replace(/[^0-9]/g,'').replace(/^0/,'62')}"
+            <a href="https://wa.me/${normalizeNoHp(c.no_hp||'').replace('+','')}"
               onclick="event.stopPropagation()"
               style="color:var(--success);font-weight:600">
               📱 ${c.no_hp||'—'}
@@ -4218,7 +4218,7 @@ function renderCalonCard(c) {
           onclick="editCalon('${c.id}',event)">
           ✏️ Edit Data
         </button>
-        <a href="https://wa.me/${String(c.no_hp||'').replace(/[^0-9]/g,'').replace(/^0/,'62')}?text=Halo%20${encodeURIComponent(c.nama_ktp)}%2C%20kami%20dari%20PNS.NET..."
+        <a href="https://wa.me/${normalizeNoHp(c.no_hp||'').replace('+','')}?text=Halo%20${encodeURIComponent(c.nama_ktp)}%2C%20kami%20dari%20PNS.NET..."
           onclick="event.stopPropagation()"
           target="_blank">
           <button class="btn-sm btn-sm-secondary">💬 WhatsApp</button>
@@ -5757,9 +5757,159 @@ function renderPelangganCard(p) {
           onclick="event.stopPropagation();showToast('🚧 Riwayat — segera hadir')">
           📋 Riwayat
         </button>
+        <button class="btn-sm btn-sm-secondary"
+          onclick="event.stopPropagation();editPelanggan('${idPel}')">
+          ✏️ Edit
+        </button>
       </div>
     </div>
   </div>`;
+}
+
+function editPelanggan(idPel) {
+  const pel = pelangganData.find(p =>
+    (p.id_pelanggan||p.id) === idPel);
+  if (!pel) { showToast('Data pelanggan tidak ditemukan'); return; }
+
+  // Simpan referensi
+  window._editingPelId  = idPel;
+  window._editingPel    = pel;
+
+  // Tampilkan modal edit
+  let modal = document.getElementById('editPelModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'editPelModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;padding:0';
+    document.body.appendChild(modal);
+  }
+
+  const fields = [
+    { key:'nama_ktp',      label:'Nama KTP',        type:'text' },
+    { key:'no_hp',         label:'No. HP / WA',     type:'tel'  },
+    { key:'username_pppoe',label:'Username PPPoE',  type:'text' },
+    { key:'ip_ont',        label:'IP ONT',          type:'text' },
+    { key:'merek_ont',     label:'Merek ONT',       type:'select',
+      opts:['CIOT','HUAWEI','FIBERHOME','ZTE','LAINNYA'] },
+    { key:'id_paket',      label:'Paket',           type:'select',
+      opts: PAKET_DATA.map(p => ({ val: p.id_paket||p.id, label: p.nama_paket||p.id })) },
+    { key:'catatan',       label:'Catatan',         type:'textarea' },
+  ];
+
+  const buatInput = (f) => {
+    const val = pel[f.key] || '';
+    if (f.type === 'select') {
+      const optsHtml = f.opts.map(o => {
+        const v = typeof o === 'string' ? o : o.val;
+        const l = typeof o === 'string' ? o : o.label;
+        return `<option value="${v}" ${val===v?'selected':''}>${l}</option>`;
+      }).join('');
+      return `<select id="epf_${f.key}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+        ${optsHtml}</select>`;
+    }
+    if (f.type === 'textarea') {
+      return `<textarea id="epf_${f.key}" rows="2"
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);resize:none">${val}</textarea>`;
+    }
+    return `<input type="${f.type}" id="epf_${f.key}" value="${val}"
+      style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">`;
+  };
+
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-width:520px;
+      max-height:90vh;overflow-y:auto;padding:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <span style="font-size:20px">✏️</span>
+        <div style="font-size:15px;font-weight:700;flex:1">Edit Pelanggan</div>
+        <div style="font-size:12px;color:var(--text3)">${pel.nama_ktp||idPel}</div>
+        <button onclick="document.getElementById('editPelModal').style.display='none'"
+          style="color:var(--text3);font-size:20px;background:none;border:none;cursor:pointer;padding:4px">✕</button>
+      </div>
+      ${fields.map(f => `
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">${f.label}</label>
+          ${buatInput(f)}
+        </div>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:16px;padding-bottom:8px">
+        <button class="btn btn-secondary" style="flex:1"
+          onclick="document.getElementById('editPelModal').style.display='none'">
+          Batal
+        </button>
+        <button class="btn btn-primary" style="flex:2" id="btnSimpanPel"
+          onclick="simpanEditPelanggan()">
+          💾 Simpan Perubahan
+        </button>
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+async function simpanEditPelanggan() {
+  const idPel = window._editingPelId;
+  if (!idPel) return;
+
+  const btn = document.getElementById('btnSimpanPel');
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Menyimpan...'; }
+
+  // Ambil nilai dari form + normalisasi no_hp
+  const getValue = id => {
+    const el = document.getElementById(id);
+    return el ? (el.value || '').trim() : '';
+  };
+
+  const noHpRaw = getValue('epf_no_hp');
+  const noHp    = normalizeNoHp(noHpRaw);
+
+  const payload = {
+    id_pelanggan  : idPel,
+    nama_ktp      : getValue('epf_nama_ktp'),
+    no_hp         : noHp,
+    username_pppoe: getValue('epf_username_pppoe'),
+    ip_ont        : getValue('epf_ip_ont'),
+    merek_ont     : getValue('epf_merek_ont'),
+    id_paket      : getValue('epf_id_paket'),
+    catatan       : getValue('epf_catatan'),
+  };
+
+  try {
+    const token  = localStorage.getItem('pnsnet_token') || '';
+    const params = new URLSearchParams({ action:'pelanggan_status', token,
+      id_pelanggan: idPel, status: window._editingPel?.status || 'AKTIF' });
+
+    // Gunakan endpoint pelanggan_status untuk field status + update umum via calon_update
+    // Untuk data detail pakai endpoint khusus jika ada, atau update langsung
+    const res  = await fetch(API_URL + '?' + new URLSearchParams({
+      action        : 'pelanggan_update',
+      token,
+      ...Object.fromEntries(Object.entries(payload).map(([k,v])=>[k,String(v)]))
+    }).toString());
+
+    let data;
+    try { data = await res.json(); } catch(e) { data = { ok: false }; }
+
+    if (data.ok) {
+      // Update lokal
+      const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id) === idPel);
+      if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload };
+      document.getElementById('editPelModal').style.display = 'none';
+      showToast('✅ Data pelanggan diperbarui');
+      renderPelList();
+    } else {
+      // Simpan lokal saja
+      const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id) === idPel);
+      if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload, _offline: true };
+      document.getElementById('editPelModal').style.display = 'none';
+      showToast('📴 Disimpan lokal — akan disinkronkan saat online');
+      renderPelList();
+    }
+  } catch(err) {
+    // Fallback lokal
+    const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id) === idPel);
+    if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload, _offline: true };
+    document.getElementById('editPelModal').style.display = 'none';
+    showToast('📴 Disimpan lokal — ' + err.message);
+    renderPelList();
+  }
 }
 
 function togglePelCard(id) {
@@ -6614,6 +6764,16 @@ let ktpMime      = null;
 let formToken    = null;
 
 // ── Cek online ────────────────────────────────────────
+function normalizeNoHp(raw) {
+  // Normalisasi nomor HP: 08xx / 8xx → +628xx
+  if (!raw) return '';
+  let hp = String(raw).replace(/[\s\-().]/g, '');
+  if (hp.startsWith('0'))  hp = '62' + hp.slice(1);
+  if (hp.startsWith('8'))  hp = '62' + hp;
+  if (!hp.startsWith('+')) hp = '+' + hp;
+  return hp;
+}
+
 function isOnline() { return navigator.onLine; }
 
 // ── Buka / tutup form ─────────────────────────────────
