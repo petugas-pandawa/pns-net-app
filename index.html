@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.7.7">
+<meta name="app-version" content="2.7.9">
 <meta name="app-build" content="2026-10-12">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -1511,7 +1511,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.7.7 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version">v2.7.8 (2026-10-13) · PNS.NET Offline-first PWA</div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1581,7 +1581,7 @@ img{max-width:100%;display:block}
     <div class="nav-item nav-parent" data-page="pelanggan"
       onclick="toggleNavGroup('navGroupPelanggan')">
       <span class="icon">👤</span> Pelanggan
-      <span class="badge" id="badgePelanggan">3</span>
+      <span class="badge" id="badgePelanggan">0</span>
       <span class="nav-arrow" id="arrowPelanggan">›</span>
     </div>
     <div class="nav-group" id="navGroupPelanggan">
@@ -1592,7 +1592,7 @@ img{max-width:100%;display:block}
       <div class="nav-item nav-child" data-page="calon"
         onclick="setPage('calon')">
         <span class="icon" style="font-size:12px">📋</span> Calon
-        <span class="badge" id="badgeCalon">7</span>
+        <span class="badge" id="badgeCalon">0</span>
       </div>
     </div>
 
@@ -3290,6 +3290,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Nav Highlight ────────────────────────────────────────
+// Badge sidebar: dihitung dari data nyata, dipilih lewat ID (bukan posisi)
+function updateSidebarBadges() {
+  const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+  set('badgePelanggan', Array.isArray(pelangganData) ? pelangganData.length : 0);
+  set('badgeCalon',     Array.isArray(calonData)     ? calonData.length     : 0);
+}
+
 function toggleNavGroup(groupId) {
   const el    = document.getElementById(groupId);
   const arrow = document.getElementById(groupId.replace('navGroup','arrow'));
@@ -3318,6 +3325,7 @@ function autoOpenNavGroup(page) {
 }
 
 function updateNavHighlight(pageKey) {
+  updateSidebarBadges();
   autoOpenNavGroup(pageKey);
   document.querySelectorAll('.nav-item').forEach(el => {
     const dp = el.getAttribute('data-page') || '';
@@ -5670,7 +5678,7 @@ function renderPelangganCard(p) {
   const tglStr   = tglAktif ? new Date(tglAktif).toLocaleDateString('id-ID',
     {day:'numeric',month:'short',year:'numeric'}) : '—';
   const isOpen   = pelExpandedId === idPel;
-  const waNum    = noHp.replace(/[^0-9]/g,'').replace(/^0/,'62');
+  const waNum    = normalizeNoHp(noHp).replace('+','');
 
   const statusCls = status==='AKTIF' ? 'pel-status-aktif'
     : status==='ISTIRAHAT' ? 'pel-status-istirahat' : 'pel-status-nonaktif';
@@ -5758,7 +5766,7 @@ function renderPelangganCard(p) {
           📋 Riwayat
         </button>
         <button class="btn-sm btn-sm-secondary"
-          onclick="event.stopPropagation();editPelanggan('${idPel}')">
+          onclick="event.stopPropagation();try{editPelanggan('${idPel}')}catch(err){showToast('❌ Edit gagal: '+err.message)}">
           ✏️ Edit
         </button>
       </div>
@@ -5768,7 +5776,7 @@ function renderPelangganCard(p) {
 
 function editPelanggan(idPel) {
   const pel = pelangganData.find(p =>
-    (p.id_pelanggan||p.id) === idPel);
+    (p.id_pelanggan||p.id_calon||p.id) === idPel);
   if (!pel) { showToast('Data pelanggan tidak ditemukan'); return; }
 
   // Simpan referensi
@@ -5792,7 +5800,7 @@ function editPelanggan(idPel) {
     { key:'merek_ont',     label:'Merek ONT',       type:'select',
       opts:['CIOT','HUAWEI','FIBERHOME','ZTE','LAINNYA'] },
     { key:'id_paket',      label:'Paket',           type:'select',
-      opts: PAKET_DATA.map(p => ({ val: p.id_paket||p.id, label: p.nama_paket||p.id })) },
+      opts: PAKET_LIST.map(p => ({ val: p.id, label: p.speed + ' — ' + p.price })) },
     { key:'catatan',       label:'Catatan',         type:'textarea' },
   ];
 
@@ -5889,26 +5897,26 @@ async function simpanEditPelanggan() {
 
     if (data.ok) {
       // Update lokal
-      const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id) === idPel);
+      const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id_calon||p.id) === idPel);
       if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload };
       document.getElementById('editPelModal').style.display = 'none';
       showToast('✅ Data pelanggan diperbarui');
-      renderPelList();
+      renderPelangganList();
     } else {
       // Simpan lokal saja
-      const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id) === idPel);
+      const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id_calon||p.id) === idPel);
       if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload, _offline: true };
       document.getElementById('editPelModal').style.display = 'none';
       showToast('📴 Disimpan lokal — akan disinkronkan saat online');
-      renderPelList();
+      renderPelangganList();
     }
   } catch(err) {
     // Fallback lokal
-    const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id) === idPel);
+    const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id_calon||p.id) === idPel);
     if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload, _offline: true };
     document.getElementById('editPelModal').style.display = 'none';
     showToast('📴 Disimpan lokal — ' + err.message);
-    renderPelList();
+    renderPelangganList();
   }
 }
 
@@ -7551,9 +7559,7 @@ async function syncPull(silent = false) {
         nama_desa: String(p.nama_desa || p.id_desa || ''),
         id_paket : String(p.id_paket || ''),
       }));
-      // Update badge sidebar
-      const badge = document.querySelector('.nav-item:nth-child(2) .badge');
-      if (badge) badge.textContent = pelangganData.length;
+      updateSidebarBadges();
     }
 
     if (Array.isArray(d.calon) && d.calon.length > 0) {
