@@ -2,8 +2,8 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.8.0">
-<meta name="app-build" content="2026-10-12">
+<meta name="app-version" content="2.8.2">
+<meta name="app-build" content="2026-10-30">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
 // Force unregister semua Service Worker dan hapus semua cache
@@ -1511,7 +1511,7 @@ img{max-width:100%;display:block}
     </button>
 
     <div class="login-error" id="loginError"></div>
-    <div class="login-version">v2.7.8 (2026-10-13) · PNS.NET Offline-first PWA</div>
+    <div class="login-version" id="loginVersion"></div>
 
     <div style="margin-top:16px">
       <div style="font-size:11px;font-weight:600;color:var(--text3);
@@ -1639,7 +1639,7 @@ img{max-width:100%;display:block}
     <div class="user-info">
       <div class="user-name" id="sidebarName">Administrator</div>
       <div class="user-role" id="sidebarRole">Direktur</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:1px" id="sidebarVersion">v2.6.5</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:1px" id="sidebarVersion"></div>
     </div>
     <button class="btn-icon" title="Keluar" onclick="logout()">🚪</button>
   </div>
@@ -3297,6 +3297,297 @@ function updateSidebarBadges() {
   set('badgeCalon',     Array.isArray(calonData)     ? calonData.length     : 0);
 }
 
+// ════════════════════════════════════════════════════════
+// VERSI APLIKASI — satu sumber: <meta name="app-version"> + <meta name="app-build">
+// Cukup ubah meta saat rilis; login & sidebar membaca dari sini.
+// ════════════════════════════════════════════════════════
+const APP_VERSION = (document.querySelector('meta[name="app-version"]') || {}).content || '?';
+const APP_BUILD   = (document.querySelector('meta[name="app-build"]')   || {}).content || '';
+
+function renderAppVersion() {
+  const login = document.getElementById('loginVersion');
+  if (login) login.textContent = 'v' + APP_VERSION + (APP_BUILD ? ' (' + APP_BUILD + ')' : '') + ' · PNS.NET Offline-first PWA';
+  const side = document.getElementById('sidebarVersion');
+  if (side) side.textContent = 'v' + APP_VERSION;
+}
+renderAppVersion();
+document.addEventListener('DOMContentLoaded', renderAppVersion);
+
+// ════════════════════════════════════════════════════════
+// TEMPLATE WHATSAPP — dipilih dulu sebelum membuka chat pelanggan
+// Variabel: {nama} {paket} {harga} {nominal} {username} {bulan} {status} {tgl_aktif} {desa}
+// ════════════════════════════════════════════════════════
+const WA_REG  = {};   // key kartu → objek pelanggan/calon
+const WA_VARS = ['nama','paket','harga','nominal','username','bulan','status','tgl_aktif','desa'];
+const WA_CHIP    = 'border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;';
+const WA_CHIP_ON = 'border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:700;';
+
+const WA_TEMPLATES_DEFAULT = [
+  { id:'status_bayar', icon:'📊', label:'Info Status Pembayaran', text: [
+    'Halo Bapak/Ibu {nama} 👋', '',
+    'Berikut info layanan internet Anda:',
+    '• Paket: {paket} ({harga})',
+    '• Status layanan: {status}',
+    '• Periode: {bulan}', '',
+    'Layanan aktif selama pembayaran bulan berjalan sudah kami terima. Bila ada pertanyaan, silakan balas pesan ini.', '',
+    'Terima kasih,', 'PNS.NET'].join('\n') },
+  { id:'info_bayar', icon:'💳', label:'Info Pembayaran', text: [
+    'Halo {nama},', '',
+    'Informasi pembayaran internet PNS.NET:',
+    '• Paket: {paket}',
+    '• Tagihan: {nominal}',
+    '• Periode: {bulan}', '',
+    'Pembayaran bisa dilakukan tunai ke petugas kami atau transfer. Untuk transfer, silakan minta detail rekening lewat chat ini, lalu kirim foto bukti transfernya.', '',
+    'Terima kasih 🙏', 'PNS.NET'].join('\n') },
+  { id:'pengingat', icon:'⏰', label:'Info Pengingat', text: [
+    'Halo {nama},', '',
+    'Kami mengingatkan bahwa pembayaran internet {paket} periode {bulan} sebesar {nominal} belum kami terima.', '',
+    'Layanan aktif setelah pembayaran diterima. Jika sudah membayar, mohon kirim bukti pembayarannya di chat ini.', '',
+    'Terima kasih 🙏', 'PNS.NET'].join('\n') },
+  { id:'diterima', icon:'✅', label:'Pembayaran Diterima', text: [
+    'Halo {nama},', '',
+    'Pembayaran internet {paket} periode {bulan} sebesar {nominal} sudah kami terima ✅',
+    'Layanan Anda aktif. Terima kasih telah berlangganan PNS.NET 🙏'].join('\n') },
+  { id:'info_layanan', icon:'📡', label:'Info Layanan Anda', text: [
+    'Halo {nama},', '',
+    'Berikut data layanan internet Anda:',
+    '• Paket: {paket}',
+    '• Username: {username}',
+    '• Lokasi: {desa}',
+    '• Aktif sejak: {tgl_aktif}', '',
+    'Bila ada gangguan atau ingin mengubah paket, silakan hubungi kami lewat chat ini.', '',
+    'PNS.NET'].join('\n') },
+  { id:'istirahat', icon:'⏸', label:'Info Layanan Istirahat', text: [
+    'Halo {nama},', '',
+    'Layanan internet Anda saat ini berstatus istirahat.',
+    'Layanan bisa diaktifkan kembali kapan saja, tanpa denda, setelah pembayaran bulan berjalan diterima.', '',
+    'Silakan balas pesan ini bila ingin mengaktifkan kembali.', '',
+    'Terima kasih,', 'PNS.NET'].join('\n') },
+  { id:'jadwal_pasang', icon:'🔧', label:'Info Jadwal Pemasangan', text: [
+    'Halo {nama},', '',
+    'Terima kasih telah mendaftar internet PNS.NET paket {paket} ({harga}).',
+    'Tim kami akan menghubungi Anda untuk menjadwalkan pemasangan di {desa}.', '',
+    'Mohon pastikan nomor ini aktif dan bisa dihubungi.', '',
+    'Terima kasih 🙏', 'PNS.NET'].join('\n') },
+  { id:'pemberitahuan', icon:'📢', label:'Pemberitahuan', text: [
+    'Halo {nama},', '',
+    'Pemberitahuan dari PNS.NET:', '',
+    '[tulis isi pemberitahuan di sini]', '',
+    'Terima kasih atas pengertiannya 🙏', 'PNS.NET'].join('\n') },
+];
+
+let _wa = { ctx:{}, selId:'', raw:'' };
+
+function waEsc(v) {
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function waLoadCustom() {
+  try { const a = JSON.parse(localStorage.getItem('pnsnet_wa_templates') || '[]'); return Array.isArray(a) ? a : []; }
+  catch(e) { return []; }
+}
+function waSaveCustom(arr) {
+  try { localStorage.setItem('pnsnet_wa_templates', JSON.stringify(arr)); } catch(e) {}
+}
+function waAllTemplates() {
+  return WA_TEMPLATES_DEFAULT.concat(waLoadCustom().map(t => ({ ...t, custom:true })));
+}
+
+function waBuildCtx(obj, kind) {
+  const paketId = obj.id_paket || '';
+  const pk  = (typeof PAKET_LIST !== 'undefined' ? PAKET_LIST : []).find(p => p.id === paketId);
+  const tgl = obj.tgl_aktif || obj.created_at || '';
+  const tglStr = (tgl && !isNaN(new Date(tgl)))
+    ? new Date(tgl).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) : '—';
+  return {
+    nama     : obj.nama_ktp || 'Pelanggan',
+    paket    : pk ? pk.speed : (paketId || '—'),
+    harga    : pk ? pk.price : '—',
+    nominal  : obj.nominal ? 'Rp' + Number(obj.nominal).toLocaleString('id-ID') : (pk ? String(pk.price).replace(/\/.*$/, '') : '—'),
+    username : obj.username_pppoe || '—',
+    bulan    : new Date().toLocaleDateString('id-ID', { month:'long', year:'numeric' }),
+    status   : kind === 'calon' ? (obj.id_status_proses || '—') : (obj.status || 'AKTIF'),
+    tgl_aktif: tglStr,
+    desa     : obj.nama_desa || obj.id_desa || '—',
+    _hp      : obj.no_hp || '',
+  };
+}
+
+function waFill(text, ctx) {
+  return String(text || '').replace(/\{(\w+)\}/g, (m, k) =>
+    (!k.startsWith('_') && Object.prototype.hasOwnProperty.call(ctx, k)) ? ctx[k] : m)
+    .replace(/(\S) {2,}(\S)/g, '$1 $2');
+}
+function waFinalText() {
+  return (_wa.selId === '__kosong' && !String(_wa.raw).trim()) ? '' : waFill(_wa.raw, _wa.ctx);
+}
+
+function bukaWaPicker(key, ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  const obj = WA_REG[key];
+  if (!obj) { showToast('Data pelanggan tidak ditemukan'); return; }
+  const kind = String(key).startsWith('c:') ? 'calon' : 'pelanggan';
+  _wa.ctx = waBuildCtx(obj, kind);
+  waSelect(kind === 'calon' ? 'jadwal_pasang' : (obj.status === 'ISTIRAHAT' ? 'istirahat' : 'status_bayar'));
+}
+
+// Dipakai halaman Pembayaran: d = { id_pelanggan, nama_pelanggan, no_hp, nominal, bulan_tagihan }
+function bukaWaBayar(d, templateId) {
+  if (!d) { showToast('Data pembayaran tidak ditemukan'); return; }
+  const daftar = Array.isArray(pelangganData) ? pelangganData : [];
+  const pel = (d.id_pelanggan && daftar.find(p => (p.id_pelanggan || p.id_calon || p.id) === d.id_pelanggan)) || {};
+  const ctx = waBuildCtx({ ...pel,
+    nama_ktp: d.nama_pelanggan || pel.nama_ktp,
+    no_hp   : d.no_hp || pel.no_hp,
+    nominal : d.nominal }, 'pelanggan');
+  const s  = String(d.bulan_tagihan || '');
+  const dt = /^\d{4}-\d{2}$/.test(s) ? new Date(s + '-01') : new Date(s);
+  if (s && !isNaN(dt)) ctx.bulan = dt.toLocaleDateString('id-ID', { month:'long', year:'numeric' });
+  if (ctx.paket === '—') ctx.paket = '';
+  _wa.ctx = ctx;
+  waSelect(templateId);
+}
+
+function waSelect(id) {
+  const t = waAllTemplates().find(x => x.id === id);
+  _wa.selId = t ? id : '__kosong';
+  _wa.raw   = t ? t.text : '';
+  waRender();
+}
+
+function waOnEdit() {
+  const ta = document.getElementById('waRaw');
+  if (ta) _wa.raw = ta.value;
+  const pv = document.getElementById('waPreview');
+  if (pv) pv.textContent = waFinalText() || '(Chat dibuka tanpa pesan)';
+}
+
+function waInsertVar(v) {
+  const ta = document.getElementById('waRaw');
+  if (!ta) return;
+  const s = (ta.selectionStart == null) ? ta.value.length : ta.selectionStart;
+  const e = (ta.selectionEnd   == null) ? s : ta.selectionEnd;
+  ta.value = ta.value.slice(0, s) + '{' + v + '}' + ta.value.slice(e);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = s + v.length + 2;
+  waOnEdit();
+}
+
+function waRender() {
+  let modal = document.getElementById('waPickerModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'waPickerModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center';
+    modal.onclick = e => { if (e.target === modal) waTutup(); };
+    document.body.appendChild(modal);
+  }
+  const tpls = waAllTemplates();
+  const cur  = tpls.find(t => t.id === _wa.selId);
+  const chip = (id, icon, label) =>
+    `<button type="button" style="${WA_CHIP}${_wa.selId === id ? WA_CHIP_ON : ''}" onclick="waSelect('${id}')">${icon} ${waEsc(label)}</button>`;
+  const hp = normalizeNoHp(_wa.ctx._hp);
+  const btn = 'padding:6px 10px;font-size:11px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:6px;cursor:pointer;';
+
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:20px">💬</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:700">Kirim WhatsApp</div>
+          <div style="font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${waEsc(_wa.ctx.nama)} · ${hp ? waEsc(hp) : '⚠️ Nomor HP belum diisi'}</div>
+        </div>
+        <button type="button" onclick="waTutup()" style="font-size:20px;background:none;border:none;color:var(--text3);cursor:pointer">✕</button>
+      </div>
+
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Pilih template pesan</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        ${tpls.map(t => chip(t.id, t.icon || '📝', t.label)).join('')}
+        ${chip('__kosong', '💬', 'Chat kosong')}
+      </div>
+
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Pratinjau pesan</div>
+      <div id="waPreview" style="white-space:pre-wrap;font-size:13px;line-height:1.5;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--accent-soft);max-height:34vh;overflow-y:auto;margin-bottom:10px">${waEsc(waFinalText() || '(Chat dibuka tanpa pesan)')}</div>
+
+      <details style="margin-bottom:12px">
+        <summary style="cursor:pointer;font-size:12px;color:var(--text3)">✏️ Ubah isi template</summary>
+        <div style="margin-top:8px">
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">
+            ${WA_VARS.map(v => `<button type="button" style="${btn}font-family:monospace" onclick="waInsertVar('${v}')">{${v}}</button>`).join('')}
+          </div>
+          <textarea id="waRaw" rows="7" oninput="waOnEdit()" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px;box-sizing:border-box">${waEsc(_wa.raw)}</textarea>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <button type="button" style="${btn}" onclick="waSimpanTemplate()">💾 Simpan sebagai template</button>
+            ${cur && cur.custom ? `<button type="button" style="${btn}color:var(--danger)" onclick="waHapusTemplate()">🗑 Hapus template ini</button>` : ''}
+          </div>
+        </div>
+      </details>
+
+      <div style="display:flex;gap:8px;padding-bottom:6px">
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="waSalin()">📋 Salin</button>
+        <button type="button" class="btn btn-primary" style="flex:2" onclick="waKirim()">💬 Buka WhatsApp</button>
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function waTutup() {
+  const m = document.getElementById('waPickerModal');
+  if (m) m.style.display = 'none';
+}
+
+async function waSalin() {
+  const t = waFinalText();
+  if (!t) { showToast('Tidak ada teks untuk disalin'); return; }
+  try {
+    await navigator.clipboard.writeText(t);
+    showToast('📋 Pesan disalin');
+  } catch(e) {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('📋 Pesan disalin'); }
+    catch(e2) { showToast('❌ Gagal menyalin'); }
+    ta.remove();
+  }
+}
+
+function waKirim() {
+  const num = normalizeNoHp(_wa.ctx._hp).replace('+', '');
+  if (!num) { showToast('⚠️ Nomor HP belum diisi — lengkapi lewat tombol Edit'); return; }
+  const t = waFinalText();
+  if (t.includes('[tulis')) { showToast('⚠️ Lengkapi dulu bagian [tulis ...] pada pesan'); return; }
+  window.open('https://wa.me/' + num + (t ? '?text=' + encodeURIComponent(t) : ''), '_blank');
+  waTutup();
+}
+
+function waSimpanTemplate() {
+  const raw = String(_wa.raw || '').trim();
+  if (!raw) { showToast('Isi template masih kosong'); return; }
+  const cur  = waAllTemplates().find(t => t.id === _wa.selId);
+  const nama = prompt('Nama template:', cur ? (cur.custom ? cur.label : cur.label + ' (ubahan)') : '');
+  if (!nama || !nama.trim()) return;
+  const arr = waLoadCustom();
+  const ada = arr.find(t => t.label === nama.trim());
+  if (ada) { ada.text = raw; _wa.selId = ada.id; }
+  else {
+    const id = 'c_' + Date.now();
+    arr.push({ id, icon:'📝', label: nama.trim(), text: raw });
+    _wa.selId = id;
+  }
+  waSaveCustom(arr);
+  waRender();
+  showToast('✅ Template disimpan');
+}
+
+function waHapusTemplate() {
+  const cur = waAllTemplates().find(t => t.id === _wa.selId);
+  if (!cur || !cur.custom) return;
+  if (!confirm('Hapus template "' + cur.label + '"?')) return;
+  waSaveCustom(waLoadCustom().filter(t => t.id !== cur.id));
+  waSelect('status_bayar');
+}
+
 function toggleNavGroup(groupId) {
   const el    = document.getElementById(groupId);
   const arrow = document.getElementById(groupId.replace('navGroup','arrow'));
@@ -4120,6 +4411,7 @@ function renderCalonList() {
 }
 
 function renderCalonCard(c) {
+  WA_REG['c:' + c.id] = c;
   const initials = c.nama_ktp.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
   const tgl      = formatTgl(c.created_at);
   const isOpen   = expandedId === c.id;
@@ -4226,11 +4518,8 @@ function renderCalonCard(c) {
           onclick="editCalon('${c.id}',event)">
           ✏️ Edit Data
         </button>
-        <a href="https://wa.me/${normalizeNoHp(c.no_hp||'').replace('+','')}?text=Halo%20${encodeURIComponent(c.nama_ktp)}%2C%20kami%20dari%20PNS.NET..."
-          onclick="event.stopPropagation()"
-          target="_blank">
-          <button class="btn-sm btn-sm-secondary">💬 WhatsApp</button>
-        </a>
+        <button class="btn-sm btn-sm-secondary"
+          onclick="bukaWaPicker('c:${c.id}',event)">💬 WhatsApp</button>
         ${!['BATAL','TIDAK_TERJANGKAU','PROSES_PASANG'].includes(fase) ? `
         <button class="btn-sm btn-sm-danger"
           onclick="ubahFase('${c.id}','BATAL',event)">
@@ -5305,9 +5594,15 @@ async function aksiKonfirmasi(idPembayaran, aksi, namaPel, noHp) {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
 
-    if (aksi === 'KONFIRMASI' && data.data?.wa_template) {
-      // Tampilkan template WA
-      bukaWaModal(data.data.wa_template, String(data.data.no_hp||noHp||''));
+    if (aksi === 'KONFIRMASI' && data.data) {
+      const d = data.data;
+      if (d.nama_pelanggan) {
+        bukaWaBayar({ id_pelanggan:d.id_pelanggan, nama_pelanggan:d.nama_pelanggan,
+          no_hp:String(d.no_hp || noHp || ''), nominal:d.nominal, bulan_tagihan:d.bulan_tagihan }, 'diterima');
+      } else if (d.wa_template) {
+        // Server versi lama: pakai modal teks tetap
+        bukaWaModal(d.wa_template, String(d.no_hp||noHp||''));
+      }
     }
     showToast(aksi === 'KONFIRMASI' ? '✅ Pembayaran dikonfirmasi' : '❌ Pembayaran ditolak');
     loadKonfirmasi(); // Refresh
@@ -5445,7 +5740,7 @@ function renderListBelum() {
     return;
   }
 
-  el.innerHTML = _listBelumData.map(p => `
+  el.innerHTML = _listBelumData.map((p, idx) => `
     <div class="belum-card">
       <div class="pel-avatar" style="width:36px;height:36px;font-size:13px;
         background:linear-gradient(135deg,var(--danger),#a02020)">
@@ -5458,7 +5753,9 @@ function renderListBelum() {
         </div>
       </div>
       <div class="belum-nominal">Rp${Number(p.nominal||0).toLocaleString('id-ID')}</div>
-      <button class="btn-sm btn-sm-primary" style="margin-left:8px"
+      <button class="btn-sm btn-sm-secondary" style="margin-left:8px"
+        onclick="bukaWaBayar(_listBelumData[${idx}],'pengingat')">💬</button>
+      <button class="btn-sm btn-sm-primary" style="margin-left:6px"
         onclick="bayarDariList('${p.id_pelanggan}','${p.nama_pelanggan}','${p.no_hp}',${p.nominal},'${p.bulan_tagihan}')">
         Bayar
       </button>
@@ -5666,6 +5963,7 @@ function renderPelangganList() {
 }
 
 function renderPelangganCard(p) {
+  WA_REG['p:' + (p.id_pelanggan || p.id_calon || String(p.no_hp || ''))] = p;
   const nama     = String(p.nama_ktp || '—');
   const noHp     = String(p.no_hp    || '');
   const desa     = String(p.nama_desa || p.id_desa || '—');
@@ -5749,10 +6047,8 @@ function renderPelangganCard(p) {
       </div>
       <div class="pel-actions">
         ${noHp ? `
-        <a href="https://wa.me/${waNum}?text=Halo%20${encodeURIComponent(nama)}%2C%20kami%20dari%20PNS.NET..."
-          onclick="event.stopPropagation()" target="_blank">
-          <button class="btn-sm btn-sm-secondary">💬 WhatsApp</button>
-        </a>` : ''}
+        <button class="btn-sm btn-sm-secondary"
+          onclick="bukaWaPicker('p:${idPel || noHp}',event)">💬 WhatsApp</button>` : ''}
         <button class="btn-sm ${status==='AKTIF'?'btn-sm-secondary':'btn-sm-primary'}"
           onclick="event.stopPropagation();ubahStatusPel('${idPel}','${status}')">
           ${status==='AKTIF' ? '⏸ Set Istirahat' : status==='ISTIRAHAT' ? '▶ Aktifkan Kembali' : '▶ Aktifkan'}
