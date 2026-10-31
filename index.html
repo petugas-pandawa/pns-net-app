@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.8.3">
+<meta name="app-version" content="2.8.4">
 <meta name="app-build" content="2026-10-31">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -3395,7 +3395,7 @@ function waAllTemplates() {
 function waBuildCtx(obj, kind) {
   const paketId = obj.id_paket || '';
   const pk  = (typeof PAKET_LIST !== 'undefined' ? PAKET_LIST : []).find(p => p.id === paketId);
-  const tgl = obj.tgl_aktif || obj.created_at || '';
+  const tgl = obj.tanggal_aktif || obj.tgl_aktif || obj.created_at || '';
   const tglStr = (tgl && !isNaN(new Date(tgl)))
     ? new Date(tgl).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) : '—';
   return {
@@ -6199,6 +6199,10 @@ function wilayahBlockHtml(pel) {
 }
 
 function editPelanggan(idPel) {
+  if (!idPel) {
+    showToast('⚠️ Pelanggan ini belum punya ID di Sheets — jalankan perbaikiDataPelanggan() di Apps Script, lalu Sync ulang');
+    return;
+  }
   const pel = pelangganData.find(p =>
     (p.id_pelanggan||p.id_calon||p.id) === idPel);
   if (!pel) { showToast('Data pelanggan tidak ditemukan'); return; }
@@ -6220,11 +6224,11 @@ function editPelanggan(idPel) {
     { key:'nama_ktp',      label:'Nama KTP',        type:'text' },
     { key:'no_hp',         label:'No. HP / WA',     type:'tel'  },
     { key:'username_pppoe',label:'Username PPPoE',  type:'text' },
-    { key:'ip_ont',        label:'IP ONT',          type:'text' },
-    { key:'merek_ont',     label:'Merek ONT',       type:'select',
-      opts:['CIOT','HUAWEI','FIBERHOME','ZTE','LAINNYA'] },
+    { key:'ip_ont',        label:'IP ONT (tersimpan di data modem)', type:'text' },
+    { key:'merek_ont',     label:'Merek ONT (tersimpan di data modem)', type:'select',
+      opts:[{ val:'', label:'— tidak diubah —' },'CIOT','HUAWEI','FIBERHOME','ZTE','LAINNYA'] },
     { key:'id_paket',      label:'Paket',           type:'select',
-      opts: PAKET_LIST.map(p => ({ val: p.id, label: p.speed + ' — ' + p.price })) },
+      opts:[{ val:'', label:'— tidak diubah —' }].concat(PAKET_LIST.map(p => ({ val: p.id, label: p.speed + ' — ' + p.price }))) },
     { key:'__wilayah', type:'wilayah' },
     { key:'alamat_detail', label:'Alamat Detail (patokan)', type:'textarea' },
     { key:'catatan',       label:'Catatan',         type:'textarea' },
@@ -6317,6 +6321,23 @@ async function simpanEditPelanggan() {
   // Desa kosong = tidak diubah (jangan timpa data lama dengan kosong)
   if (!payload.id_desa) delete payload.id_desa;
   else payload.nama_desa = payload.id_desa;
+  // Kosong = tidak diubah (jangan menimpa data modem / paket yang sudah ada)
+  ['ip_ont', 'merek_ont', 'id_paket'].forEach(k => { if (!payload[k]) delete payload[k]; });
+
+  // Hanya kirim isian yang BENAR-BENAR berubah. Kolom yang tidak ikut dimuat dari server
+  // (tampil kosong di form) tidak boleh ikut terhapus di Sheets.
+  const asli = window._editingPel || {};
+  Object.keys(payload).forEach(k => {
+    if (k === 'id_pelanggan' || k === 'nama_desa') return;
+    const lama = (k === 'no_hp') ? normalizeNoHp(asli[k] || '') : String(asli[k] == null ? '' : asli[k]).trim();
+    if (String(payload[k]) === lama) delete payload[k];
+  });
+  if (!payload.id_desa) delete payload.nama_desa;
+  if (!Object.keys(payload).some(k => k !== 'id_pelanggan' && k !== 'nama_desa')) {
+    showToast('Tidak ada perubahan untuk disimpan');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan Perubahan'; }
+    return;
+  }
 
   try {
     const token  = localStorage.getItem('pnsnet_token') || '';
@@ -6332,30 +6353,28 @@ async function simpanEditPelanggan() {
     }).toString());
 
     let data;
-    try { data = await res.json(); } catch(e) { data = { ok: false }; }
+    try { data = await res.json(); }
+    catch(e) { data = { ok: false, error: 'Balasan server tidak terbaca (HTTP ' + res.status + ')' }; }
 
     if (data.ok) {
-      // Update lokal
+      const lewat  = (data.data && data.data.dilewati) || [];
+      const simpan = { ...payload };
+      lewat.forEach(x => delete simpan[x.field]);          // yang ditolak server jangan ditampilkan sebagai tersimpan
       const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id_calon||p.id) === idPel);
-      if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload };
+      if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...simpan };
       document.getElementById('editPelModal').style.display = 'none';
-      showToast('✅ Data pelanggan diperbarui');
+      showToast(lewat.length
+        ? '⚠️ Tersimpan, tapi ' + lewat.map(x => x.field).join(', ') + ' belum tersimpan: ' + lewat[0].alasan
+        : '✅ Data pelanggan tersimpan di server');
       renderPelangganList();
     } else {
-      // Simpan lokal saja
-      const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id_calon||p.id) === idPel);
-      if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload, _offline: true };
-      document.getElementById('editPelModal').style.display = 'none';
-      showToast('📴 Disimpan lokal — akan disinkronkan saat online');
-      renderPelangganList();
+      // Server menolak: tampilkan alasan sebenarnya dan biarkan form terbuka agar isian tidak hilang
+      showToast('❌ Server menolak: ' + (data.error || 'alasan tidak diketahui'));
+      if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan Perubahan'; }
     }
   } catch(err) {
-    // Fallback lokal
-    const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id_calon||p.id) === idPel);
-    if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...payload, _offline: true };
-    document.getElementById('editPelModal').style.display = 'none';
-    showToast('📴 Disimpan lokal — ' + err.message);
-    renderPelangganList();
+    showToast('❌ Tidak bisa terhubung ke server (' + err.message + ') — coba lagi saat online');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan Perubahan'; }
   }
 }
 
