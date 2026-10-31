@@ -2,8 +2,8 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.8.2">
-<meta name="app-build" content="2026-10-30">
+<meta name="app-version" content="2.8.3">
+<meta name="app-build" content="2026-10-31">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
 // Force unregister semua Service Worker dan hapus semua cache
@@ -2495,20 +2495,14 @@ img{max-width:100%;display:block}
       </div>
       <div class="form-card-body">
 
-        <!-- Cari pelanggan -->
+        <!-- Filter + daftar pilih pelanggan -->
         <div class="field">
           <label>Pelanggan<span>*</span></label>
-          <div style="position:relative">
-            <input type="text" id="bayar_cariPel"
-              placeholder="Ketik nama atau nomor HP..."
-              oninput="cariPelangganBayar(this.value)"
-              autocomplete="off">
-            <div id="bayar_dropdownPel" style="display:none;position:absolute;
-              top:100%;left:0;right:0;z-index:100;
-              background:var(--surface);border:1px solid var(--border);
-              border-radius:var(--radius-sm);box-shadow:var(--shadow-md);
-              max-height:180px;overflow-y:auto"></div>
-          </div>
+          <input type="text" id="bayar_cariPel"
+            placeholder="🔍 Filter: nama, no. HP, username PPPoE, atau desa..."
+            oninput="cariPelangganBayar(this.value)"
+            autocomplete="off">
+          <div id="bayar_listPel" style="margin-top:8px"></div>
         </div>
 
         <!-- Info pelanggan terpilih -->
@@ -2516,8 +2510,14 @@ img{max-width:100%;display:block}
           background:var(--success-soft);border:1px solid var(--success);
           border-radius:var(--radius-sm);padding:10px 14px;
           font-size:12px;margin-bottom:4px">
-          <div style="font-weight:700;color:var(--text)" id="bayar_namaPel">—</div>
-          <div style="color:var(--text3);margin-top:2px" id="bayar_infoPelSub">—</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;color:var(--text)" id="bayar_namaPel">—</div>
+              <div style="color:var(--text3);margin-top:2px" id="bayar_infoPelSub">—</div>
+              <div style="color:var(--warning);margin-top:2px;display:none" id="bayar_infoPelWarn"></div>
+            </div>
+            <button type="button" class="btn-sm btn-sm-secondary" onclick="gantiPelBayar()">✕ Ganti</button>
+          </div>
         </div>
 
         <!-- Detail pembayaran -->
@@ -5297,69 +5297,121 @@ function setBayarTab(tab) {
     const el = document.getElementById('bayarTab'+t.charAt(0).toUpperCase()+t.slice(1));
     if (el) el.style.display = t===tab ? 'block' : 'none';
   });
+  if (tab === 'terima') renderPelBayarList(String((document.getElementById('bayar_cariPel') || {}).value || '').trim());
   if (tab === 'konfirmasi') loadKonfirmasi();
   if (tab === 'belum') loadListBelum();
 }
 
-// ── Cari pelanggan ────────────────────────────────────────
-function cariPelangganBayar(q) {
-  const dropdown = document.getElementById('bayar_dropdownPel');
-  if (!q || q.length < 2) { dropdown.style.display='none'; return; }
+// ── Filter + pilih pelanggan (pilih dari daftar, bukan ketik bebas) ─────
+const BAYAR_PEL_MAX = 60;
 
-  // Cari di pelangganData (aktif) + calonData (pipeline)
-  const gabungan = [
-    ...pelangganData.map(p => ({...p, _tipe:'AKTIF'})),
-    ...pelangganData, // fallback
-  ].filter((p,i,a) => a.findIndex(x=>x.id_pelanggan===p.id_pelanggan)===i);
-
-  const ql = q.toLowerCase();
-  const hasil = gabungan.filter(p =>
-    String(p.nama_ktp||'').toLowerCase().includes(ql) ||
-    String(p.no_hp||'').includes(q)
-  ).slice(0,6);
-
-  if (!hasil.length) { dropdown.style.display='none'; return; }
-
-  dropdown.style.display = 'block';
-  dropdown.innerHTML = hasil.map(p => `
-    <div onclick="pilihPelangganBayar('${p.id_pelanggan||p.id_calon}')"
-      style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);
-      transition:background .1s"
-      onmouseover="this.style.background='var(--surface2)'"
-      onmouseout="this.style.background=''">
-      <div style="font-weight:600;font-size:13px">${p.nama_ktp||'—'}</div>
-      <div style="font-size:11px;color:var(--text3)">
-        📱 ${p.no_hp||'—'} · ${p.id_paket||'—'}
-      </div>
-    </div>
-  `).join('');
-
-  // Simpan data untuk pilih
-  window._bayarPelHasil = gabungan.filter(p =>
-    String(p.nama_ktp||'').toLowerCase().includes(ql) ||
-    String(p.no_hp||'').includes(q)
-  );
+function bayarPelDaftar() {
+  const arr = Array.isArray(pelangganData) ? pelangganData : [];
+  return arr.slice().sort((x, y) => {
+    const nx = String(x.nama_ktp || '').trim(), ny = String(y.nama_ktp || '').trim();
+    if (!nx !== !ny) return nx ? -1 : 1;          // yang tanpa nama di paling bawah
+    return nx.localeCompare(ny, 'id');
+  });
 }
 
-function pilihPelangganBayar(id) {
-  const pel = (window._bayarPelHasil||[]).find(p =>
-    p.id_pelanggan===id || p.id_calon===id
-  );
+function bayarPelCocok(p, q) {
+  if (!q) return true;
+  const ql = q.toLowerCase();
+  const qd = q.replace(/\D/g, '').replace(/^(62|0)/, '');
+  const hp = String(p.no_hp || '').replace(/\D/g, '').replace(/^(62|0)/, '');
+  return String(p.nama_ktp || '').toLowerCase().includes(ql)
+      || String(p.username_pppoe || '').toLowerCase().includes(ql)
+      || String(p.nama_desa || p.id_desa || '').toLowerCase().includes(ql)
+      || (qd.length >= 3 && hp.includes(qd));
+}
+
+function cariPelangganBayar(q) {
+  // Mengetik lagi = membatalkan pelanggan terpilih, supaya nama di kotak
+  // tidak pernah berbeda dari pelanggan yang benar-benar dicatat.
+  if (_bayarPelTerpilih) {
+    _bayarPelTerpilih = null;
+    document.getElementById('bayar_infoPel').style.display = 'none';
+    updateBayarPreview(); validateBayar();
+  }
+  renderPelBayarList(String(q || '').trim());
+}
+
+function renderPelBayarList(q) {
+  const box = document.getElementById('bayar_listPel');
+  if (!box) return;
+  if (_bayarPelTerpilih) { box.innerHTML = ''; return; }
+
+  const note = t => `<div style="font-size:12px;color:var(--text3);padding:10px 12px;border:1px dashed var(--border);border-radius:var(--radius-sm)">${t}</div>`;
+  const semua = bayarPelDaftar();
+  if (!semua.length) { box.innerHTML = note('Belum ada data pelanggan — lakukan Sync dulu.'); window._bayarPelHasil = []; return; }
+
+  const hasil = semua.filter(p => bayarPelCocok(p, q));
+  window._bayarPelHasil = hasil.slice(0, BAYAR_PEL_MAX);
+  if (!hasil.length) {
+    box.innerHTML = note('Tidak ada pelanggan yang cocok dengan "<b>' + waEsc(q) + '</b>". Periksa ejaan, atau coba nama / nomor HP lain.');
+    return;
+  }
+
+  const paket = typeof PAKET_LIST !== 'undefined' ? PAKET_LIST : [];
+  const rows = window._bayarPelHasil.map((p, i) => {
+    const nama = String(p.nama_ktp || '').trim() || '(tanpa nama)';
+    const pk   = paket.find(x => x.id === p.id_paket);
+    const st   = String(p.status || 'AKTIF').toUpperCase();
+    const desa = p.nama_desa || p.id_desa || '';
+    const badge = st !== 'AKTIF'
+      ? ` <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:var(--surface2);color:var(--text3)">${waEsc(st)}</span>` : '';
+    return `
+      <div onclick="pilihPelangganBayar(${i})"
+        style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px"
+        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">${waEsc(nama.charAt(0).toUpperCase())}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px">${waEsc(nama)}${badge}</div>
+          <div style="font-size:11px;color:var(--text3)">📱 ${waEsc(normalizeNoHp(p.no_hp) || '—')} · ${waEsc(pk ? pk.speed : (p.id_paket || '—'))}${desa ? ' · 📍 ' + waEsc(desa) : ''}${p.username_pppoe ? ' · ' + waEsc(p.username_pppoe) : ''}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">
+      Menampilkan ${window._bayarPelHasil.length} dari ${hasil.length} pelanggan${hasil.length > BAYAR_PEL_MAX ? ' — ketik untuk mempersempit' : ' — ketuk nama untuk memilih'}</div>
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:260px;overflow-y:auto">${rows}</div>`;
+}
+
+function pilihPelangganBayar(i) {
+  const pel = (window._bayarPelHasil || [])[i];
   if (!pel) return;
+  setPelBayarTerpilih(pel);
+}
 
+function setPelBayarTerpilih(obj) {
+  const daftar = Array.isArray(pelangganData) ? pelangganData : [];
+  const cocok  = obj.id_pelanggan && daftar.find(p => p.id_pelanggan === obj.id_pelanggan);
+  const pel    = cocok ? { ...cocok, ...obj } : obj;
   _bayarPelTerpilih = pel;
+
+  const pk = (typeof PAKET_LIST !== 'undefined' ? PAKET_LIST : []).find(x => x.id === pel.id_paket);
   document.getElementById('bayar_cariPel').value = pel.nama_ktp || '';
-  document.getElementById('bayar_dropdownPel').style.display = 'none';
+  document.getElementById('bayar_listPel').innerHTML = '';
   document.getElementById('bayar_infoPel').style.display = 'block';
-  document.getElementById('bayar_namaPel').textContent = pel.nama_ktp || '—';
+  document.getElementById('bayar_namaPel').textContent = pel.nama_ktp || '(tanpa nama)';
   document.getElementById('bayar_infoPelSub').textContent =
-    `📱 ${pel.no_hp||'—'} · Paket: ${pel.id_paket||'—'}`;
+    '📱 ' + (normalizeNoHp(pel.no_hp) || '—') + ' · Paket: ' + (pk ? pk.speed : (pel.id_paket || '—'));
+  const tanpaId = !(pel.id_pelanggan || pel.id_calon);
+  const warn = document.getElementById('bayar_infoPelWarn');
+  warn.style.display = tanpaId ? 'block' : 'none';
+  warn.textContent   = tanpaId ? '⚠️ Pelanggan ini belum punya ID di data — pembayaran dicatat dengan nama & no. HP saja' : '';
+  updateBayarPreview(); validateBayar();
+}
 
-  // Auto-isi nominal dari paket jika ada
-  // (bisa dikembangkan dengan data paket dari API)
-
-  updateBayarPreview();
-  validateBayar();
+function gantiPelBayar() {
+  _bayarPelTerpilih = null;
+  document.getElementById('bayar_infoPel').style.display = 'none';
+  const inp = document.getElementById('bayar_cariPel');
+  inp.value = '';
+  renderPelBayarList('');
+  updateBayarPreview(); validateBayar();
+  inp.focus();
 }
 
 // ── Metode pembayaran ─────────────────────────────────────
@@ -5490,6 +5542,7 @@ async function submitBayar() {
       document.getElementById('bayar_nominal').value   = '';
       document.getElementById('bayar_catatan').value   = '';
       document.getElementById('bayar_infoPel').style.display  = 'none';
+      renderPelBayarList('');
       document.getElementById('bayar_preview').style.display  = 'none';
       document.getElementById('bayar_fotoPreview').style.display = 'none';
       document.getElementById('bayar_fotoPlaceholder').style.display = 'flex';
@@ -5766,11 +5819,7 @@ function renderListBelum() {
 function bayarDariList(idPel, nama, noHp, nominal, bulan) {
   // Auto-isi form terima pembayaran
   setBayarTab('terima');
-  _bayarPelTerpilih = { id_pelanggan: idPel, nama_ktp: nama, no_hp: noHp };
-  document.getElementById('bayar_cariPel').value = nama;
-  document.getElementById('bayar_infoPel').style.display = 'block';
-  document.getElementById('bayar_namaPel').textContent = nama;
-  document.getElementById('bayar_infoPelSub').textContent = '📱 ' + noHp;
+  setPelBayarTerpilih({ id_pelanggan: idPel, nama_ktp: nama, no_hp: noHp });
   document.getElementById('bayar_nominal').value = nominal;
   document.getElementById('bayar_bulan').value   = bulan;
   updateBayarPreview();
