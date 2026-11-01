@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.8.4">
+<meta name="app-version" content="2.8.5">
 <meta name="app-build" content="2026-10-31">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -2758,6 +2758,8 @@ img{max-width:100%;display:block}
       onclick="setPelTab('daftar')">👤 Daftar Pelanggan</button>
     <button class="bayar-tab" id="peltab_import"
       onclick="setPelTab('import')">📥 Import Massal</button>
+    <button class="bayar-tab" id="peltab_massal"
+      onclick="setPelTab('massal')">✏️ Perbarui Massal</button>
   </div>
 
   <!-- TAB: Daftar -->
@@ -2772,6 +2774,51 @@ img{max-width:100%;display:block}
     <div class="list-stats" id="pelStats"></div>
     <div class="calon-list" id="pelList"></div>
     <div class="pagination" id="pelPagination"></div>
+  </div>
+
+  <!-- TAB: Perbarui Massal -->
+  <div id="pelTabMassal" style="display:none">
+    <div style="background:var(--info-soft);border:1px solid var(--info);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;color:var(--info);margin-bottom:16px">
+      <div style="font-weight:700;margin-bottom:4px">✏️ Perbarui data pelanggan yang sudah ada</div>
+      <div>Melengkapi nama, no. HP, lokasi, dan data lain untuk banyak pelanggan sekaligus. <b>Tidak membuat pelanggan baru</b> — untuk itu pakai tab Import Massal. Cara lain yang tetap bisa dipakai: tombol ✏️ Edit di tiap kartu, atau mengisi langsung di Google Sheets.</div>
+    </div>
+
+    <div class="form-card" style="margin-bottom:12px">
+      <div class="form-card-head">
+        <span style="font-size:18px">📋</span>
+        <div class="form-card-title">Cara memakai</div>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">1</span>
+          <div><b>Unduh daftar pelanggan</b> — file sudah berisi data saat ini</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">2</span>
+          <div>Lengkapi di Excel / Google Sheets. <b>Jangan ubah kolom <code>id_pelanggan</code> dan <code>username_pppoe</code></b> (kunci pencocokan). Sel yang <b>dikosongkan = tidak diubah</b>. Format tanggal: <code>2026-10-01</code>.</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+          <span style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">3</span>
+          <div><b>Unggah</b> file → periksa pratinjau (lama → baru) → <b>Terapkan</b></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+          <button class="btn btn-secondary" onclick="massalUnduh()">⬇️ Unduh daftar pelanggan (CSV)</button>
+          <label style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px">Pemisah kolom
+            <select id="massalSep" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+              <option value=",">koma ( , )</option>
+              <option value=";">titik koma ( ; )</option>
+            </select>
+          </label>
+          <label class="btn btn-primary" style="cursor:pointer;margin:0">📤 Pilih file CSV
+            <input type="file" accept=".csv,.txt,text/csv" style="display:none" onchange="massalPilihFile(this)">
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">Jika Excel menampilkan semua data dalam satu kolom, unduh ulang dengan pemisah <b>titik koma</b>, atau buka lewat Google Sheets. Untuk <b>mengosongkan</b> isian, ubah lewat ✏️ Edit atau langsung di Sheets.</div>
+      </div>
+    </div>
+
+    <div id="massalStatus" style="display:none;font-size:13px;color:var(--text3);padding:8px 2px"></div>
+    <div id="massalHasil"></div>
   </div>
 
   <!-- TAB: Import Massal -->
@@ -5939,7 +5986,7 @@ function openListPelanggan() {
 
 function setPelTab(tab) {
   _pelTab = tab;
-  ['daftar','import'].forEach(t => {
+  ['daftar','import','massal'].forEach(t => {
     document.getElementById('peltab_'+t).classList.toggle('active', t===tab);
     const el = document.getElementById('pelTab'+t.charAt(0).toUpperCase()+t.slice(1));
     if (el) el.style.display = t===tab ? 'block' : 'none';
@@ -6423,6 +6470,336 @@ function renderPelPagination(total, totalPage) {
 
 function goPagePel(p) { pelPage=p; renderPelangganList(); }
 
+// ════════════════════════════════════════════════════════
+// PEMBACA CSV (dipakai Import Massal & Perbarui Massal)
+// Mendukung tanda kutip, koma/titik koma/tab, BOM, CRLF, dan sel Excel ="123".
+// ════════════════════════════════════════════════════════
+function parseCsvText(text) {
+  text = String(text || '').replace(/^\uFEFF/, '');
+  // pemisah ditebak dari baris pertama (di luar tanda kutip)
+  let first = '', inQ = false;
+  for (const ch of text) {
+    if (ch === '"') inQ = !inQ;
+    if (!inQ && (ch === '\n' || ch === '\r')) break;
+    first += ch;
+  }
+  const hitung = d => { let q = false, n = 0; for (const ch of first) { if (ch === '"') q = !q; else if (!q && ch === d) n++; } return n; };
+  const terbanyak = [',', ';', '\t'].map(d => ({ d, n: hitung(d) })).sort((a, b) => b.n - a.n)[0];
+  const D = terbanyak.n ? terbanyak.d : ',';
+
+  const baris = [];
+  let cur = [], sel = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { sel += '"'; i++; } else q = false; }
+      else sel += ch;
+    }
+    else if (ch === '"' && sel === '') q = true;          // kutip hanya membuka di awal sel
+    else if (ch === D) { cur.push(sel); sel = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      cur.push(sel); sel = ''; baris.push(cur); cur = [];
+    }
+    else sel += ch;
+  }
+  if (sel !== '' || cur.length) { cur.push(sel); baris.push(cur); }
+
+  const bersih = v => { v = String(v == null ? '' : v).trim(); const m = v.match(/^="(.*)"$/); return m ? m[1] : v; };
+  const isi = baris.map((r, i) => ({ r: r.map(bersih), no: i + 1 })).filter(x => x.r.some(v => v !== ''));
+  if (!isi.length) return { delim: D, header: [], rows: [] };
+  const header = isi[0].r.map(h => h.toLowerCase().trim());
+  const rows = isi.slice(1).map(x => {
+    const o = {};
+    header.forEach((h, i) => { if (h) o[h] = x.r[i] !== undefined ? x.r[i] : ''; });
+    o._baris = x.no;
+    return o;
+  });
+  return { delim: D, header, rows };
+}
+
+// ════════════════════════════════════════════════════════
+// PERBARUI MASSAL PELANGGAN (CSV)
+// Unduh daftar → lengkapi di Excel/Sheets → unggah → periksa → terapkan
+// Hanya MEMPERBARUI pelanggan yang sudah ada; sel kosong = tidak diubah.
+// ════════════════════════════════════════════════════════
+const MASSAL_KOLOM = ['id_pelanggan','username_pppoe','nama_ktp','no_hp','nik','id_paket',
+  'id_desa','id_sub_wilayah','alamat_detail','tanggal_aktif','catatan','ip_ont','merek_ont'];
+const MASSAL_ALIAS = { tgl_aktif:'tanggal_aktif', nama:'nama_ktp', username:'username_pppoe', hp:'no_hp' };
+const MASSAL_STATUS = {
+  AKAN_DIUBAH:      { ikon:'✏️', label:'Akan diubah',     warna:'var(--success)' },
+  DIPERBARUI:       { ikon:'✅', label:'Diperbarui',       warna:'var(--success)' },
+  TANPA_PERUBAHAN:  { ikon:'⏭',  label:'Tanpa perubahan', warna:'var(--text3)'   },
+  TIDAK_DITEMUKAN:  { ikon:'❓', label:'Tidak ditemukan',  warna:'var(--warning)' },
+  KUNCI_KOSONG:     { ikon:'⚠️', label:'Kunci kosong',     warna:'var(--danger)'  },
+  KUNCI_GANDA:      { ikon:'⚠️', label:'Baris ganda',      warna:'var(--danger)'  },
+  USERNAME_DIPAKAI: { ikon:'⚠️', label:'Username dipakai', warna:'var(--danger)'  },
+  DATA_TIDAK_VALID: { ikon:'⚠️', label:'Data tidak valid', warna:'var(--danger)'  },
+};
+let _massal = { rows:[], detail:[], diabaikan:[], nama:'', sibuk:false, semua:false };
+const _kosongM = v => String(v == null ? '' : v).trim() === '';
+
+function setMassalStatus(msg) {
+  const el = document.getElementById('massalStatus');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+// Bagi baris jadi beberapa permintaan agar URL tidak terlalu panjang
+function massalBagi(rows) {
+  const out = []; let cur = [], len = 0;
+  rows.forEach(r => {
+    const l = encodeURIComponent(JSON.stringify(r)).length + 3;
+    if (cur.length && (len + l > 6000 || cur.length >= 40)) { out.push(cur); cur = []; len = 0; }
+    cur.push(r); len += l;
+  });
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+function massalRingkasRow(r) {
+  const o = { _baris: r._baris };
+  MASSAL_KOLOM.forEach(k => { if (!_kosongM(r[k])) o[k] = String(r[k]).trim(); });
+  return o;
+}
+
+async function massalPanggil(rows, dry, token) {
+  const url = API_URL + '?action=pelanggan_update_massal&token=' + encodeURIComponent(token) +
+    '&dry=' + (dry ? 1 : 0) + '&rows=' + encodeURIComponent(JSON.stringify(rows));
+  let data;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+    data = await res.json();
+  } catch (e) {
+    throw new Error('Tidak bisa terhubung ke server: ' + e.message);
+  }
+  if (!data.ok) throw new Error('Server menolak: ' + (data.error || 'alasan tidak diketahui'));
+  return data.data;
+}
+
+// 1) Unduh daftar pelanggan (sudah berisi data saat ini)
+function massalUnduh() {
+  const arr = Array.isArray(pelangganData) ? pelangganData.slice() : [];
+  if (!arr.length) { showToast('Belum ada data pelanggan — lakukan Sync dulu'); return; }
+  const sep = (document.getElementById('massalSep') || {}).value || ',';
+  arr.sort((a, b) => String(a.username_pppoe || '').localeCompare(String(b.username_pppoe || ''), 'id'));
+  const tgl   = v => {
+    const s = String(v || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);                       // "…T16:00:00.000Z" → tanggal lokal (WITA), bukan potongan UTC
+    if (!s || isNaN(d)) return s;
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  };
+  const teks  = v => '="' + String(v == null ? '' : v).replace(/"/g, '""') + '"';   // Excel: jaga angka panjang sebagai teks
+  const biasa = v => { v = String(v == null ? '' : v); return (v.includes(sep) || /["\n\r]/.test(v)) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const baris = arr.map(p => [
+    biasa(p.id_pelanggan), biasa(p.username_pppoe), biasa(p.nama_ktp),
+    teks(normalizeNoHp(p.no_hp)), teks(p.nik), biasa(p.id_paket), biasa(p.id_desa || p.nama_desa),
+    biasa(p.id_sub_wilayah), biasa(p.alamat_detail), teks(tgl(p.tanggal_aktif || p.tgl_aktif)),
+    biasa(p.catatan), biasa(p.ip_ont), biasa(p.merek_ont),
+  ].join(sep));
+  const csv  = '\uFEFF' + MASSAL_KOLOM.join(sep) + '\r\n' + baris.join('\r\n') + '\r\n';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'pelanggan_PNSNET_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ ' + arr.length + ' pelanggan diunduh — lengkapi lalu unggah kembali');
+}
+
+// 2) Pilih file → baca → periksa
+async function massalPilihFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  input.value = '';
+  try {
+    const p      = parseCsvText(await file.text());
+    const alias  = h => MASSAL_ALIAS[h] || h;
+    const header = p.header.map(alias);
+    const rows   = p.rows.map(o => {
+      const r = { _baris: o._baris };
+      Object.keys(o).forEach(k => { if (k !== '_baris') r[alias(k)] = o[k]; });
+      return r;
+    });
+    if (!header.includes('id_pelanggan') && !header.includes('username_pppoe')) {
+      showToast('❌ File harus punya kolom id_pelanggan atau username_pppoe'); return;
+    }
+    const dataCols = header.filter(h => MASSAL_KOLOM.includes(h) && h !== 'id_pelanggan' && h !== 'username_pppoe');
+    if (!dataCols.length) { showToast('❌ Tidak ada kolom data yang bisa diperbarui (mis. nama_ktp, no_hp)'); return; }
+    if (!rows.length)     { showToast('❌ File tidak berisi baris data'); return; }
+    _massal = { rows, detail: [], nama: file.name, sibuk: false, semua: false,
+                diabaikan: header.filter(h => h && !MASSAL_KOLOM.includes(h)) };
+    await massalPeriksa();
+  } catch (e) {
+    showToast('❌ Gagal membaca file: ' + e.message);
+  }
+}
+
+// 3) Periksa ke server (tanpa menulis apa pun)
+async function massalPeriksa() {
+  if (!navigator.onLine) { showToast('⚠️ Perlu koneksi internet untuk memeriksa file'); return; }
+  const token = localStorage.getItem('pnsnet_token') || '';
+  const paketOk = (typeof PAKET_LIST !== 'undefined' ? PAKET_LIST : []).map(p => p.id);
+  const lokal = [], kirim = [], seen = {};
+
+  _massal.rows.forEach(r => {
+    const kunci = (String(r.id_pelanggan || '').trim() || String(r.username_pppoe || '').trim()).toLowerCase();
+    const info  = { baris: r._baris, kunci: kunci, id_pelanggan: '', nama: String(r.nama_ktp || ''), perubahan: [] };
+    if (kunci) {
+      if (seen[kunci]) { lokal.push({ ...info, status: 'KUNCI_GANDA', pesan: 'Sama dengan baris ' + seen[kunci] + ' di file ini' }); return; }
+      seen[kunci] = r._baris;
+    }
+    if (!_kosongM(r.id_paket) && paketOk.length && !paketOk.includes(String(r.id_paket).trim())) {
+      lokal.push({ ...info, status: 'DATA_TIDAK_VALID', pesan: 'id_paket tidak dikenal: ' + r.id_paket + ' (pilihan: ' + paketOk.join(', ') + ')' });
+      return;
+    }
+    kirim.push(massalRingkasRow(r));
+  });
+
+  const detail = [];
+  try {
+    const bagian = massalBagi(kirim);
+    for (let i = 0; i < bagian.length; i++) {
+      setMassalStatus('⟳ Memeriksa ' + _massal.rows.length + ' baris… (bagian ' + (i + 1) + '/' + bagian.length + ')');
+      const d = await massalPanggil(bagian[i], true, token);
+      detail.push(...d.detail);
+    }
+  } catch (e) {
+    setMassalStatus('');
+    showToast('❌ ' + e.message);
+    return;
+  }
+  setMassalStatus('');
+  _massal.detail = detail.concat(lokal).sort((a, b) => a.baris - b.baris);
+  massalRender();
+}
+
+function massalRender() {
+  const box = document.getElementById('massalHasil');
+  if (!box) return;
+  const d = _massal.detail;
+  const n = s => d.filter(x => x.status === s).length;
+  const diubah = n('AKAN_DIUBAH'), tanpa = n('TANPA_PERUBAHAN'), hilang = n('TIDAK_DITEMUKAN');
+  const masalah = d.length - diubah - tanpa - hilang;
+  const chip = (t, w) => `<span style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid ${w};color:${w};font-weight:600">${t}</span>`;
+
+  const tampil = d.filter(x => _massal.semua || x.status !== 'TANPA_PERUBAHAN');
+  const daftar = tampil.map(x => {
+    const s = MASSAL_STATUS[x.status] || { ikon:'•', label:x.status, warna:'var(--text3)' };
+    const ubah = (x.perubahan || []).map(u =>
+      `<div style="font-size:12px;margin:2px 0 0 26px;word-break:break-word">${waEsc(u.field)}: <span style="color:var(--text3);text-decoration:line-through">${waEsc(u.lama || '—')}</span> → <b>${waEsc(u.baru)}</b></div>`).join('');
+    return `
+      <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;gap:8px;align-items:center">
+          <span>${s.ikon}</span>
+          <div style="flex:1;min-width:0">
+            <span style="font-weight:600;font-size:13px">${waEsc(x.nama || '(tanpa nama)')}</span>
+            <span style="font-size:11px;color:var(--text3)"> · baris ${x.baris} · ${waEsc(x.kunci || '—')}</span>
+          </div>
+          <span style="font-size:10px;font-weight:700;color:${s.warna};white-space:nowrap">${s.label}</span>
+        </div>
+        ${ubah}
+        ${x.pesan ? `<div style="font-size:11px;margin:3px 0 0 26px;color:${s.warna}">${waEsc(x.pesan)}</div>` : ''}
+      </div>`;
+  }).join('') || '<div style="padding:14px;font-size:12px;color:var(--text3);text-align:center">Tidak ada baris untuk ditampilkan.</div>';
+
+  box.innerHTML = `
+    <div class="form-card">
+      <div class="form-card-head">
+        <span style="font-size:18px">🔎</span>
+        <div class="form-card-title">Pratinjau — ${waEsc(_massal.nama)}</div>
+      </div>
+      <div style="padding:14px 16px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          ${chip('✏️ ' + diubah + ' akan diubah', 'var(--success)')}
+          ${chip('⏭ ' + tanpa + ' tanpa perubahan', 'var(--text3)')}
+          ${hilang ? chip('❓ ' + hilang + ' tidak ditemukan', 'var(--warning)') : ''}
+          ${masalah ? chip('⚠️ ' + masalah + ' bermasalah', 'var(--danger)') : ''}
+        </div>
+        ${_massal.diabaikan.length ? `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">Kolom tidak dikenal (diabaikan): ${waEsc(_massal.diabaikan.join(', '))}</div>` : ''}
+        <label style="font-size:12px;color:var(--text3);display:flex;gap:6px;align-items:center;margin-bottom:8px;cursor:pointer">
+          <input type="checkbox" ${_massal.semua ? 'checked' : ''} onchange="_massal.semua=this.checked;massalRender()"> Tampilkan juga baris tanpa perubahan
+        </label>
+        <div style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:420px;overflow-y:auto">${daftar}</div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-secondary" style="flex:1" onclick="batalMassal()">Batal</button>
+          <button class="btn btn-primary" style="flex:2" id="btnMassalTerapkan" onclick="massalTerapkan()" ${diubah ? '' : 'disabled'}>✅ Terapkan ${diubah} perubahan</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px">Perubahan ditulis langsung ke Google Sheets. Baris tanpa perubahan, tidak ditemukan, atau bermasalah tidak disentuh.</div>
+      </div>
+    </div>`;
+}
+
+// 4) Terapkan
+async function massalTerapkan() {
+  if (_massal.sibuk) return;
+  const target = _massal.detail.filter(d => d.status === 'AKAN_DIUBAH');
+  if (!target.length) return;
+  if (!navigator.onLine) { showToast('⚠️ Perlu koneksi internet'); return; }
+  if (!confirm('Terapkan perubahan ke ' + target.length + ' pelanggan?\nPerubahan ditulis langsung ke Google Sheets.')) return;
+
+  _massal.sibuk = true;
+  const btn = document.getElementById('btnMassalTerapkan');
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Menerapkan…'; }
+
+  const token  = localStorage.getItem('pnsnet_token') || '';
+  const byBaris = {}; _massal.rows.forEach(r => { byBaris[r._baris] = r; });
+  const kirim  = target.map(d => massalRingkasRow(byBaris[d.baris]));
+  const hasil  = [];
+  let gagalPesan = '';
+  try {
+    const bagian = massalBagi(kirim);
+    for (let i = 0; i < bagian.length; i++) {
+      setMassalStatus('⟳ Menerapkan… (bagian ' + (i + 1) + '/' + bagian.length + ')');
+      const d = await massalPanggil(bagian[i], false, token);
+      hasil.push(...d.detail);
+    }
+  } catch (e) { gagalPesan = e.message; }
+  setMassalStatus('');
+
+  // Cerminkan ke data di HP — hanya yang benar-benar DIPERBARUI oleh server
+  hasil.forEach(d => {
+    if (d.status !== 'DIPERBARUI') return;
+    const i = pelangganData.findIndex(p => String(p.id_pelanggan || '') === d.id_pelanggan);
+    if (i < 0) return;
+    const upd = {};
+    d.perubahan.forEach(u => {
+      const f = u.field.replace(' (modem)', '');
+      upd[f] = u.baru;
+      if (f === 'id_desa') upd.nama_desa = u.baru;
+    });
+    pelangganData[i] = { ...pelangganData[i], ...upd };
+  });
+
+  _massal.sibuk = false;
+  const ok     = hasil.filter(d => d.status === 'DIPERBARUI');
+  const lain   = hasil.filter(d => d.status !== 'DIPERBARUI');
+  const belum  = target.length - hasil.length;
+  renderPelangganPage();
+
+  const box = document.getElementById('massalHasil');
+  if (box) box.innerHTML = `
+    <div class="form-card">
+      <div style="padding:16px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">${ok.length ? '✅' : '⚠️'} ${ok.length} pelanggan diperbarui</div>
+        ${lain.length ? `<div style="font-size:12px;color:var(--warning);margin-bottom:6px">${lain.length} baris tidak diterapkan (datanya berubah sejak diperiksa atau bermasalah):<br>${lain.map(d => 'baris ' + d.baris + ' — ' + waEsc(d.pesan || (MASSAL_STATUS[d.status] || {}).label || d.status)).join('<br>')}</div>` : ''}
+        ${gagalPesan ? `<div style="font-size:12px;color:var(--danger);margin-bottom:6px">❌ ${waEsc(gagalPesan)}<br>${belum} baris belum terkirim. Yang sudah terkirim tetap tersimpan — unggah file yang sama lagi untuk melihat sisanya.</div>` : ''}
+        <button class="btn btn-secondary" style="margin-top:6px" onclick="batalMassal()">Tutup</button>
+      </div>
+    </div>`;
+  showToast(gagalPesan ? '⚠️ Sebagian gagal — lihat laporan' : '✅ ' + ok.length + ' pelanggan diperbarui');
+}
+
+function batalMassal() {
+  _massal = { rows:[], detail:[], diabaikan:[], nama:'', sibuk:false, semua:false };
+  const box = document.getElementById('massalHasil');
+  if (box) box.innerHTML = '';
+  setMassalStatus('');
+}
+
 // ── Import Massal ─────────────────────────────────────────
 function downloadTemplatePelanggan() {
   const headers = IMPORT_COLS.map(c => c.key).join(',');
@@ -6442,9 +6819,8 @@ async function uploadImportPelanggan(input) {
   showToast('⟳ Membaca file...');
 
   try {
-    const text  = await file.text();
-    const lines = text.trim().split('\n');
-    const hdr   = lines[0].split(',').map(h => h.trim().replace(/"/g,'').toLowerCase());
+    const parsed = parseCsvText(await file.text());
+    const hdr    = parsed.header;
 
     // Cek kolom wajib
     const missing = IMPORT_WAJIB.filter(k => !hdr.includes(k));
@@ -6453,12 +6829,9 @@ async function uploadImportPelanggan(input) {
       return;
     }
 
-    const rows = lines.slice(1).map(line => {
-      const vals = line.split(',');
-      const obj  = {};
-      hdr.forEach((h,i) => { obj[h] = (vals[i]||'').trim().replace(/^"|"$/g,''); });
-      return obj;
-    }).filter(r => r.id_paket || r.username_pppoe);
+    const rows = parsed.rows
+      .map(o => { const r = { ...o }; delete r._baris; return r; })
+      .filter(r => r.id_paket || r.username_pppoe);
 
     _importData = rows;
     tampilkanPreviewImport(rows, hdr);
