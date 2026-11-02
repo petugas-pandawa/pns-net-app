@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.8.5">
+<meta name="app-version" content="2.8.6">
 <meta name="app-build" content="2026-10-31">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -2928,7 +2928,8 @@ img{max-width:100%;display:block}
     </div>
 
     <!-- Preview import -->
-    <div id="importPreview" style="display:none">
+    <div id="importLaporan"></div>
+  <div id="importPreview" style="display:none">
       <div class="panel" style="margin-bottom:12px">
         <div class="panel-head">
           <div class="panel-title" id="importPreviewTitle">Preview Import</div>
@@ -6578,16 +6579,39 @@ async function massalPanggil(rows, dry, token) {
   return data.data;
 }
 
-// 1) Unduh daftar pelanggan (sudah berisi data saat ini)
-function massalUnduh() {
-  const arr = Array.isArray(pelangganData) ? pelangganData.slice() : [];
-  if (!arr.length) { showToast('Belum ada data pelanggan — lakukan Sync dulu'); return; }
+// 1) Unduh daftar pelanggan — data diambil LANGSUNG dari server:
+//    • tanggal dibaca dengan zona waktu Sheets (tidak bergantung zona waktu HP)
+//    • kolom yang tidak dimuat Dashboard (nik, catatan, alamat, IP & merek ONT) ikut terisi
+async function massalAmbilPelanggan() {
+  const token = localStorage.getItem('pnsnet_token') || '';
+  const url = API_URL + '?action=pelanggan_list&status=SEMUA&modem=1&token=' + encodeURIComponent(token);
+  let data;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+    data = await res.json();
+  } catch (e) {
+    throw new Error('Tidak bisa terhubung ke server: ' + e.message);
+  }
+  if (!data.ok) throw new Error('Server menolak: ' + (data.error || 'alasan tidak diketahui'));
+  if (!Array.isArray(data.data)) throw new Error('Balasan server tidak dikenali — pastikan Apps Script sudah di-deploy versi terbaru');
+  return data.data;
+}
+
+async function massalUnduh() {
+  if (!navigator.onLine) { showToast('⚠️ Perlu koneksi internet untuk mengunduh data terbaru'); return; }
+  setMassalStatus('⟳ Mengambil data terbaru dari server…');
+  let arr;
+  try { arr = await massalAmbilPelanggan(); }
+  catch (e) { setMassalStatus(''); showToast('❌ ' + e.message); return; }
+  setMassalStatus('');
+  if (!arr.length) { showToast('Belum ada pelanggan di sheet PELANGGAN'); return; }
+
   const sep = (document.getElementById('massalSep') || {}).value || ',';
-  arr.sort((a, b) => String(a.username_pppoe || '').localeCompare(String(b.username_pppoe || ''), 'id'));
-  const tgl   = v => {
+  arr.sort((x, y) => String(x.username_pppoe || '').localeCompare(String(y.username_pppoe || ''), 'id'));
+  const tgl = v => {
     const s = String(v || '');
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const d = new Date(s);                       // "…T16:00:00.000Z" → tanggal lokal (WITA), bukan potongan UTC
+    const d = new Date(s);                       // cadangan: tanggal-waktu ISO → tanggal lokal
     if (!s || isNaN(d)) return s;
     const p = n => String(n).padStart(2, '0');
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
@@ -6596,8 +6620,8 @@ function massalUnduh() {
   const biasa = v => { v = String(v == null ? '' : v); return (v.includes(sep) || /["\n\r]/.test(v)) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const baris = arr.map(p => [
     biasa(p.id_pelanggan), biasa(p.username_pppoe), biasa(p.nama_ktp),
-    teks(normalizeNoHp(p.no_hp)), teks(p.nik), biasa(p.id_paket), biasa(p.id_desa || p.nama_desa),
-    biasa(p.id_sub_wilayah), biasa(p.alamat_detail), teks(tgl(p.tanggal_aktif || p.tgl_aktif)),
+    teks(normalizeNoHp(p.no_hp)), teks(p.nik), biasa(p.id_paket), biasa(p.id_desa),
+    biasa(p.id_sub_wilayah), biasa(p.alamat_detail), teks(tgl(p.tanggal_aktif)),
     biasa(p.catatan), biasa(p.ip_ont), biasa(p.merek_ont),
   ].join(sep));
   const csv  = '\uFEFF' + MASSAL_KOLOM.join(sep) + '\r\n' + baris.join('\r\n') + '\r\n';
@@ -6829,9 +6853,7 @@ async function uploadImportPelanggan(input) {
       return;
     }
 
-    const rows = parsed.rows
-      .map(o => { const r = { ...o }; delete r._baris; return r; })
-      .filter(r => r.id_paket || r.username_pppoe);
+    const rows = parsed.rows.filter(r => r.id_paket || r.username_pppoe);   // _baris dipertahankan: nomor baris di file untuk laporan
 
     _importData = rows;
     tampilkanPreviewImport(rows, hdr);
@@ -6927,54 +6949,81 @@ function batalImport() {
 
 async function konfirmasiImport() {
   if (!_importData.length) return;
-  const btn = document.getElementById('btnKonfirmasiImport');
+  if (!navigator.onLine) { showToast('⚠️ Perlu koneksi internet untuk import'); return; }
+  const btn   = document.getElementById('btnKonfirmasiImport');
+  const label = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span style="animation:spin .6s linear infinite;display:inline-block">⟳</span> Mengimport...';
 
-  const token = localStorage.getItem('pnsnet_token') || '';
-  const rowsEncoded = encodeURIComponent(JSON.stringify(_importData));
+  const token   = localStorage.getItem('pnsnet_token') || '';
+  const agregat = { berhasil: 0, duplikat: 0, gagal: 0, detail: [] };
+  const bagian  = massalBagi(_importData);          // ≤40 baris / permintaan, URL tidak kepanjangan
+  let terkirim = 0, gagalPesan = '';
 
   try {
-    const res  = await fetch(API_URL +
-      '?action=pelanggan_import&token=' + encodeURIComponent(token) +
-      '&rows=' + rowsEncoded, {
-      signal: AbortSignal.timeout(60000)
-    });
-    const data = await res.json();
-
-    if (data.ok) {
+    for (let i = 0; i < bagian.length; i++) {
+      btn.innerHTML = '<span style="animation:spin .6s linear infinite;display:inline-block">⟳</span> Mengimport… (bagian ' + (i + 1) + '/' + bagian.length + ')';
+      const url = API_URL + '?action=pelanggan_import&token=' + encodeURIComponent(token) +
+                  '&rows=' + encodeURIComponent(JSON.stringify(bagian[i]));
+      let data;
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+        data = await res.json();
+      } catch (e) {
+        throw new Error('Tidak bisa terhubung ke server: ' + e.message);
+      }
+      if (!data.ok) throw new Error('Server menolak: ' + (data.error || 'alasan tidak diketahui'));
       const d = data.data;
-      showToast('✅ Import selesai: ' + d.berhasil + ' berhasil' +
-        (d.gagal ? ', ' + d.gagal + ' gagal' : ''));
-      batalImport();
-      // Refresh data pelanggan
-      setTimeout(() => syncPull(false), 500);
-      setPelTab('daftar');
-    } else {
-      throw new Error(data.error || 'Gagal import');
+      agregat.berhasil += d.berhasil; agregat.duplikat += d.duplikat; agregat.gagal += d.gagal;
+      agregat.detail.push(...d.detail);
+      terkirim += bagian[i].length;
     }
-  } catch(e) {
-    // Simpan lokal sebagai fallback
-    _importData.forEach(row => {
-      pelangganData.push({
-        id_pelanggan   : 'imp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-        nama_ktp       : row.nama_ktp       || '',
-        no_hp          : String(row.no_hp   || ''),
-        id_desa        : row.id_desa        || '',
-        nama_desa      : row.id_desa        || '',
-        id_paket       : row.id_paket       || '',
-        username_pppoe : row.username_pppoe || '',
-        tgl_aktif      : row.tgl_aktif      || '',
-        status         : row.status         || 'AKTIF',
-        catatan        : row.catatan        || '',
-        _local         : true,
-      });
-    });
-    renderPelangganPage();
-    showToast('⚠️ Disimpan lokal (' + _importData.length + ' data) — akan sync saat online');
-    batalImport();
-    setPelTab('daftar');
+  } catch (e) { gagalPesan = e.message; }
+
+  btn.disabled = false;
+  btn.innerHTML = label;
+  const belum = _importData.length - terkirim;
+
+  if (gagalPesan) {
+    // Pratinjau DIPERTAHANKAN supaya bisa diulang. Baris yang sudah masuk akan dilewati sebagai duplikat.
+    importTampilLaporan(agregat, gagalPesan, belum);
+    if (agregat.berhasil) setTimeout(() => syncPull(false), 500);
+    showToast('❌ Import terhenti — lihat laporan');
+    return;
   }
+  batalImport();
+  importTampilLaporan(agregat, '', 0);
+  showToast('✅ Import selesai: ' + agregat.berhasil + ' berhasil' +
+    (agregat.duplikat ? ', ' + agregat.duplikat + ' duplikat' : '') + (agregat.gagal ? ', ' + agregat.gagal + ' gagal' : ''));
+  setTimeout(() => syncPull(false), 500);          // ambil data resmi (dengan ID dari server)
+}
+
+function importTampilLaporan(h, gagalPesan, belum) {
+  const box = document.getElementById('importLaporan');
+  if (!box) return;
+  const warna = s => s === 'DUPLIKAT' ? 'var(--warning)' : 'var(--danger)';
+  const lain  = h.detail.filter(d => d.status !== 'BERHASIL').map(d => `
+    <div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <b>baris ${d.baris}</b> · ${waEsc(d.username || '—')} —
+      <span style="color:${warna(d.status)}">${d.status === 'DUPLIKAT' ? 'duplikat' : 'gagal'}</span>${d.pesan ? ': ' + waEsc(d.pesan) : ''}
+    </div>`).join('');
+  const chip = (t, w) => `<span style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid ${w};color:${w};font-weight:600">${t}</span>`;
+  box.innerHTML = `
+    <div class="form-card" style="margin-bottom:12px">
+      <div style="padding:16px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px">${h.berhasil ? '✅' : '⚠️'} ${h.berhasil} pelanggan baru ditambahkan</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          ${h.duplikat ? chip(h.duplikat + ' duplikat (sudah terdaftar, dilewati)', 'var(--warning)') : ''}
+          ${h.gagal ? chip(h.gagal + ' gagal', 'var(--danger)') : ''}
+        </div>
+        ${gagalPesan ? `<div style="font-size:12px;color:var(--danger);margin-bottom:8px">❌ ${waEsc(gagalPesan)}<br>
+          ${h.berhasil} baris sudah masuk, ${belum} belum terkirim. Pratinjau tetap ada di bawah: tekan Import lagi — baris yang sudah masuk otomatis dilewati sebagai duplikat.</div>` : ''}
+        ${lain ? `<div style="max-height:220px;overflow-y:auto;margin-bottom:8px">${lain}</div>` : ''}
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="document.getElementById('importLaporan').innerHTML=''">Tutup</button>
+          ${gagalPesan ? '' : `<button class="btn btn-primary" onclick="setPelTab('daftar')">Lihat daftar pelanggan</button>`}
+        </div>
+      </div>
+    </div>`;
 }
 
 // ════════════════════════════════════════════════════════
