@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.8.6">
+<meta name="app-version" content="2.8.7">
 <meta name="app-build" content="2026-10-31">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -2767,10 +2767,11 @@ img{max-width:100%;display:block}
     <div class="list-toolbar">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" id="pelSearch" placeholder="Cari nama, HP, username..."
+        <input type="text" id="pelSearch" placeholder="Cari nama, HP, username, desa, dusun..."
           oninput="filterPelanggan()">
       </div>
     </div>
+    <div id="pelFilter" style="margin-bottom:10px"></div>
     <div class="list-stats" id="pelStats"></div>
     <div class="calon-list" id="pelList"></div>
     <div class="pagination" id="pelPagination"></div>
@@ -5370,6 +5371,7 @@ function bayarPelCocok(p, q) {
   return String(p.nama_ktp || '').toLowerCase().includes(ql)
       || String(p.username_pppoe || '').toLowerCase().includes(ql)
       || String(p.nama_desa || p.id_desa || '').toLowerCase().includes(ql)
+      || String(p.id_sub_wilayah || '').toLowerCase().includes(ql)
       || (qd.length >= 3 && hp.includes(qd));
 }
 
@@ -5954,6 +5956,8 @@ function closeWaModal() {
 let pelangganData  = [];
 let pelSearch      = '';
 let pelPage        = 1;
+let pelPaket       = 'SEMUA';   // 'SEMUA' | id paket | '__LAIN__' (tanpa paket / tak dikenal)
+let pelDusun       = '';        // '' = semua | kunci dusun | '__KOSONG__' (belum diisi)
 let pelExpandedId  = null;
 let _pelTab        = 'daftar';
 let _importData    = [];
@@ -6021,17 +6025,87 @@ function filterPelanggan() {
   renderPelangganList();
 }
 
+// ── Filter daftar pelanggan: kategori paket + dusun/lingkungan ──────────
+const PEL_DUSUN_KOSONG = '__KOSONG__';
+const PEL_PAKET_LAIN   = '__LAIN__';
+
+function pelDusunKey(p) {
+  const s = String(p.id_sub_wilayah || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  return s || PEL_DUSUN_KOSONG;                     // "Puse" dan "puse " dianggap satu dusun
+}
+function pelPaketKey(p) {
+  const id = String(p.id_paket || '').trim();
+  return PAKET_LIST.some(x => x.id === id) ? id : PEL_PAKET_LAIN;
+}
+// abaikan: 'paket' | 'dusun' → dipakai untuk menghitung jumlah tiap pilihan filter
+function pelCocok(p, abaikan) {
+  if (pelSearch && !bayarPelCocok(p, pelSearch)) return false;
+  if (abaikan !== 'paket' && pelPaket !== 'SEMUA' && pelPaketKey(p) !== pelPaket) return false;
+  if (abaikan !== 'dusun' && pelDusun && pelDusunKey(p) !== pelDusun) return false;
+  return true;
+}
 function getPelFiltered() {
-  if (!pelSearch) return pelangganData;
-  return pelangganData.filter(p =>
-    String(p.nama_ktp||'').toLowerCase().includes(pelSearch) ||
-    String(p.no_hp||'').includes(pelSearch) ||
-    String(p.username_pppoe||'').toLowerCase().includes(pelSearch) ||
-    String(p.nama_desa||p.id_desa||'').toLowerCase().includes(pelSearch)
-  );
+  return pelangganData.filter(p => pelCocok(p));
+}
+
+function renderPelFilter() {
+  const box = document.getElementById('pelFilter');
+  if (!box) return;
+  if (!pelangganData.length) { box.innerHTML = ''; return; }
+
+  // ── chip paket (jumlah mengikuti filter lain yang aktif) ──
+  const dasarPaket = pelangganData.filter(p => pelCocok(p, 'paket'));
+  const nPaket = k => dasarPaket.filter(p => pelPaketKey(p) === k).length;
+  const chip = (nilai, label, n) =>
+    `<div class="chip ${pelPaket === nilai ? 'active' : ''}" onclick="setPelPaket('${nilai}')">${waEsc(label)} · ${n}</div>`;
+  let chips = chip('SEMUA', 'Semua paket', dasarPaket.length) +
+              PAKET_LIST.map(x => chip(x.id, x.speed, nPaket(x.id))).join('');
+  const nLain = nPaket(PEL_PAKET_LAIN);
+  if (nLain || pelPaket === PEL_PAKET_LAIN) chips += chip(PEL_PAKET_LAIN, 'Tanpa paket / lainnya', nLain);
+
+  // ── pilihan dusun (dikelompokkan tanpa peduli huruf besar/kecil) ──
+  const dasarDusun = pelangganData.filter(p => pelCocok(p, 'dusun'));
+  const peta = {};
+  const namaDusun = p => { const k = pelDusunKey(p); return k === PEL_DUSUN_KOSONG ? '(belum diisi)' : String(p.id_sub_wilayah).trim().replace(/\s+/g, ' '); };
+  dasarDusun.forEach(p => {
+    const k = pelDusunKey(p);
+    if (!peta[k]) peta[k] = { nama: namaDusun(p), n: 0 };
+    peta[k].n++;
+  });
+  if (pelDusun && !peta[pelDusun]) {               // pilihan aktif tetap terlihat walau jumlahnya 0
+    const asli = pelangganData.find(p => pelDusunKey(p) === pelDusun);
+    peta[pelDusun] = { nama: asli ? namaDusun(asli) : '(belum diisi)', n: 0 };
+  }
+  const kunci = Object.keys(peta).sort((x, y) =>
+    ((x === PEL_DUSUN_KOSONG) - (y === PEL_DUSUN_KOSONG)) || peta[x].nama.localeCompare(peta[y].nama, 'id'));
+  const opsi = `<option value="">Semua dusun / lingkungan · ${dasarDusun.length}</option>` +
+    kunci.map(k => `<option value="${waEsc(k)}" ${pelDusun === k ? 'selected' : ''}>${waEsc(peta[k].nama)} · ${peta[k].n}</option>`).join('');
+
+  const aktif  = pelPaket !== 'SEMUA' || pelDusun || pelSearch;
+  const tampil = getPelFiltered().length;
+  box.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${chips}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:12px;color:var(--text3)">🏘 Dusun</label>
+      <select onchange="setPelDusun(this.value)"
+        style="flex:1;min-width:180px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">${opsi}</select>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text3)">
+      <span>Menampilkan <b>${tampil}</b> dari ${pelangganData.length} pelanggan</span>
+      ${aktif ? `<button class="btn-sm btn-sm-secondary" onclick="resetPelFilter()">✕ Reset filter</button>` : ''}
+    </div>`;
+}
+
+function setPelPaket(v)  { pelPaket = v; pelPage = 1; renderPelangganList(); }
+function setPelDusun(v)  { pelDusun = v; pelPage = 1; renderPelangganList(); }
+function resetPelFilter() {
+  pelPaket = 'SEMUA'; pelDusun = ''; pelSearch = ''; pelPage = 1;
+  const s = document.getElementById('pelSearch'); if (s) s.value = '';
+  renderPelangganList();
 }
 
 function renderPelangganList() {
+  renderPelFilter();
   const filtered  = getPelFiltered();
   const total     = filtered.length;
   const totalPage = Math.ceil(total / PEL_PER_PAGE) || 1;
@@ -6047,10 +6121,10 @@ function renderPelangganList() {
         <div class="empty-icon">👤</div>
         <div class="empty-title">${pelangganData.length===0
           ? 'Belum ada pelanggan aktif'
-          : 'Tidak ada hasil pencarian'}</div>
+          : 'Tidak ada hasil'}</div>
         <div class="empty-sub">${pelangganData.length===0
           ? 'Gunakan tab Import untuk menambah data massal, atau pemasangan selesai otomatis menambah pelanggan'
-          : 'Coba kata kunci lain'}</div>
+          : 'Coba ubah kata kunci atau filter paket / dusun'}</div>
       </div>`;
     document.getElementById('pelPagination').innerHTML = '';
     return;
@@ -6064,9 +6138,11 @@ function renderPelangganCard(p) {
   const nama     = String(p.nama_ktp || '—');
   const noHp     = String(p.no_hp    || '');
   const desa     = String(p.nama_desa || p.id_desa || '—');
-  const paket    = String(p.id_paket  || '—');
+  const pk       = PAKET_LIST.find(x => x.id === p.id_paket);
+  const paket    = pk ? pk.speed : String(p.id_paket || '—');        // "10 Mbps", bukan "pk2"
+  const dusun    = String(p.id_sub_wilayah || '').trim();
   const username = String(p.username_pppoe || '');
-  const tglAktif = p.tgl_aktif || p.created_at || '';
+  const tglAktif = p.tanggal_aktif || p.tgl_aktif || p.created_at || '';   // kolom sheet: tanggal_aktif
   const status   = p.status || 'AKTIF';
   const idPel    = p.id_pelanggan || p.id_calon || '';
   const initials = nama.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
@@ -6090,6 +6166,7 @@ function renderPelangganCard(p) {
         <div class="pel-meta">
           ${noHp ? `<span>📱 ${noHp}</span>` : ''}
           <span>📍 ${desa}</span>
+          ${dusun ? `<span>🏘 ${waEsc(dusun)}</span>` : ''}
           ${username ? `<span>🌐 ${username}</span>` : ''}
         </div>
       </div>
@@ -6116,6 +6193,15 @@ function renderPelangganCard(p) {
           <div class="detail-label">LOKASI</div>
           <div class="detail-val">${desa}</div>
         </div>
+        <div class="detail-item">
+          <div class="detail-label">DUSUN / LINGKUNGAN</div>
+          <div class="detail-val">${dusun ? waEsc(dusun) : '—'}</div>
+        </div>
+        ${p.alamat_detail ? `
+        <div class="detail-item" style="grid-column:1/-1">
+          <div class="detail-label">ALAMAT / PATOKAN</div>
+          <div class="detail-val">${waEsc(p.alamat_detail)}</div>
+        </div>` : ''}
         <div class="detail-item">
           <div class="detail-label">PAKET</div>
           <div class="detail-val">${paket}</div>
@@ -6283,7 +6369,7 @@ function editPelanggan(idPel) {
   ];
 
   const buatInput = (f) => {
-    const val = pel[f.key] || '';
+    const val = f.key === 'no_hp' ? normalizeNoHp(pel.no_hp || '') : (pel[f.key] || '');   // tampil +62…; menyimpan merapikan data di Sheets
     if (f.type === 'select') {
       const optsHtml = f.opts.map(o => {
         const v = typeof o === 'string' ? o : o.val;
@@ -6377,7 +6463,7 @@ async function simpanEditPelanggan() {
   const asli = window._editingPel || {};
   Object.keys(payload).forEach(k => {
     if (k === 'id_pelanggan' || k === 'nama_desa') return;
-    const lama = (k === 'no_hp') ? normalizeNoHp(asli[k] || '') : String(asli[k] == null ? '' : asli[k]).trim();
+    const lama = String(asli[k] == null ? '' : asli[k]).trim();   // bandingkan dengan nilai TERSIMPAN apa adanya (no. HP 8xxx dianggap berbeda dari +628xxx → dirapikan)
     if (String(payload[k]) === lama) delete payload[k];
   });
   if (!payload.id_desa) delete payload.nama_desa;
@@ -6406,14 +6492,15 @@ async function simpanEditPelanggan() {
 
     if (data.ok) {
       const lewat  = (data.data && data.data.dilewati) || [];
-      const simpan = { ...payload };
+      const rapi   = data.data && data.data.no_hp_dirapikan;     // server merapikan no. HP tersimpan yang bukan +62…
+      const simpan = { ...payload, ...(rapi ? { no_hp: rapi.baru } : {}) };
       lewat.forEach(x => delete simpan[x.field]);          // yang ditolak server jangan ditampilkan sebagai tersimpan
       const idx = pelangganData.findIndex(p => (p.id_pelanggan||p.id_calon||p.id) === idPel);
       if (idx >= 0) pelangganData[idx] = { ...pelangganData[idx], ...simpan };
       document.getElementById('editPelModal').style.display = 'none';
       showToast(lewat.length
         ? '⚠️ Tersimpan, tapi ' + lewat.map(x => x.field).join(', ') + ' belum tersimpan: ' + lewat[0].alasan
-        : '✅ Data pelanggan tersimpan di server');
+        : '✅ Data pelanggan tersimpan di server' + (rapi ? ' · no. HP dirapikan jadi ' + rapi.baru : ''));
       renderPelangganList();
     } else {
       // Server menolak: tampilkan alasan sebenarnya dan biarkan form terbuka agar isian tidak hilang
