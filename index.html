@@ -2,7 +2,7 @@
 <html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="2.8.7">
+<meta name="app-version" content="2.8.8">
 <meta name="app-build" content="2026-10-31">
 <meta name="app-desc" content="Login screen + sync dashboard + data wilayah Tolitoli + CIOT Bridge">
 <script>
@@ -5639,14 +5639,14 @@ async function loadKonfirmasi() {
       return;
     }
 
-    container.innerHTML = pending.map(p => `
+    container.innerHTML = pending.map((p, i) => `
       <div class="konfirmasi-card">
         <div class="konfirmasi-card-head">
           <div class="pel-avatar" style="background:linear-gradient(135deg,var(--warning),#b36800)">
             ${String(p.nama_pelanggan||'?').charAt(0).toUpperCase()}
           </div>
           <div style="flex:1">
-            <div class="konfirmasi-nama">${p.nama_pelanggan||'—'}</div>
+            <div class="konfirmasi-nama">${waEsc(p.nama_pelanggan||'—')}</div>
             <div class="konfirmasi-sub">
               ${p.metode||'—'} · ${p.tgl_transaksi||'—'}
               ${p.no_hp ? ` · 📱 ${p.no_hp}` : ''}
@@ -5668,11 +5668,11 @@ async function loadKonfirmasi() {
         </div>` : ''}
         <div class="konfirmasi-actions">
           <button class="btn-konfirmasi btn-konfirmasi-tolak"
-            onclick="aksiKonfirmasi('${p.id_pembayaran}','TOLAK','${p.nama_pelanggan}',${p.no_hp||0})">
+            onclick="aksiKonfirmasiIdx(${i},'TOLAK')">
             ✕ Tolak
           </button>
           <button class="btn-konfirmasi btn-konfirmasi-ok"
-            onclick="aksiKonfirmasi('${p.id_pembayaran}','KONFIRMASI','${p.nama_pelanggan}',${p.no_hp||0})">
+            onclick="aksiKonfirmasiIdx(${i},'KONFIRMASI')">
             ✓ Konfirmasi Lunas
           </button>
         </div>
@@ -5850,7 +5850,7 @@ function renderListBelum() {
         ${String(p.nama_pelanggan||'?').charAt(0).toUpperCase()}
       </div>
       <div style="flex:1;min-width:0">
-        <div class="belum-nama">${p.nama_pelanggan||'—'}</div>
+        <div class="belum-nama">${waEsc(p.nama_pelanggan||'—')}</div>
         <div style="font-size:11px;color:var(--text3)">
           📱 ${p.no_hp||'—'} · ${p.bulan_tagihan||'—'}
         </div>
@@ -5859,11 +5859,31 @@ function renderListBelum() {
       <button class="btn-sm btn-sm-secondary" style="margin-left:8px"
         onclick="bukaWaBayar(_listBelumData[${idx}],'pengingat')">💬</button>
       <button class="btn-sm btn-sm-primary" style="margin-left:6px"
-        onclick="bayarDariList('${p.id_pelanggan}','${p.nama_pelanggan}','${p.no_hp}',${p.nominal},'${p.bulan_tagihan}')">
+        onclick="bayarDariListIdx(${idx})">
         Bayar
       </button>
     </div>
   `).join('');
+}
+
+// Tombol memakai kunci/indeks — TIDAK menyisipkan nama ke string JS di atribut HTML
+// (nama seperti D'Angelo atau yang berisi tanda kutip merusak tombol bila disisipkan).
+function catatBayarDariKartu(key, ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  const p = WA_REG[key];
+  if (!p) { showToast('Data pelanggan tidak ditemukan'); return; }
+  setPage('keuangan');
+  setTimeout(() => { setBayarTab('terima'); setPelBayarTerpilih(p); }, 300);   // langsung memilih pelanggan itu
+}
+function aksiKonfirmasiIdx(i, aksi) {
+  const p = (_konfirmasiData || [])[i];
+  if (!p) { showToast('Data pembayaran tidak ditemukan — muat ulang tab Konfirmasi'); return; }
+  return aksiKonfirmasi(p.id_pembayaran, aksi, p.nama_pelanggan || '—', String(p.no_hp || ''));
+}
+function bayarDariListIdx(i) {
+  const p = (_listBelumData || [])[i];
+  if (!p) { showToast('Data tidak ditemukan — muat ulang daftar'); return; }
+  bayarDariList(p.id_pelanggan, p.nama_pelanggan, p.no_hp, p.nominal, p.bulan_tagihan);
 }
 
 function bayarDariList(idPel, nama, noHp, nominal, bulan) {
@@ -6237,7 +6257,7 @@ function renderPelangganCard(p) {
           ${status==='AKTIF' ? '⏸ Set Istirahat' : status==='ISTIRAHAT' ? '▶ Aktifkan Kembali' : '▶ Aktifkan'}
         </button>
         <button class="btn-sm btn-sm-secondary"
-          onclick="event.stopPropagation();setPage('keuangan');setTimeout(()=>{cariPelangganBayar('${nama}')},300)">
+          onclick="catatBayarDariKartu('p:${idPel || noHp}',event)">
           💰 Catat Bayar
         </button>
         <button class="btn-sm btn-sm-secondary"
@@ -7145,6 +7165,21 @@ let timerRunning     = false;
 let passPreviewHide  = true;
 let wifi5On          = false;
 
+// Data calon dari server memakai id_paket / id_desa / id_sub_wilayah (bukan paket / nama_desa)
+function pemInfoCalon(c) {
+  c = c || {};
+  const pk = PAKET_LIST.find(x => x.id === c.id_paket);
+  return {
+    id   : c.id || c.id_calon || '',
+    nama : c.nama_ktp || '',
+    hp   : normalizeNoHp(c.no_hp || ''),
+    desa : c.nama_desa || c.id_desa || '',
+    dusun: c.id_sub_wilayah || '',
+    paket: pk ? pk.speed : (c.id_paket || ''),
+    harga: pk ? pk.price : '',
+  };
+}
+
 function openFormPemasangan(calonData) {
   // Sembunyikan semua halaman
   ['pageContent','formCalonPage','listCalonPage'].forEach(id=>{
@@ -7156,9 +7191,10 @@ function openFormPemasangan(calonData) {
   // Isi info calon
   if (calonData) {
     window._pemCalon = calonData;
-    document.getElementById('pem_namaCabon').textContent = calonData.nama_ktp;
+    const info = pemInfoCalon(calonData);
+    document.getElementById('pem_namaCabon').textContent = info.nama || '—';
     document.getElementById('pem_infoCabon').textContent =
-      `${calonData.no_hp} · ${calonData.nama_desa} · ${calonData.paket}`;
+      [info.hp, info.desa, info.dusun, info.paket].filter(Boolean).join(' · ') || '—';
   }
 
   // Reset
@@ -7509,6 +7545,7 @@ function validatePem3(){
 // ── Ringkasan ─────────────────────────────────────────
 function buildPemSummary(){
   const calon = window._pemCalon||{};
+  const info  = pemInfoCalon(calon);
   const teknisiNames = DEMO_TEKNISI.filter(t=>pemTeknisiSel.includes(t.id)).map(t=>t.nama).join(', ');
   const svrEl=document.getElementById('pem_server');
   const bayarEl=document.getElementById('pem_statusBayar');
@@ -7517,11 +7554,11 @@ function buildPemSummary(){
 
   document.getElementById('pemSummaryBody').innerHTML=`
     <div class="summary-row"><span class="summary-label">Pelanggan</span>
-      <span class="summary-val">${calon.nama_ktp||'—'}</span></div>
+      <span class="summary-val">${waEsc(info.nama||'—')}</span></div>
     <div class="summary-row"><span class="summary-label">No. HP</span>
-      <span class="summary-val">${calon.no_hp||'—'}</span></div>
+      <span class="summary-val">${info.hp||'—'}</span></div>
     <div class="summary-row"><span class="summary-label">Paket</span>
-      <span class="summary-val">${calon.paket||'—'} — ${calon.harga||'—'}</span></div>
+      <span class="summary-val">${info.paket||'—'} — ${info.harga||'—'}</span></div>
     <div class="summary-row"><span class="summary-label">Server</span>
       <span class="summary-val">${svrEl.options[svrEl.selectedIndex]?.text||'—'}</span></div>
     <div class="summary-row"><span class="summary-label">Tanggal</span>
@@ -7572,10 +7609,11 @@ async function submitPemasangan(){
   timerPause();
 
   const calon=window._pemCalon||{};
+  const info=pemInfoCalon(calon);
   const h=Math.floor(timerSeconds/3600),m=Math.floor((timerSeconds%3600)/60);
 
   const payload={
-    id_calon          : calon.id||'',
+    id_calon          : info.id,
     id_teknisi_list   : JSON.stringify(pemTeknisiSel),
     id_server         : document.getElementById('pem_server').value,
     id_port           : document.getElementById('pem_port').value,
@@ -7593,9 +7631,9 @@ async function submitPemasangan(){
     status_bayar      : document.getElementById('pem_statusBayar').value,
     catatan_teknisi   : document.getElementById('pem_catatanTeknisi').value,
     nama_ktp          : calon.nama_ktp||'',
-    no_hp             : calon.no_hp||'',
+    no_hp             : info.hp,
     id_paket          : calon.id_paket||'',
-    nama_desa         : calon.nama_desa||'',
+    nama_desa         : info.desa,
     nama_odp          : document.getElementById('pem_odp').options[document.getElementById('pem_odp').selectedIndex]?.text||'',
     username_pppoe    : document.getElementById('pem_usernamePreview').textContent,
   };
@@ -7610,7 +7648,7 @@ async function submitPemasangan(){
       if(ontBase64){
         await fetch(API_URL,{method:'POST',body:JSON.stringify({
           action:'foto_upload',token,jenis:'ONT',
-          nama_ktp:calon.nama_ktp,nama_desa:calon.nama_desa,
+          nama_ktp:calon.nama_ktp,nama_desa:info.desa,
           id_server:payload.id_server,
           tgl_daftar:new Date().toISOString().slice(0,10),
           base64data:ontBase64,mime_type:ontMime
@@ -7620,7 +7658,7 @@ async function submitPemasangan(){
       if(opmBase64){
         await fetch(API_URL,{method:'POST',body:JSON.stringify({
           action:'foto_upload',token,jenis:'OPM',
-          nama_ktp:calon.nama_ktp,nama_desa:calon.nama_desa,
+          nama_ktp:calon.nama_ktp,nama_desa:info.desa,
           id_server:payload.id_server,
           tgl_daftar:new Date().toISOString().slice(0,10),
           base64data:opmBase64,mime_type:opmMime
